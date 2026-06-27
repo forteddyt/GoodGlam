@@ -62,6 +62,12 @@ public sealed class GlamPopularityService(Configuration config, IGlamSource sour
 
     private readonly record struct CacheEntry(GlamPopularity Popularity, DateTime FetchedUtc)
     {
-        public bool IsExpired(int ttlHours) => DateTime.UtcNow - this.FetchedUtc > TimeSpan.FromHours(ttlHours);
+        public bool IsExpired(int ttlHours)
+        {
+            // Guard against a non-positive TTL (manual config edit / future migration),
+            // which would otherwise expire every entry instantly and hammer the network.
+            var hours = Math.Max(1, ttlHours);
+            return DateTime.UtcNow - this.FetchedUtc > TimeSpan.FromHours(hours);
+        }
     }
 }

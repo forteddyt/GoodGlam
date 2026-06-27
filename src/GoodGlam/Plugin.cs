@@ -21,7 +21,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         pluginInterface.Create<Services>();
 
-        this.config = Services.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        this.config = Services.PluginInterface.GetPluginConfig() as Configuration;
+        if (this.config is null)
+        {
+            // First run: persist defaults so later loads reuse them and migrations have a baseline.
+            this.config = new Configuration();
+            this.config.Save();
+        }
 
         this.ecClient = new EorzeaCollectionClient();
         var popularity = new GlamPopularityService(this.config, this.ecClient);

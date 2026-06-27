@@ -159,7 +159,10 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
             return null;
         }
 
+        // Drain both pipes concurrently: if curl writes enough to stderr (e.g. TLS/HTTP
+        // errors) and we never read it, the process can block once the pipe buffer fills.
         var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
+        var stderrTask = proc.StandardError.ReadToEndAsync(ct);
 
         try
         {
@@ -172,10 +175,12 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         }
 
         var stdout = await stdoutTask.ConfigureAwait(false);
+        var stderr = await stderrTask.ConfigureAwait(false);
 
         if (proc.ExitCode != 0)
         {
-            Services.Log.Debug($"GoodGlam: curl.exe exited with code {proc.ExitCode}.");
+            var detail = string.IsNullOrWhiteSpace(stderr) ? string.Empty : $" {stderr.Trim()}";
+            Services.Log.Debug($"GoodGlam: curl.exe exited with code {proc.ExitCode}.{detail}");
             return null;
         }
 
