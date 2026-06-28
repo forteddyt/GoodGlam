@@ -94,3 +94,5 @@ src/GoodGlam/
   Loot/LootWatcher.cs            NeedGreed addon hook + Loot struct read
   Windows/ConfigWindow.cs        settings UI
 ```
+
+> ℹ️ This plugin was developed with AI assistance.
