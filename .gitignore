@@ -1,0 +1,16 @@
+# Build output
+bin/
+obj/
+dist/
+
+# Downloaded Dalamud dev libraries (restored via build, not committed)
+.dalamud/
+
+# IDE
+.vs/
+.idea/
+*.user
+
+# OS
+Thumbs.db
+.DS_Store
