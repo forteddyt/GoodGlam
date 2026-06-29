@@ -3,6 +3,10 @@ bin/
 obj/
 dist/
 
+# Test/coverage output
+TestResults/
+CoverageReport/
+
 # Downloaded Dalamud dev libraries (restored via build, not committed)
 .dalamud/
 
