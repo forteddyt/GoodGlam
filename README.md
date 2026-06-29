@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/GoodGlam/Assets/Logo.svg" alt="GoodGlam logo" width="120" height="120" />
+</p>
+
 # GoodGlam
 
 [![CI](https://github.com/forteddyt/GoodGlam/actions/workflows/ci.yml/badge.svg)](https://github.com/forteddyt/GoodGlam/actions/workflows/ci.yml)

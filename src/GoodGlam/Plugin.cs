@@ -16,6 +16,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WindowSystem windowSystem = new("GoodGlam");
     private readonly ConfigWindow configWindow;
     private readonly HistoryWindow historyWindow;
+    private readonly LogoWindow logoWindow;
     private readonly NotificationHistoryStore history;
     private readonly EorzeaCollectionClient ecClient;
     private readonly LootWatcher lootWatcher;
@@ -35,10 +36,15 @@ public sealed class Plugin : IDalamudPlugin
         var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
 
-        this.configWindow = new ConfigWindow(this.config, this.ToggleHistory);
+        this.configWindow = new ConfigWindow(this.config, this.ToggleHistory, this.SetLogoVisible);
         this.historyWindow = new HistoryWindow(this.history);
+        this.logoWindow = new LogoWindow(this.config, this.ToggleHistory, this.ToggleConfig)
+        {
+            IsOpen = this.config.ShowLogo,
+        };
         this.windowSystem.AddWindow(this.configWindow);
         this.windowSystem.AddWindow(this.historyWindow);
+        this.windowSystem.AddWindow(this.logoWindow);
 
         Services.PluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
         Services.PluginInterface.UiBuilder.OpenConfigUi += this.ToggleConfig;
@@ -101,6 +107,13 @@ public sealed class Plugin : IDalamudPlugin
     private void ToggleConfig() => this.configWindow.Toggle();
 
     private void ToggleHistory() => this.historyWindow.Toggle();
+
+    private void SetLogoVisible(bool visible)
+    {
+        this.config.ShowLogo = visible;
+        this.config.Save();
+        this.logoWindow.IsOpen = visible;
+    }
 
     public void Dispose()
     {
