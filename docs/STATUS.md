@@ -12,7 +12,8 @@ For end-user build/run instructions see the [README](../README.md); this file fo
   when a rollable item is used in a *popular* glamour on Eorzea Collection (EC).
 - **State:** MVP **feature-complete and compiles clean** (0 warnings / 0 errors) against
   **Dalamud API 15 / `net10.0-windows`**. EC integration logic is **runtime-verified** against the
-  live site. **Not yet tested inside the running game.**
+  live site, and the full pipeline (NeedGreed hook → Loot read → EC → toast) is **verified in-game on
+  Linux (XIVLauncher.Core / Wine)**.
 - **Biggest gotcha:** on **native Windows** EC blocks .NET's HTTP stacks via Cloudflare TLS
   fingerprinting, so the plugin shells out to the system **`curl.exe`**. Under **Wine (Linux)** the
   opposite holds — in-process `HttpClient` works but `curl.exe` doesn't — so the transport is chosen
@@ -59,13 +60,13 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
 | `curl.exe` transport from .NET subprocess (native Windows) | ✅ verified |
 | In-process `HttpClient` transport under Wine (Linux) | ✅ runtime-verified (POST + GET, HTTP 200) |
 | Managed-first transport with curl fallback (auto-select) | ✅ verified under XIVLauncher Wine |
-| `NeedGreed` addon hook + `Loot` struct read | ⛔ not tested in-game |
-| Toast notification on qualifying drop | ⛔ not tested in-game |
-| Config window / `/goodglam` command | ⛔ not tested in-game |
+| `NeedGreed` addon hook + `Loot` struct read | ✅ verified in-game (`/goodglam dump`) |
+| Toast notification on qualifying drop | ✅ verified in-game (`/goodglam check`) |
+| Config window / `/goodglam` command | ✅ verified in-game |
 
-**Next concrete step:** load the DLL in a live client and confirm the `NeedGreed` hook fires and a
-toast renders. Everything up to the EC calls is verified; the in-game UI/hook path is the untested
-remainder.
+**Status:** the full path is verified in-game on Linux — `/goodglam dump` confirmed the `NeedGreed`
+hook fires and the `Loot` struct read resolves gear correctly, and `/goodglam check` rendered a toast.
+**Next concrete step:** replace the curl subprocess with the GitHub Actions static-index crawler.
 
 ## Transport (important)
 
@@ -149,7 +150,7 @@ loot/resolver/notify code.
 
 ## Roadmap / next steps
 
-1. **In-game smoke test** of the NeedGreed hook + toast (the only unverified path).
+1. ~~**In-game smoke test** of the NeedGreed hook + toast~~ — done (verified on Linux via `/goodglam dump` + `check`).
 2. **Replace the curl subprocess** with the GitHub Actions crawler + static JSON index.
 3. **MVP+1:** configurable filters mirroring EC (gender, date submitted, tags = style/theme/color,
    intended-for/job, level to equip). All map to EC query params.
