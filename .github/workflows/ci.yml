@@ -9,6 +9,9 @@ jobs:
   build-test:
     name: Build & test
     runs-on: windows-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -33,7 +36,7 @@ jobs:
         run: dotnet build GoodGlam.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test GoodGlam.slnx -c Release --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
+        run: dotnet test GoodGlam.slnx -c Release --no-build --settings coverlet.runsettings --results-directory TestResults
 
       - name: Coverage report
         if: always()
@@ -42,7 +45,7 @@ jobs:
           DOTNET_ROLL_FORWARD: Major
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
-          reportgenerator -reports:TestResults/**/coverage.cobertura.xml -targetdir:CoverageReport -reporttypes:"Html;MarkdownSummaryGithub"
+          reportgenerator -reports:TestResults/**/coverage.cobertura.xml -targetdir:CoverageReport -assemblyfilters:+GoodGlam -reporttypes:"Html;Badges;MarkdownSummaryGithub"
           Get-Content CoverageReport/SummaryGithub.md >> $env:GITHUB_STEP_SUMMARY
 
       - name: Upload coverage report
@@ -51,3 +54,16 @@ jobs:
         with:
           name: coverage-report
           path: CoverageReport
+
+      - name: Comment coverage on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: CoverageReport/SummaryGithub.md
+
+      - name: Publish report to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: CoverageReport

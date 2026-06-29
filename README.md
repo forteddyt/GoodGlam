@@ -1,6 +1,7 @@
 # GoodGlam
 
 [![CI](https://github.com/forteddyt/GoodGlam/actions/workflows/ci.yml/badge.svg)](https://github.com/forteddyt/GoodGlam/actions/workflows/ci.yml)
+[![Coverage](https://forteddyt.github.io/GoodGlam/badge_linecoverage.svg)](https://forteddyt.github.io/GoodGlam/)
 
 A [Dalamud](https://github.com/goatcorp/Dalamud) plugin for **FINAL FANTASY XIV** that watches
 the **Need/Greed roll window** and notifies you when a rollable item is used in a *popular*
