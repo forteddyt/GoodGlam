@@ -51,6 +51,13 @@ public sealed class LogoWindow : Window, IDisposable
     private bool glowBakeStarted;
     private bool disposed;
 
+    /// <summary>
+    /// Guards the hand-off of <see cref="glowTexture"/> between the background bake task and
+    /// <see cref="Dispose"/> (which run on different threads), so the baked texture is either
+    /// published to the window or disposed exactly once — never leaked, never double-freed.
+    /// </summary>
+    private readonly object glowLock = new();
+
     public LogoWindow(Configuration config, Action openHistory, Action openConfig, NotificationState notificationState)
         : base("GoodGlam###GoodGlamLogo",
             ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar
@@ -239,14 +246,19 @@ public sealed class LogoWindow : Window, IDisposable
             var baked = Services.TextureProvider.CreateFromRaw(
                 RawImageSpecification.Bgra32(spec.Width, spec.Height), gold, "GoodGlam.NotificationGlow");
 
-            // Lost the race with disposal: throw the freshly-baked texture away instead of leaking it.
-            if (this.disposed)
+            // Publish under the lock so we race with Dispose() exactly once: either we hand the
+            // texture to the window (and Dispose frees it later), or disposal already happened and
+            // we free the freshly-baked texture here. The lock also barriers the `disposed` read.
+            bool published;
+            lock (this.glowLock)
             {
-                baked.Dispose();
-                return;
+                published = !this.disposed;
+                if (published)
+                    this.glowTexture = baked;
             }
 
-            this.glowTexture = baked;
+            if (!published)
+                baked.Dispose();
         }
         catch (Exception ex)
         {
@@ -272,8 +284,16 @@ public sealed class LogoWindow : Window, IDisposable
     /// <summary>Releases the baked glow sprite (an owned GPU texture) when the plugin unloads.</summary>
     public void Dispose()
     {
-        this.disposed = true;
-        this.glowTexture?.Dispose();
-        this.glowTexture = null;
+        // Capture and clear under the lock so a bake task finishing concurrently either sees
+        // `disposed` and frees its own texture, or has already published the one we dispose here.
+        IDalamudTextureWrap? toDispose;
+        lock (this.glowLock)
+        {
+            this.disposed = true;
+            toDispose = this.glowTexture;
+            this.glowTexture = null;
+        }
+
+        toDispose?.Dispose();
     }
 }
