@@ -7,11 +7,13 @@ using Dalamud.Interface.Windowing;
 namespace GoodGlam.Windows;
 
 /// <summary>
-/// A small, frameless, always-available floating button that shows the GoodGlam logo (the
-/// brand mark adapted from Eorzea Collection). Clicking it opens the history window. The logo
-/// is drawn from an embedded high-resolution PNG, scaled by the current UI/DPI factor so it
-/// stays crisp and correctly sized on any monitor. The window is draggable; ImGui persists its
-/// position by window id. A right-click context menu exposes settings and a hide option.
+/// A small, frameless floating button that shows the GoodGlam logo (the brand mark adapted from
+/// Eorzea Collection). It is only drawn once a character is logged in (see
+/// <see cref="DrawConditions"/>), so it stays hidden on the title / character-select screen.
+/// Clicking it opens the history window. The logo is drawn from an embedded high-resolution PNG,
+/// scaled by the current UI/DPI factor so it stays crisp and correctly sized on any monitor. The
+/// window is draggable; ImGui persists its position by window id. A right-click context menu
+/// exposes settings and a hide option.
 /// </summary>
 public sealed class LogoWindow : Window
 {
@@ -43,6 +45,13 @@ public sealed class LogoWindow : Window
         this.RespectCloseHotkey = false;
         this.DisableWindowSounds = true;
     }
+
+    /// <summary>
+    /// Only draw the logo while a character is logged in, so it stays hidden on the title /
+    /// character-select screen. <see cref="Window.IsOpen"/> still reflects the user's show/hide
+    /// preference; this gates the in-world visibility on top of it.
+    /// </summary>
+    public override bool DrawConditions() => Services.ClientState.IsLoggedIn;
 
     public override void Draw()
     {

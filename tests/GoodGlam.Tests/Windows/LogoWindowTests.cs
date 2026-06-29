@@ -1,4 +1,5 @@
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using FakeItEasy;
 using FluentAssertions;
 using GoodGlam.Windows;
@@ -8,17 +9,20 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// Covers the config-mutating actions on <see cref="LogoWindow"/> (the right-click menu's lock
-/// toggle and hide). A faked <see cref="IDalamudPluginInterface"/> is installed into the static
-/// <c>Services</c> holder so <see cref="Configuration.Save"/> is observable without a framework.
+/// toggle and hide) and its login-gated visibility. A faked <see cref="IDalamudPluginInterface"/>
+/// is installed into the static <c>Services</c> holder so <see cref="Configuration.Save"/> is
+/// observable without a framework; a faked <see cref="IClientState"/> drives the login gate.
 /// </summary>
 public class LogoWindowTests
 {
     private readonly IDalamudPluginInterface pluginInterface = A.Fake<IDalamudPluginInterface>();
+    private readonly IClientState clientState = A.Fake<IClientState>();
 
     public LogoWindowTests()
     {
         TestServices.EnsureLog();
         TestServices.Install("PluginInterface", this.pluginInterface);
+        TestServices.Install("ClientState", this.clientState);
     }
 
     private LogoWindow NewWindow(Configuration config)
@@ -51,5 +55,16 @@ public class LogoWindowTests
         config.ShowLogo.Should().BeFalse();
         window.IsOpen.Should().BeFalse();
         A.CallTo(() => this.pluginInterface.SavePluginConfig(config)).MustHaveHappenedOnceExactly();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void DrawConditions_follows_login_state(bool loggedIn)
+    {
+        A.CallTo(() => this.clientState.IsLoggedIn).Returns(loggedIn);
+        var window = this.NewWindow(new Configuration());
+
+        window.DrawConditions().Should().Be(loggedIn);
     }
 }
