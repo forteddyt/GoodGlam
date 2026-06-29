@@ -10,7 +10,8 @@ For end-user build/run instructions see the [README](../README.md); this file fo
 
 - **What it is:** a Dalamud (C#) plugin that watches the Need/Greed roll window and, when a
   rollable item is used in a *popular* glamour on Eorzea Collection (EC), logs it to a persistent,
-  browsable history window and raises a clickable bell (the old transient toast is gone).
+  browsable history window and makes the floating logo glow gold until opened (the old transient
+  toast and bell are gone).
 - **State:** MVP **feature-complete and compiles clean** (0 warnings / 0 errors) against
   **Dalamud API 15 / `net10.0-windows`**. EC integration logic is **runtime-verified** against the
   live site. **Not yet tested inside the running game.**
@@ -48,7 +49,7 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
    `GoodGlam.dll`.
 2. Open the plugin installer, enable **GoodGlam**.
 3. `/goodglam` opens the history window (`/goodglam config` for settings). Enter a duty,
-   win/contest a roll, and confirm popular drops appear in the history with a bell.
+   win/contest a roll, and confirm popular drops appear in the history and the logo glows gold.
 
 ## What works / what's verified
 
@@ -62,7 +63,7 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
 | Managed-first transport with curl fallback (auto-select) | ✅ verified under XIVLauncher Wine |
 | Persistent history store + scrollable window (clickable links) | ✅ unit-tested; ⛔ not tested in-game |
 | `NeedGreed` addon hook + `Loot` struct read | ⛔ not tested in-game |
-| Bell notification on qualifying drop | ⛔ not tested in-game |
+| Logo notification glow on qualifying drop | ⛔ not tested in-game |
 | Config window / `/goodglam` command | ⛔ not tested in-game |
 
 **Next concrete step:** load the DLL in a live client and confirm the `NeedGreed` hook fires and a
@@ -135,7 +136,8 @@ src/GoodGlam/
   Glam/EorzeaCollectionClient.cs IGlamSource; builds EC requests + parses loves+name (delegates HTTP to IEcTransport)
   Glam/GlamPopularityService.cs  orchestration + per-item/per-filter TTL cache + notify
   History/NotificationHistory.cs PopularDropRecord + JSON-backed, capped (500) history store
-  History/HistoryNotifier.cs     INotifier: append to history + raise persistent clickable bell
+  History/HistoryNotifier.cs     INotifier: append to history + raise the logo glow signal
+  History/NotificationState.cs   shared "unseen popular drop" flag (raised by notifier, cleared on open)
   Loot/LootWatcher.cs            NeedGreed AddonLifecycle hook; reads CSLoot.Instance()->Items
   Windows/ConfigWindow.cs        ImGui settings UI
   Windows/HistoryWindow.cs       scrollable popular-drop history (clickable EC links, clear)
@@ -153,8 +155,9 @@ loot/resolver/notify code.
   can be notified *before* you roll. Items are de-duplicated per window.
 - **Notification:** popular drops are logged to a **persistent, capped history store**
   (`history.json` in the plugin config dir, newest first, max 500), shown in a scrollable
-  **history window** with clickable EC glamour links, plus a persistent clickable **bell** that
-  opens the window. The old transient toast is removed.
+  **history window** with clickable EC glamour links. The floating GoodGlam logo lights up with a
+  **pulsing golden glow** until the history is opened (by any path), then clears. The old transient
+  toast and bell are removed.
 - **Caching:** per game-item-ID with a configurable TTL (default 12h) to stay polite to EC. The
   active filter signature is folded into the cache key, so changing filters never serves a stale,
   differently-filtered result.
@@ -165,7 +168,7 @@ loot/resolver/notify code.
 
 ## Roadmap / next steps
 
-1. **In-game smoke test** of the NeedGreed hook + history/bell (the only unverified path).
+1. **In-game smoke test** of the NeedGreed hook + history/logo glow (the only unverified path).
 2. **Replace the curl subprocess** with the GitHub Actions crawler + static JSON index.
 3. ✅ **MVP+1:** configurable filters mirroring EC (gender, race, date submitted, tags =
    classification/style/theme/color, intended-for/job, level to equip, exclude Mog Station /

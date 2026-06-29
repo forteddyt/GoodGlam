@@ -26,7 +26,7 @@ public class LogoWindowTests
     }
 
     private LogoWindow NewWindow(Configuration config)
-        => new(config, openHistory: () => { }, openConfig: () => { });
+        => new(config, openHistory: () => { }, openConfig: () => { }, new GoodGlam.History.NotificationState());
 
     [Fact]
     public void ToggleLock_locks_then_unlocks_and_persists_each_time()

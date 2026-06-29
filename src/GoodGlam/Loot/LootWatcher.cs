@@ -137,7 +137,7 @@ public sealed class LootWatcher : IDisposable
         Services.Log.Information(
             $"GoodGlam[check]: {drop.Name} -> topLoves={popularity.TopLoves}, " +
             $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
-            $"{(passed ? "POPULAR — logged to history (bell raised)" : "below threshold — not logged")}");
+            $"{(passed ? "POPULAR — logged to history (logo glow raised)" : "below threshold — not logged")}");
     }
 
     public void Dispose()

@@ -27,14 +27,15 @@ whether an unassuming dungeon/trial/raid drop is actually worth rolling Need on.
 4. EC's glamour listing is queried sorted by loves (`GET /glamours?...&filter[orderBy]=loves`),
    and the top glamour's love count is parsed.
 5. If a glamour using the item has **≥ the configured loves threshold** (default **100**), the drop
-   is recorded in a **persistent, browsable history window** and a clickable bell-style
-   notification is raised (click it to open the history).
+   is recorded in a **persistent, browsable history window** and the floating GoodGlam logo lights
+   up with a **pulsing golden glow** (click it to open the history; the glow then clears).
 
 Results are cached per item to stay polite to Eorzea Collection.
 
-> 💡 The old transient toast has been replaced: qualifying drops are now logged to a **scrollable,
-> persistent history window** (each row has a clickable glamour link) plus a clickable bell, so a
-> popular drop can always be pulled back up — even after the alert is dismissed.
+> 💡 The old transient toast and bell have been replaced: qualifying drops are now logged to a
+> **scrollable, persistent history window** (each row has a clickable glamour link), and the
+> floating logo glows gold until you open the history, so a popular drop can always be pulled back
+> up — even after you step away.
 
 ### A note on the data transport (important)
 
@@ -109,7 +110,7 @@ In Dalamud's `/xlsettings` → *Experimental* → *Dev Plugin Locations*, add th
 - Each history row shows the timestamp, item name, top loves count, and a **clickable** glamour
   name that opens the Eorzea Collection page. History persists across game sessions; **Clear**
   empties it.
-- Qualifying drops raise a persistent bell-style notification — click it to open the history.
+- Qualifying drops make the floating logo glow gold — click it to open the history (the glow clears).
 - Settings: enable/disable notifications, the loves threshold, the cache lifetime, and filters.
 
 ## Roadmap
@@ -131,7 +132,8 @@ src/GoodGlam/
   Glam/EorzeaCollectionClient.cs IGlamSource (EC request building + parsing)
   Glam/GlamPopularityService.cs  orchestration + caching + notify
   History/NotificationHistory.cs persistent drop history store (JSON, capped)
-  History/HistoryNotifier.cs     records drops + raises clickable bell
+  History/HistoryNotifier.cs     records drops + raises the logo glow signal
+  History/NotificationState.cs   shared "unseen popular drop" flag (drives the logo glow)
   Loot/LootWatcher.cs            NeedGreed addon hook + Loot struct read
   Windows/ConfigWindow.cs        settings UI
   Windows/HistoryWindow.cs       scrollable popular-drop history
