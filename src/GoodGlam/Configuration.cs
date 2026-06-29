@@ -1,11 +1,12 @@
 using Dalamud.Configuration;
+using GoodGlam.Glam;
 
 namespace GoodGlam;
 
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
 
     /// <summary>Master toggle for drop notifications.</summary>
     public bool Enabled { get; set; } = true;
@@ -18,6 +19,12 @@ public sealed class Configuration : IPluginConfiguration
 
     /// <summary>How long (hours) a popularity lookup is cached before being refreshed.</summary>
     public int CacheTtlHours { get; set; } = 12;
+
+    /// <summary>
+    /// Global Eorzea Collection filters applied to every popularity lookup. Defaults are inert,
+    /// so an unconfigured plugin behaves exactly like the original unfiltered check.
+    /// </summary>
+    public PopularityFilters Filters { get; set; } = new();
 
     public void Save() => Services.PluginInterface.SavePluginConfig(this);
 }

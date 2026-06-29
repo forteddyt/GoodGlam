@@ -15,6 +15,7 @@ internal sealed class FakeGlamSource : IGlamSource
     public EcItem? EcItem = new(14930, "X", 25430);
     public GlamPopularity Popularity = new(0, null);
     public Exception? Throw;
+    public PopularityFilters? LastFilters;
 
     public Task<EcItem?> ResolveEcItemAsync(GlamSlot slot, string itemName, uint gameItemId, CancellationToken ct)
     {
@@ -23,9 +24,10 @@ internal sealed class FakeGlamSource : IGlamSource
         return Task.FromResult(this.EcItem);
     }
 
-    public Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, CancellationToken ct)
+    public Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
     {
         this.PopularityCalls++;
+        this.LastFilters = filters;
         if (this.Throw is not null) throw this.Throw;
         return Task.FromResult(this.Popularity);
     }

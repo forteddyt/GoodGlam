@@ -124,12 +124,14 @@ There is **no math relation** between them — only lookup tables. Conveniently,
 src/GoodGlam/
   Plugin.cs                      entry point, wiring, /goodglam command
   Services.cs                    [PluginService] locator
-  Configuration.cs               persisted settings (Enabled, LovesThreshold=100, CacheTtlHours=12)
+  Configuration.cs               persisted settings (Enabled, LovesThreshold=100, CacheTtlHours=12, Filters)
   Glam/GlamSlot.cs               EquipSlotCategory -> EC slot; FilterParam = "<key>Piece"
   Glam/ItemResolver.cs           game item ID -> name + slot (Lumina Item sheet); HQ normalize; skips non-gear
+  Glam/EcFilterOptions.cs        EC filter value/label tables (shared by query builder + config UI)
+  Glam/PopularityFilters.cs      global EC-parity filters; builds active filter[..] params + cache signature
   Glam/EcTransport.cs            IEcTransport; managed-first HttpClient w/ curl.exe fallback (FallbackEcTransport)
   Glam/EorzeaCollectionClient.cs IGlamSource; builds EC requests + parses results (delegates HTTP to IEcTransport)
-  Glam/GlamPopularityService.cs  orchestration + per-item TTL cache + toast
+  Glam/GlamPopularityService.cs  orchestration + per-item/per-filter TTL cache + toast
   Loot/LootWatcher.cs            NeedGreed AddonLifecycle hook; reads CSLoot.Instance()->Items
   Windows/ConfigWindow.cs        ImGui settings UI
 GoodGlam.json                    plugin manifest (DalamudApiLevel 15)
@@ -145,14 +147,22 @@ loot/resolver/notify code.
 - **Detection point:** the `NeedGreed` roll window (`AddonLifecycle` PostSetup / PostRefresh), so you
   can be notified *before* you roll. Items are de-duplicated per window.
 - **Notification:** native Dalamud toast (`INotificationManager`).
-- **Caching:** per game-item-ID with a configurable TTL (default 12h) to stay polite to EC.
+- **Caching:** per game-item-ID with a configurable TTL (default 12h) to stay polite to EC. The
+  active filter signature is folded into the cache key, so changing filters never serves a stale,
+  differently-filtered result.
+- **Filters (MVP+1):** global EC-parity filters in config (`Configuration.Filters`); each active
+  one is appended as a `filter[..]` param onto the loves-ordered listing, so the threshold is
+  evaluated against the filtered set. Config version bumped 1 → 2 (old configs migrate by keeping
+  default, unfiltered selections).
 
 ## Roadmap / next steps
 
 1. **In-game smoke test** of the NeedGreed hook + toast (the only unverified path).
 2. **Replace the curl subprocess** with the GitHub Actions crawler + static JSON index.
-3. **MVP+1:** configurable filters mirroring EC (gender, date submitted, tags = style/theme/color,
-   intended-for/job, level to equip). All map to EC query params.
+3. ✅ **MVP+1:** configurable filters mirroring EC (gender, race, date submitted, tags =
+   classification/style/theme/color, intended-for/job, level to equip, exclude Mog Station /
+   seasonal). Stored globally in config (`Filters`), appended to every popularity lookup; the
+   loves threshold is judged against the filtered result set. Server filtering is out of scope.
 4. **In-window annotation:** mark popular items directly on the Need/Greed window (better UX than a
    toast).
 5. **MVP+2:** EC login → restrict notifications to glamours the user has saved.

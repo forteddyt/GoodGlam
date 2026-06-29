@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -19,7 +20,7 @@ public interface IGlamSource
 {
     Task<EcItem?> ResolveEcItemAsync(GlamSlot slot, string itemName, uint gameItemId, CancellationToken ct);
 
-    Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, CancellationToken ct);
+    Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct);
 }
 
 /// <summary>
@@ -79,9 +80,9 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         return null;
     }
 
-    public async Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, CancellationToken ct)
+    public async Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
     {
-        var url = $"{BaseUrl}/glamours?filter%5BorderBy%5D=loves&filter%5B{slot.FilterParam}%5D={ecId}&page=1";
+        var url = BuildListingUrl(slot, ecId, filters);
 
         var html = await this.transport.GetAsync(url, ct).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(html))
@@ -104,6 +105,32 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
 
         var glamUrl = bestId is null ? null : $"{BaseUrl}/glamour/{bestId}";
         return new GlamPopularity(bestLoves, glamUrl);
+    }
+
+    /// <summary>
+    /// Builds the glamour-listing URL: always ordered by loves and scoped to the slot piece,
+    /// then any active global filters appended in EC's <c>filter[name]=value</c> form. With no
+    /// filters configured this matches the original unfiltered query exactly.
+    /// </summary>
+    private static string BuildListingUrl(GlamSlot slot, int ecId, PopularityFilters filters)
+    {
+        var query = new StringBuilder($"{BaseUrl}/glamours?");
+        query.Append(Filter("orderBy", "loves"));
+        query.Append('&').Append(Filter(slot.FilterParam, ecId.ToString()));
+
+        foreach (var (name, value) in filters.ActiveParams())
+            query.Append('&').Append(Filter(name, value));
+
+        query.Append("&page=1");
+        return query.ToString();
+
+        static string Filter(string name, string value)
+        {
+            var key = name.EndsWith("[]", StringComparison.Ordinal)
+                ? $"filter%5B{Uri.EscapeDataString(name[..^2])}%5D%5B%5D"
+                : $"filter%5B{Uri.EscapeDataString(name)}%5D";
+            return $"{key}={Uri.EscapeDataString(value)}";
+        }
     }
 
     [GeneratedRegex("id=\"js-glamour-likes-(\\d+)\"[^>]*>([\\d,]+)<", RegexOptions.IgnoreCase)]

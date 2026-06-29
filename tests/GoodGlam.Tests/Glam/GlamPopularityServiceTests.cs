@@ -78,4 +78,29 @@ public class GlamPopularityServiceTests
         result.TopLoves.Should().Be(0);
         source.PopularityCalls.Should().Be(0);
     }
+
+    [Fact]
+    public async Task Passes_configured_filters_to_source()
+    {
+        var config = new Configuration { Filters = new PopularityFilters { Gender = "female" } };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+
+        await new GlamPopularityService(config, source, new FakeNotifier()).ProcessAsync(Drop());
+
+        source.LastFilters.Should().BeSameAs(config.Filters);
+    }
+
+    [Fact]
+    public async Task Distinct_filters_are_cached_separately()
+    {
+        var config = new Configuration();
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var service = new GlamPopularityService(config, source, new FakeNotifier());
+
+        await service.ProcessAsync(Drop());
+        config.Filters = new PopularityFilters { Gender = "female" };
+        await service.ProcessAsync(Drop());
+
+        source.PopularityCalls.Should().Be(2);
+    }
 }
