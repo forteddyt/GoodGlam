@@ -1,5 +1,6 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using GoodGlam.Glam;
 
@@ -26,6 +27,8 @@ public sealed class ConfigWindow : Window
             this.config.Save();
         }
 
+        Help("Master switch. When off, GoodGlam never checks dropped items or shows toasts.");
+
         ImGui.Separator();
         ImGui.TextWrapped(
             "Notify when a dropped item is used in a glamour with at least this many loves on Eorzea Collection:");
@@ -37,12 +40,17 @@ public sealed class ConfigWindow : Window
             this.config.Save();
         }
 
+        Help("Minimum 'loves' a glamour must have for a drop to count as popular. Higher = pickier.");
+
         var ttl = this.config.CacheTtlHours;
         if (ImGui.InputInt("Cache lifetime (hours)", ref ttl, 1, 6, default))
         {
             this.config.CacheTtlHours = Math.Clamp(ttl, 1, 72);
             this.config.Save();
         }
+
+        Help("How long a popularity result is reused before re-checking Eorzea Collection. " +
+            "Longer = fewer requests, but slower to reflect new glamours. Clamped to 1-72 hours.");
 
         ImGui.Separator();
         this.DrawFilters();
@@ -51,8 +59,14 @@ public sealed class ConfigWindow : Window
         ImGui.Spacing();
         if (ImGui.Button("Restore Defaults"))
             this.RestoreDefaults();
+        Help("Reverts every GoodGlam setting (notifications, threshold, cache, and all filters) to defaults.");
+    }
+
+    /// <summary>Draws Dalamud's standard info "(?)" icon on the same line, with a hover tooltip.</summary>
+    private static void Help(string text)
+    {
         ImGui.SameLine();
-        ImGui.TextDisabled("Reverts all GoodGlam settings");
+        ImGuiComponents.HelpMarker(text);
     }
 
     private void RestoreDefaults()
@@ -73,16 +87,23 @@ public sealed class ConfigWindow : Window
 
         var filters = this.config.Filters;
 
-        this.DrawCombo("Gender", EcFilterOptions.Genders, filters.Gender, v => filters.Gender = v);
+        this.DrawCombo("Gender", EcFilterOptions.Genders, filters.Gender, v => filters.Gender = v,
+            "Only count glamours shown for this character gender.");
         this.DrawRacePicker(filters);
-        this.DrawCombo("Intended for", EcFilterOptions.Jobs, filters.Job, v => filters.Job = v);
-        this.DrawCombo("Date submitted", EcFilterOptions.DatePeriods, filters.DatePeriod, v => filters.DatePeriod = v);
+        this.DrawCombo("Intended for", EcFilterOptions.Jobs, filters.Job, v => filters.Job = v,
+            "Only count glamours tagged for this role or job.");
+        this.DrawCombo("Date submitted", EcFilterOptions.DatePeriods, filters.DatePeriod, v => filters.DatePeriod = v,
+            "Only count glamours submitted within this time window.");
         this.DrawLevelRange(filters);
 
-        this.DrawCombo("Classification", EcFilterOptions.Classifications, filters.Classification, v => filters.Classification = v);
-        this.DrawCombo("Style", EcFilterOptions.Styles, filters.Style, v => filters.Style = v);
-        this.DrawCombo("Theme", EcFilterOptions.Themes, filters.Theme, v => filters.Theme = v);
-        this.DrawCombo("Color", EcFilterOptions.Colors, filters.Color, v => filters.Color = v);
+        this.DrawCombo("Classification", EcFilterOptions.Classifications, filters.Classification, v => filters.Classification = v,
+            "EC overall vibe tag (e.g. Cute, Cool, Sexy).");
+        this.DrawCombo("Style", EcFilterOptions.Styles, filters.Style, v => filters.Style = v,
+            "EC style tag (e.g. Casual, Fantasy, Modern).");
+        this.DrawCombo("Theme", EcFilterOptions.Themes, filters.Theme, v => filters.Theme = v,
+            "EC theme tag (e.g. Swimwear, Battle Gear, Royalty).");
+        this.DrawCombo("Color", EcFilterOptions.Colors, filters.Color, v => filters.Color = v,
+            "EC dominant color tag.");
 
         var noMog = filters.ExcludeMogstation;
         if (ImGui.Checkbox("Exclude Mog Station", ref noMog))
@@ -91,6 +112,8 @@ public sealed class ConfigWindow : Window
             this.config.Save();
         }
 
+        Help("Ignore glamours that use Mog Station (cash-shop) items.");
+
         var noSeasonal = filters.ExcludeSeasonal;
         if (ImGui.Checkbox("Exclude seasonal", ref noSeasonal))
         {
@@ -98,30 +121,36 @@ public sealed class ConfigWindow : Window
             this.config.Save();
         }
 
+        Help("Ignore glamours that use limited seasonal event gear.");
+
         ImGui.Spacing();
         if (ImGui.Button("Reset filters"))
         {
             this.config.Filters = new PopularityFilters();
             this.config.Save();
         }
+
+        Help("Clears only the filters above; keeps notifications, threshold, and cache settings.");
     }
 
-    private void DrawCombo(string label, IReadOnlyList<EcFilterOption> options, string current, Action<string> set)
+    private void DrawCombo(string label, IReadOnlyList<EcFilterOption> options, string current, Action<string> set, string help)
     {
         var preview = options.FirstOrDefault(o => o.Value == current)?.Label ?? options[0].Label;
-        if (!ImGui.BeginCombo(label, preview))
-            return;
-
-        foreach (var option in options)
+        if (ImGui.BeginCombo(label, preview))
         {
-            if (ImGui.Selectable(option.Label, option.Value == current) && option.Value != current)
+            foreach (var option in options)
             {
-                set(option.Value);
-                this.config.Save();
+                if (ImGui.Selectable(option.Label, option.Value == current) && option.Value != current)
+                {
+                    set(option.Value);
+                    this.config.Save();
+                }
             }
+
+            ImGui.EndCombo();
         }
 
-        ImGui.EndCombo();
+        Help(help);
     }
 
     private void DrawRacePicker(PopularityFilters filters)
@@ -130,23 +159,25 @@ public sealed class ConfigWindow : Window
             ? "All races"
             : string.Join(", ", EcFilterOptions.Races.Where(r => filters.Races.Contains(r.Value)).Select(r => r.Label));
 
-        if (!ImGui.BeginCombo("Race", preview))
-            return;
-
-        foreach (var race in EcFilterOptions.Races)
+        if (ImGui.BeginCombo("Race", preview))
         {
-            var selected = filters.Races.Contains(race.Value);
-            if (!ImGui.Selectable(race.Label, selected, ImGuiSelectableFlags.DontClosePopups))
-                continue;
+            foreach (var race in EcFilterOptions.Races)
+            {
+                var selected = filters.Races.Contains(race.Value);
+                if (!ImGui.Selectable(race.Label, selected, ImGuiSelectableFlags.DontClosePopups))
+                    continue;
 
-            if (selected)
-                filters.Races.Remove(race.Value);
-            else
-                filters.Races.Add(race.Value);
-            this.config.Save();
+                if (selected)
+                    filters.Races.Remove(race.Value);
+                else
+                    filters.Races.Add(race.Value);
+                this.config.Save();
+            }
+
+            ImGui.EndCombo();
         }
 
-        ImGui.EndCombo();
+        Help("Only count glamours for the selected races; pick several or none for all.");
     }
 
     private void DrawLevelRange(PopularityFilters filters)
@@ -160,11 +191,15 @@ public sealed class ConfigWindow : Window
             this.config.Save();
         }
 
+        Help("Lowest item equip level to include. Stays at or below the max.");
+
         if (ImGui.InputInt("Max level to equip", ref max, 1, 5, default))
         {
             filters.MaxLevel = Math.Clamp(max, EcFilterOptions.MinLevel, EcFilterOptions.MaxLevel);
             filters.MinLevel = Math.Min(filters.MinLevel, filters.MaxLevel);
             this.config.Save();
         }
+
+        Help("Highest item equip level to include. Stays at or above the min.");
     }
 }
