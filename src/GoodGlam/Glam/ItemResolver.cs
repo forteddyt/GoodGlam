@@ -18,9 +18,7 @@ public sealed class ItemResolver
     public DropItem? Resolve(uint itemId)
     {
         // Normalise HQ items (HQ id = base id + 1,000,000); collectables sit even higher.
-        var baseId = itemId;
-        if (baseId is >= 1_000_000 and < 2_000_000)
-            baseId -= 1_000_000;
+        var baseId = NormalizeItemId(itemId);
 
         var sheet = Services.DataManager.GetExcelSheet<Item>();
         if (sheet is null || !sheet.TryGetRow(baseId, out var item))
@@ -40,4 +38,11 @@ public sealed class ItemResolver
 
         return new DropItem(baseId, name, slot);
     }
+
+    /// <summary>
+    /// Maps a loot item id to its base game item id. HQ items report <c>baseId + 1,000,000</c>;
+    /// collectables sit above that and are left untouched. Pure so the HQ math can be unit-tested.
+    /// </summary>
+    internal static uint NormalizeItemId(uint itemId)
+        => itemId is >= 1_000_000 and < 2_000_000 ? itemId - 1_000_000 : itemId;
 }

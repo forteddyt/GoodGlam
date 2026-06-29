@@ -30,18 +30,30 @@ public sealed record GlamSlot(string Key)
     /// (e.g. materia, crafting materials, soul crystals, belts).
     /// </summary>
     public static GlamSlot? FromEquipSlotCategory(EquipSlotCategory esc)
+        => FromSlotFlags(esc.Head, esc.Body, esc.Gloves, esc.Legs, esc.Feet,
+            esc.MainHand, esc.OffHand, esc.Ears, esc.Neck, esc.Wrists, esc.FingerL, esc.FingerR);
+
+    /// <summary>
+    /// Pure mapping from the raw <c>EquipSlotCategory</c> slot flags (positive = wearable in
+    /// that slot) to an EC slot, mirroring the in-game lookup. Split out from
+    /// <see cref="FromEquipSlotCategory"/> so the priority order can be unit-tested without a
+    /// game-backed <c>EquipSlotCategory</c>. Returns <c>null</c> for non-gear.
+    /// </summary>
+    internal static GlamSlot? FromSlotFlags(
+        sbyte head, sbyte body, sbyte gloves, sbyte legs, sbyte feet,
+        sbyte mainHand, sbyte offHand, sbyte ears, sbyte neck, sbyte wrists, sbyte fingerL, sbyte fingerR)
     {
-        if (esc.Head > 0) return Head;
-        if (esc.Body > 0) return Body;
-        if (esc.Gloves > 0) return Hands;
-        if (esc.Legs > 0) return Legs;
-        if (esc.Feet > 0) return Feet;
-        if (esc.MainHand > 0) return Weapon;
-        if (esc.OffHand > 0) return Offhand;
-        if (esc.Ears > 0) return Earrings;
-        if (esc.Neck > 0) return Necklace;
-        if (esc.Wrists > 0) return Bracelets;
-        if (esc.FingerL > 0 || esc.FingerR > 0) return Ring;
+        if (head > 0) return Head;
+        if (body > 0) return Body;
+        if (gloves > 0) return Hands;
+        if (legs > 0) return Legs;
+        if (feet > 0) return Feet;
+        if (mainHand > 0) return Weapon;
+        if (offHand > 0) return Offhand;
+        if (ears > 0) return Earrings;
+        if (neck > 0) return Necklace;
+        if (wrists > 0) return Bracelets;
+        if (fingerL > 0 || fingerR > 0) return Ring;
         return null;
     }
 }
