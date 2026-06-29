@@ -90,4 +90,35 @@ public class EorzeaCollectionClientTests
         result.TopLoves.Should().Be(0);
         result.TopGlamUrl.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetTopPopularity_appends_active_filters_to_listing_url()
+    {
+        var transport = new FakeTransport { GetResult = "" };
+        var filters = new PopularityFilters
+        {
+            Gender = "female",
+            Job = "tanks",
+            MinLevel = 50,
+            ExcludeMogstation = true,
+        };
+
+        await new EorzeaCollectionClient(transport).GetTopPopularityAsync(GlamSlot.Legs, 14930, filters, CancellationToken.None);
+
+        transport.GetUrls.Should().ContainSingle().Which.Should().Be(
+            "https://ffxiv.eorzeacollection.com/glamours?filter%5BorderBy%5D=loves&filter%5BlegsPiece%5D=14930" +
+            "&filter%5Bgender%5D=female&filter%5Bjob%5D=tanks&filter%5BminimumLvl%5D=50&filter%5BexcludeMogstation%5D=1&page=1");
+    }
+
+    [Fact]
+    public async Task GetTopPopularity_encodes_each_race_as_array_param()
+    {
+        var transport = new FakeTransport { GetResult = "" };
+        var filters = new PopularityFilters { Races = ["miqote", "aura"] };
+
+        await new EorzeaCollectionClient(transport).GetTopPopularityAsync(GlamSlot.Body, 1, filters, CancellationToken.None);
+
+        transport.GetUrls.Single().Should()
+            .Contain("filter%5Brace%5D%5B%5D=miqote").And.Contain("filter%5Brace%5D%5B%5D=aura");
+    }
 }
