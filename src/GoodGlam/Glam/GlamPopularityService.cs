@@ -12,18 +12,24 @@ public sealed class GlamPopularityService(Configuration config, IGlamSource sour
 {
     private readonly ConcurrentDictionary<uint, CacheEntry> cache = new();
 
-    /// <summary>Checks a dropped item and raises a notification if it qualifies as popular.</summary>
-    public async Task ProcessAsync(DropItem drop)
+    /// <summary>
+    /// Checks a dropped item and raises a notification if it qualifies as popular.
+    /// Returns the popularity it found (or an empty result on error) so callers/diagnostics
+    /// can inspect the outcome.
+    /// </summary>
+    public async Task<GlamPopularity> ProcessAsync(DropItem drop)
     {
         try
         {
             var popularity = await this.GetPopularityAsync(drop).ConfigureAwait(false);
             if (popularity.TopLoves >= config.LovesThreshold)
                 this.Notify(drop, popularity);
+            return popularity;
         }
         catch (Exception ex)
         {
             Services.Log.Warning(ex, $"GoodGlam: failed to check popularity for {drop.Name} ({drop.ItemId}).");
+            return new GlamPopularity(0, null);
         }
     }
 
