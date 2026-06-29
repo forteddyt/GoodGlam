@@ -90,8 +90,8 @@ internal sealed class CountingTransport(string? result) : IEcTransport
 }
 
 /// <summary>
-/// Installs a no-op <see cref="IPluginLog"/> into the static <c>Services.Log</c> so code paths
-/// that log (warnings, transport switch) don't dereference a null static under test.
+/// Installs no-op or fake Dalamud services into the static <c>Services</c> holder so code paths
+/// that touch <c>Services.*</c> don't dereference null statics under test.
 /// </summary>
 internal static class TestServices
 {
@@ -101,9 +101,15 @@ internal static class TestServices
     {
         if (initialized) return;
         var log = DispatchProxy.Create<IPluginLog, NoopLog>();
-        typeof(GoodGlam.Services).GetProperty("Log", BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(null, log);
+        Install("Log", log);
         initialized = true;
+    }
+
+    /// <summary>Sets a static property on <c>GoodGlam.Services</c> (e.g. Framework, Notifications).</summary>
+    public static void Install<T>(string property, T value)
+    {
+        typeof(GoodGlam.Services).GetProperty(property, BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(null, value);
     }
 }
 

@@ -1,6 +1,6 @@
 # Project status & handoff
 
-_Last updated: 2026-06-26_
+_Last updated: 2026-06-29_
 
 This document captures the current state of GoodGlam so work can resume on another machine.
 For end-user build/run instructions see the [README](../README.md); this file focuses on the
@@ -8,8 +8,9 @@ For end-user build/run instructions see the [README](../README.md); this file fo
 
 ## TL;DR
 
-- **What it is:** a Dalamud (C#) plugin that watches the Need/Greed roll window and fires a toast
-  when a rollable item is used in a *popular* glamour on Eorzea Collection (EC).
+- **What it is:** a Dalamud (C#) plugin that watches the Need/Greed roll window and, when a
+  rollable item is used in a *popular* glamour on Eorzea Collection (EC), logs it to a persistent,
+  browsable history window and raises a clickable bell (the old transient toast is gone).
 - **State:** MVP **feature-complete and compiles clean** (0 warnings / 0 errors) against
   **Dalamud API 15 / `net10.0-windows`**. EC integration logic is **runtime-verified** against the
   live site. **Not yet tested inside the running game.**
@@ -46,8 +47,8 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
 1. `/xlsettings` → **Experimental** → **Dev Plugin Locations** → add the path to the built
    `GoodGlam.dll`.
 2. Open the plugin installer, enable **GoodGlam**.
-3. `/goodglam` opens settings. Enter a duty, win/contest a roll, and confirm a toast appears for
-   glam-worthy drops.
+3. `/goodglam` opens the history window (`/goodglam config` for settings). Enter a duty,
+   win/contest a roll, and confirm popular drops appear in the history with a bell.
 
 ## What works / what's verified
 
@@ -55,17 +56,18 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
 |---|---|
 | Project builds (API 15, net10.0-windows) | ✅ 0 err (Windows **and** Linux) |
 | EC item search `POST /gear/<slot>/search` (game ID → EC ID) | ✅ runtime-verified (25430 → 14930) |
-| EC popularity scrape `GET /glamours?...orderBy=loves` (parse loves) | ✅ runtime-verified |
+| EC popularity scrape `GET /glamours?...orderBy=loves` (parse loves + name) | ✅ runtime-verified |
 | `curl.exe` transport from .NET subprocess (native Windows) | ✅ verified |
 | In-process `HttpClient` transport under Wine (Linux) | ✅ runtime-verified (POST + GET, HTTP 200) |
 | Managed-first transport with curl fallback (auto-select) | ✅ verified under XIVLauncher Wine |
+| Persistent history store + scrollable window (clickable links) | ✅ unit-tested; ⛔ not tested in-game |
 | `NeedGreed` addon hook + `Loot` struct read | ⛔ not tested in-game |
-| Toast notification on qualifying drop | ⛔ not tested in-game |
+| Bell notification on qualifying drop | ⛔ not tested in-game |
 | Config window / `/goodglam` command | ⛔ not tested in-game |
 
 **Next concrete step:** load the DLL in a live client and confirm the `NeedGreed` hook fires and a
-toast renders. Everything up to the EC calls is verified; the in-game UI/hook path is the untested
-remainder.
+drop lands in the history window. Everything up to the EC calls is verified; the in-game UI/hook
+path is the untested remainder.
 
 ## Transport (important)
 
@@ -124,16 +126,19 @@ There is **no math relation** between them — only lookup tables. Conveniently,
 src/GoodGlam/
   Plugin.cs                      entry point, wiring, /goodglam command
   Services.cs                    [PluginService] locator
-  Configuration.cs               persisted settings (Enabled, LovesThreshold=100, CacheTtlHours=12, Filters)
+  Configuration.cs               persisted settings (Enabled, LovesThreshold=100, CacheTtlHours=12, Filters); v3
   Glam/GlamSlot.cs               EquipSlotCategory -> EC slot; FilterParam = "<key>Piece"
   Glam/ItemResolver.cs           game item ID -> name + slot (Lumina Item sheet); HQ normalize; skips non-gear
   Glam/EcFilterOptions.cs        EC filter value/label tables (shared by query builder + config UI)
   Glam/PopularityFilters.cs      global EC-parity filters; builds active filter[..] params + cache signature
   Glam/EcTransport.cs            IEcTransport; managed-first HttpClient w/ curl.exe fallback (FallbackEcTransport)
-  Glam/EorzeaCollectionClient.cs IGlamSource; builds EC requests + parses results (delegates HTTP to IEcTransport)
-  Glam/GlamPopularityService.cs  orchestration + per-item/per-filter TTL cache + toast
+  Glam/EorzeaCollectionClient.cs IGlamSource; builds EC requests + parses loves+name (delegates HTTP to IEcTransport)
+  Glam/GlamPopularityService.cs  orchestration + per-item/per-filter TTL cache + notify
+  History/NotificationHistory.cs PopularDropRecord + JSON-backed, capped (500) history store
+  History/HistoryNotifier.cs     INotifier: append to history + raise persistent clickable bell
   Loot/LootWatcher.cs            NeedGreed AddonLifecycle hook; reads CSLoot.Instance()->Items
   Windows/ConfigWindow.cs        ImGui settings UI
+  Windows/HistoryWindow.cs       scrollable popular-drop history (clickable EC links, clear)
 GoodGlam.json                    plugin manifest (DalamudApiLevel 15)
 ```
 
@@ -146,25 +151,28 @@ loot/resolver/notify code.
 - **"Popular"** = at least one glamour using the item has **≥ `LovesThreshold`** loves (default 100).
 - **Detection point:** the `NeedGreed` roll window (`AddonLifecycle` PostSetup / PostRefresh), so you
   can be notified *before* you roll. Items are de-duplicated per window.
-- **Notification:** native Dalamud toast (`INotificationManager`).
+- **Notification:** popular drops are logged to a **persistent, capped history store**
+  (`history.json` in the plugin config dir, newest first, max 500), shown in a scrollable
+  **history window** with clickable EC glamour links, plus a persistent clickable **bell** that
+  opens the window. The old transient toast is removed.
 - **Caching:** per game-item-ID with a configurable TTL (default 12h) to stay polite to EC. The
   active filter signature is folded into the cache key, so changing filters never serves a stale,
   differently-filtered result.
 - **Filters (MVP+1):** global EC-parity filters in config (`Configuration.Filters`); each active
   one is appended as a `filter[..]` param onto the loves-ordered listing, so the threshold is
-  evaluated against the filtered set. Config version bumped 1 → 2 (old configs migrate by keeping
-  default, unfiltered selections).
+  evaluated against the filtered set. Config version bumped 1 → 2, then 2 → 3 for the history rework
+  (additive — old configs load unchanged; history lives in a separate file).
 
 ## Roadmap / next steps
 
-1. **In-game smoke test** of the NeedGreed hook + toast (the only unverified path).
+1. **In-game smoke test** of the NeedGreed hook + history/bell (the only unverified path).
 2. **Replace the curl subprocess** with the GitHub Actions crawler + static JSON index.
 3. ✅ **MVP+1:** configurable filters mirroring EC (gender, race, date submitted, tags =
    classification/style/theme/color, intended-for/job, level to equip, exclude Mog Station /
    seasonal). Stored globally in config (`Filters`), appended to every popularity lookup; the
    loves threshold is judged against the filtered result set. Server filtering is out of scope.
-4. **In-window annotation:** mark popular items directly on the Need/Greed window (better UX than a
-   toast).
+4. ✅ **History window:** scrollable, persistent popularity history with clickable glamour links,
+   replacing the toast. Follow-up: on-item overlay showing the top hearts count.
 5. **MVP+2:** EC login → restrict notifications to glamours the user has saved.
 
 ## Notes for resuming

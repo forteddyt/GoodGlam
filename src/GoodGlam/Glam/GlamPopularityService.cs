@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Dalamud.Interface.ImGuiNotification;
 
 namespace GoodGlam.Glam;
 
@@ -10,27 +9,6 @@ namespace GoodGlam.Glam;
 public interface INotifier
 {
     void NotifyPopular(DropItem drop, GlamPopularity popularity);
-}
-
-/// <summary>Default notifier: raises a native Dalamud toast on the framework thread.</summary>
-public sealed class DalamudNotifier : INotifier
-{
-    public void NotifyPopular(DropItem drop, GlamPopularity popularity)
-    {
-        var content = popularity.TopGlamUrl is null
-            ? $"{drop.Name} is used in a popular glamour ({popularity.TopLoves} loves)."
-            : $"{drop.Name} is used in a popular glamour ({popularity.TopLoves} loves).\n{popularity.TopGlamUrl}";
-
-        // Notifications must be raised on the framework thread.
-        _ = Services.Framework.RunOnFrameworkThread(() =>
-            Services.Notifications.AddNotification(new Notification
-            {
-                Title = "GoodGlam",
-                Content = content,
-                Type = NotificationType.Info,
-                InitialDuration = TimeSpan.FromSeconds(10),
-            }));
-    }
 }
 
 /// <summary>
@@ -45,12 +23,7 @@ public sealed class GlamPopularityService
     private readonly IGlamSource source;
     private readonly INotifier notifier;
 
-    public GlamPopularityService(Configuration config, IGlamSource source)
-        : this(config, source, new DalamudNotifier())
-    {
-    }
-
-    internal GlamPopularityService(Configuration config, IGlamSource source, INotifier notifier)
+    public GlamPopularityService(Configuration config, IGlamSource source, INotifier notifier)
     {
         this.config = config;
         this.source = source;

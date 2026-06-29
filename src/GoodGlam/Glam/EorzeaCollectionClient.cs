@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,7 +11,7 @@ namespace GoodGlam.Glam;
 public sealed record EcItem(int EcId, string Name, long XivApiId);
 
 /// <summary>The most-loved glamour found for a given item, used to judge popularity.</summary>
-public sealed record GlamPopularity(int TopLoves, string? TopGlamUrl);
+public sealed record GlamPopularity(int TopLoves, string? TopGlamUrl, string? TopGlamName = null, string? ListingUrl = null);
 
 /// <summary>
 /// Abstraction over the glamour data source so the live scraper can be swapped for a
@@ -86,11 +87,14 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
 
         var html = await this.transport.GetAsync(url, ct).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(html))
-            return new GlamPopularity(0, null);
+            return new GlamPopularity(0, null, null, url);
 
         // Each glamour card exposes its loves count as:
         //   <span id="js-glamour-likes-<glamId>" ...>1,234</span>
-        // We take the maximum across the page rather than trusting result ordering.
+        // and its title in a sibling link:
+        //   <a ... href="/glamour/<glamId>/<slug>"> ... <h3 class="...content-title...">Name</h3>
+        // We take the maximum loves across the page rather than trusting result ordering,
+        // then pair the winner with its name.
         var bestLoves = 0;
         string? bestId = null;
         foreach (Match m in LovesRegex().Matches(html))
@@ -103,8 +107,26 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
             }
         }
 
-        var glamUrl = bestId is null ? null : $"{BaseUrl}/glamour/{bestId}";
-        return new GlamPopularity(bestLoves, glamUrl);
+        if (bestId is null)
+            return new GlamPopularity(0, null, null, url);
+
+        var name = ExtractGlamName(html, bestId);
+        return new GlamPopularity(bestLoves, $"{BaseUrl}/glamour/{bestId}", name, url);
+    }
+
+    /// <summary>
+    /// Pulls the glamour title for a specific id out of the listing HTML, decoding HTML entities.
+    /// Returns <c>null</c> if the card's title can't be located (the URL alone is still useful).
+    /// </summary>
+    private static string? ExtractGlamName(string html, string glamId)
+    {
+        foreach (Match m in NameRegex().Matches(html))
+        {
+            if (m.Groups[1].Value == glamId)
+                return WebUtility.HtmlDecode(m.Groups[2].Value).Trim();
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -135,6 +157,9 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
 
     [GeneratedRegex("id=\"js-glamour-likes-(\\d+)\"[^>]*>([\\d,]+)<", RegexOptions.IgnoreCase)]
     private static partial Regex LovesRegex();
+
+    [GeneratedRegex("href=\"/glamour/(\\d+)/[^\"]*\"[\\s\\S]{0,200}?content-title[^>]*>([^<]+)<", RegexOptions.IgnoreCase)]
+    private static partial Regex NameRegex();
 
     private sealed record SearchRequest([property: JsonPropertyName("search")] string Search);
 
