@@ -310,11 +310,11 @@ var assemblies = [
       { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 105, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 0, "ucl": 68, "cal": 68, "tl": 148, "cb": 0, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 63, "cal": 63, "tl": 129, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 4, "ucl": 4, "cal": 8, "tl": 21, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 5, "ucl": 4, "cal": 9, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.ConfigWindow", "rp": "GoodGlam_ConfigWindow.html", "cl": 0, "ucl": 124, "cal": 124, "tl": 220, "cb": 0, "tb": 44, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.HistoryWindow", "rp": "GoodGlam_HistoryWindow.html", "cl": 0, "ucl": 51, "cal": 51, "tl": 107, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.LogoInteraction", "rp": "GoodGlam_LogoInteraction.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 54, "cb": 10, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 18, "ucl": 34, "cal": 52, "tl": 121, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 19, "ucl": 34, "cal": 53, "tl": 130, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated", "rp": "GoodGlam_Generated.html", "cl": 157, "ucl": 39, "cal": 196, "tl": 593, "cb": 77, "tb": 118, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "cl": 64, "ucl": 19, "cal": 83, "tl": 313, "cb": 33, "tb": 54, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__NameRegex_1", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA742320574BAC24577939DA167294EA4A343__NameRegex_1.html", "cl": 89, "ucl": 20, "cal": 109, "tl": 572, "cb": 43, "tb": 62, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -332,7 +332,7 @@ var riskHotspotMetrics = [
 
 var riskHotspots = [
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 49,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 58,
     "metrics": [
       { "value": 420, "exceeded": true },
       { "value": 20, "exceeded": true },
