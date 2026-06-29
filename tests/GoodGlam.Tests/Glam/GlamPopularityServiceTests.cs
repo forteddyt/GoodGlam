@@ -24,6 +24,19 @@ public class GlamPopularityServiceTests
     }
 
     [Fact]
+    public async Task Forwards_full_popularity_including_name_and_listing_url_to_notifier()
+    {
+        var notifier = new FakeNotifier();
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u", "Nirvana", "list") };
+        await new GlamPopularityService(new Configuration { LovesThreshold = 100 }, source, notifier)
+            .ProcessAsync(Drop());
+
+        notifier.LastPopularity.Should().NotBeNull();
+        notifier.LastPopularity!.TopGlamName.Should().Be("Nirvana");
+        notifier.LastPopularity.ListingUrl.Should().Be("list");
+    }
+
+    [Fact]
     public async Task Does_not_notify_below_threshold()
     {
         var notifier = new FakeNotifier();

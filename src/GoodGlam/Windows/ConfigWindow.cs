@@ -9,17 +9,25 @@ namespace GoodGlam.Windows;
 public sealed class ConfigWindow : Window
 {
     private readonly Configuration config;
+    private readonly Action openHistory;
 
-    public ConfigWindow(Configuration config)
+    public ConfigWindow(Configuration config, Action openHistory)
         : base("GoodGlam Settings###GoodGlamConfig")
     {
         this.config = config;
+        this.openHistory = openHistory;
         this.Size = new Vector2(460, 520);
         this.SizeCondition = ImGuiCond.FirstUseEver;
     }
 
     public override void Draw()
     {
+        if (ImGui.Button("Open history"))
+            this.openHistory();
+        Help("Opens the browsable history of popular drops (persists across sessions).");
+
+        ImGui.Separator();
+
         var enabled = this.config.Enabled;
         if (ImGui.Checkbox("Enable drop notifications", ref enabled))
         {
@@ -27,7 +35,7 @@ public sealed class ConfigWindow : Window
             this.config.Save();
         }
 
-        Help("Master switch. When off, GoodGlam never checks dropped items or shows toasts.");
+        Help("Master switch. When off, GoodGlam never checks dropped items or logs popular drops.");
 
         ImGui.Separator();
         ImGui.TextWrapped(

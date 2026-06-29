@@ -21,10 +21,15 @@ whether an unassuming dungeon/trial/raid drop is actually worth rolling Need on.
    `POST /gear/<slot>/search` endpoint (matching on the `XIVApiId` field).
 4. EC's glamour listing is queried sorted by loves (`GET /glamours?...&filter[orderBy]=loves`),
    and the top glamour's love count is parsed.
-5. If a glamour using the item has **≥ the configured loves threshold** (default **100**), a
-   native toast notification fires.
+5. If a glamour using the item has **≥ the configured loves threshold** (default **100**), the drop
+   is recorded in a **persistent, browsable history window** and a clickable bell-style
+   notification is raised (click it to open the history).
 
 Results are cached per item to stay polite to Eorzea Collection.
+
+> 💡 The old transient toast has been replaced: qualifying drops are now logged to a **scrollable,
+> persistent history window** (each row has a clickable glamour link) plus a clickable bell, so a
+> popular drop can always be pulled back up — even after the alert is dismissed.
 
 ### A note on the data transport (important)
 
@@ -94,15 +99,18 @@ In Dalamud's `/xlsettings` → *Experimental* → *Dev Plugin Locations*, add th
 
 ## Usage
 
-- `/goodglam` — open the settings window.
-- Settings: enable/disable notifications, the loves threshold, and the cache lifetime.
+- `/goodglam` — open the **history** window (browsable, persistent list of popular drops).
+- `/goodglam config` — open the settings window (also has an **Open history** button).
+- Each history row shows the timestamp, item name, top loves count, and a **clickable** glamour
+  name that opens the Eorzea Collection page. History persists across game sessions; **Clear**
+  empties it.
+- Qualifying drops raise a persistent bell-style notification — click it to open the history.
+- Settings: enable/disable notifications, the loves threshold, the cache lifetime, and filters.
 
 ## Roadmap
 
-- **Annotate the Need/Greed window** itself (mark popular items inline) instead of a toast.
+- **Annotate the Need/Greed window** itself (mark popular items inline, top hearts count).
 - **Replace the curl subprocess** with a GitHub Actions crawler + static JSON index.
-- **Configurable filters** mirroring Eorzea Collection (gender, date, tags, intended-for/job,
-  level to equip).
 - **Eorzea Collection login** to restrict notifications to glamours you've saved.
 
 ## Project layout
@@ -117,8 +125,11 @@ src/GoodGlam/
   Glam/EcTransport.cs            managed-first HttpClient w/ curl.exe fallback
   Glam/EorzeaCollectionClient.cs IGlamSource (EC request building + parsing)
   Glam/GlamPopularityService.cs  orchestration + caching + notify
+  History/NotificationHistory.cs persistent drop history store (JSON, capped)
+  History/HistoryNotifier.cs     records drops + raises clickable bell
   Loot/LootWatcher.cs            NeedGreed addon hook + Loot struct read
   Windows/ConfigWindow.cs        settings UI
+  Windows/HistoryWindow.cs       scrollable popular-drop history
 ```
 
 > ℹ️ This plugin was developed with AI assistance.

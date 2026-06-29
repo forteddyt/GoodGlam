@@ -6,7 +6,7 @@ namespace GoodGlam;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 2;
+    public int Version { get; set; } = 3;
 
     /// <summary>Master toggle for drop notifications.</summary>
     public bool Enabled { get; set; } = true;

@@ -82,13 +82,52 @@ public class EorzeaCollectionClientTests
     }
 
     [Fact]
+    public async Task GetTopPopularity_captures_name_of_winning_glamour()
+    {
+        const string html =
+            "<span id=\"js-glamour-likes-100\">1,234</span>" +
+            "<a href=\"/glamour/100/loser\"><div><h3 class=\"content-title\">Loser</h3></div></a>" +
+            "<span id=\"js-glamour-likes-200\">5,678</span>" +
+            "<a href=\"/glamour/200/nirvana\"><div><h3 class=\"content-title has-text-white\">Nirvana &amp; Co</h3></div></a>";
+        var transport = new FakeTransport { GetResult = html };
+        var result = await new EorzeaCollectionClient(transport)
+            .GetTopPopularityAsync(GlamSlot.Body, 1, new PopularityFilters(), CancellationToken.None);
+
+        result.TopLoves.Should().Be(5678);
+        result.TopGlamUrl.Should().Be("https://ffxiv.eorzeacollection.com/glamour/200");
+        result.TopGlamName.Should().Be("Nirvana & Co");
+        result.ListingUrl.Should().Be(transport.GetUrls.Single());
+    }
+
+    [Fact]
     public async Task GetTopPopularity_returns_empty_when_no_cards()
     {
-        var result = await new EorzeaCollectionClient(new FakeTransport { GetResult = "<html></html>" })
+        var transport = new FakeTransport { GetResult = "<html></html>" };
+        var result = await new EorzeaCollectionClient(transport)
             .GetTopPopularityAsync(GlamSlot.Body, 1, new PopularityFilters(), CancellationToken.None);
 
         result.TopLoves.Should().Be(0);
         result.TopGlamUrl.Should().BeNull();
+        result.TopGlamName.Should().BeNull();
+        result.ListingUrl.Should().Be(transport.GetUrls.Single());
+    }
+
+    [Fact]
+    public async Task GetTopPopularity_name_null_when_winner_has_no_card_title()
+    {
+        // The winning glamour (id 200) has a loves span but no matching title link on the page;
+        // a different card does. Name should be null while url + listing are still populated.
+        const string html =
+            "<span id=\"js-glamour-likes-200\">5,678</span>" +
+            "<a href=\"/glamour/100/other\"><div><h3 class=\"content-title\">Other</h3></div></a>";
+        var transport = new FakeTransport { GetResult = html };
+        var result = await new EorzeaCollectionClient(transport)
+            .GetTopPopularityAsync(GlamSlot.Body, 1, new PopularityFilters(), CancellationToken.None);
+
+        result.TopLoves.Should().Be(5678);
+        result.TopGlamUrl.Should().Be("https://ffxiv.eorzeacollection.com/glamour/200");
+        result.TopGlamName.Should().BeNull();
+        result.ListingUrl.Should().Be(transport.GetUrls.Single());
     }
 
     [Fact]

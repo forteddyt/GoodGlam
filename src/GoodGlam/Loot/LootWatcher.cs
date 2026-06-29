@@ -115,7 +115,7 @@ public sealed class LootWatcher : IDisposable
     /// <summary>
     /// Debug helper (<c>/goodglam check &lt;itemId&gt;</c>): pushes a single game item ID through
     /// the real resolve -> Eorzea Collection -> notify pipeline, decoupling an end-to-end check
-    /// from waiting on a random loot roll. Lower the loves threshold first to see a toast.
+    /// from waiting on a random loot roll. Lower the loves threshold first to log a history entry.
     /// </summary>
     public void SimulateDrop(uint itemId)
     {
@@ -137,7 +137,7 @@ public sealed class LootWatcher : IDisposable
         Services.Log.Information(
             $"GoodGlam[check]: {drop.Name} -> topLoves={popularity.TopLoves}, " +
             $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
-            $"{(passed ? "POPULAR — toast raised (bottom-right)" : "below threshold — no toast")}");
+            $"{(passed ? "POPULAR — logged to history (bell raised)" : "below threshold — not logged")}");
     }
 
     public void Dispose()

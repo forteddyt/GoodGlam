@@ -2,6 +2,7 @@ using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using GoodGlam.Glam;
+using GoodGlam.History;
 using GoodGlam.Loot;
 using GoodGlam.Windows;
 
@@ -14,6 +15,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly Configuration config;
     private readonly WindowSystem windowSystem = new("GoodGlam");
     private readonly ConfigWindow configWindow;
+    private readonly HistoryWindow historyWindow;
+    private readonly NotificationHistoryStore history;
     private readonly EorzeaCollectionClient ecClient;
     private readonly LootWatcher lootWatcher;
 
@@ -24,20 +27,26 @@ public sealed class Plugin : IDalamudPlugin
         this.config = Services.PluginInterface.GetPluginConfig() as Configuration ?? CreateDefaultConfig();
         this.config.Filters ??= new();
 
+        var historyPath = Path.Combine(Services.PluginInterface.ConfigDirectory.FullName, "history.json");
+        this.history = new NotificationHistoryStore(historyPath);
+
         this.ecClient = new EorzeaCollectionClient();
-        var popularity = new GlamPopularityService(this.config, this.ecClient);
+        var notifier = new HistoryNotifier(this.history, this.ToggleHistory);
+        var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
 
-        this.configWindow = new ConfigWindow(this.config);
+        this.configWindow = new ConfigWindow(this.config, this.ToggleHistory);
+        this.historyWindow = new HistoryWindow(this.history);
         this.windowSystem.AddWindow(this.configWindow);
+        this.windowSystem.AddWindow(this.historyWindow);
 
         Services.PluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
         Services.PluginInterface.UiBuilder.OpenConfigUi += this.ToggleConfig;
-        Services.PluginInterface.UiBuilder.OpenMainUi += this.ToggleConfig;
+        Services.PluginInterface.UiBuilder.OpenMainUi += this.ToggleHistory;
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open settings. Debug: /goodglam dump (log live loot window), /goodglam check <itemId> (run the full pipeline on demand).",
+            HelpMessage = "Open the history window. /goodglam config (settings). Debug: /goodglam dump, /goodglam check <itemId>.",
         });
 
         Services.Log.Information("GoodGlam loaded.");
@@ -56,13 +65,22 @@ public sealed class Plugin : IDalamudPlugin
         var trimmed = args.Trim();
         if (trimmed.Length == 0)
         {
-            this.ToggleConfig();
+            this.ToggleHistory();
             return;
         }
 
         var parts = trimmed.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         switch (parts[0].ToLowerInvariant())
         {
+            case "config":
+            case "settings":
+                this.ToggleConfig();
+                break;
+
+            case "history":
+                this.ToggleHistory();
+                break;
+
             case "dump":
                 this.lootWatcher.DumpCurrentLoot();
                 break;
@@ -82,13 +100,15 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ToggleConfig() => this.configWindow.Toggle();
 
+    private void ToggleHistory() => this.historyWindow.Toggle();
+
     public void Dispose()
     {
         Services.Commands.RemoveHandler(CommandName);
 
         Services.PluginInterface.UiBuilder.Draw -= this.windowSystem.Draw;
         Services.PluginInterface.UiBuilder.OpenConfigUi -= this.ToggleConfig;
-        Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleConfig;
+        Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleHistory;
         this.windowSystem.RemoveAllWindows();
 
         this.lootWatcher.Dispose();
