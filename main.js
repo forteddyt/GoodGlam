@@ -292,26 +292,30 @@ var assemblies = [
     "classes": [
       { "name": "GoodGlam.Configuration", "rp": "GoodGlam_Configuration.html", "cl": 5, "ucl": 1, "cal": 6, "tl": 30, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.CurlTransport", "rp": "GoodGlam_CurlTransport.html", "cl": 0, "ucl": 65, "cal": 65, "tl": 246, "cb": 0, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.DalamudNotifier", "rp": "GoodGlam_DalamudNotifier.html", "cl": 0, "ucl": 12, "cal": 12, "tl": 111, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.DropItem", "rp": "GoodGlam_DropItem.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 48, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.EcFilterOption", "rp": "GoodGlam_EcFilterOption.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 215, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.EcFilterOptions", "rp": "GoodGlam_EcFilterOptions.html", "cl": 0, "ucl": 183, "cal": 183, "tl": 215, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.EcItem", "rp": "GoodGlam_EcItem.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 149, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.EcItem", "rp": "GoodGlam_EcItem.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 174, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.EcTransportFactory", "rp": "GoodGlam_EcTransportFactory.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 246, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.EorzeaCollectionClient", "rp": "GoodGlam_EorzeaCollectionClient.html", "cl": 47, "ucl": 3, "cal": 50, "tl": 197, "cb": 22, "tb": 24, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.EorzeaCollectionClient", "rp": "GoodGlam_EorzeaCollectionClient.html", "cl": 55, "ucl": 3, "cal": 58, "tl": 277, "cb": 26, "tb": 28, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.FallbackEcTransport", "rp": "GoodGlam_FallbackEcTransport.html", "cl": 15, "ucl": 0, "cal": 15, "tl": 246, "cb": 9, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.GlamPopularity", "rp": "GoodGlam_GlamPopularity.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 149, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.GlamPopularityService", "rp": "GoodGlam_GlamPopularityService.html", "cl": 29, "ucl": 2, "cal": 31, "tl": 111, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.GlamPopularity", "rp": "GoodGlam_GlamPopularity.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 174, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.GlamPopularityService", "rp": "GoodGlam_GlamPopularityService.html", "cl": 29, "ucl": 0, "cal": 29, "tl": 84, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.GlamSlot", "rp": "GoodGlam_GlamSlot.html", "cl": 25, "ucl": 2, "cal": 27, "tl": 59, "cb": 24, "tb": 24, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.ItemResolver", "rp": "GoodGlam_ItemResolver.html", "cl": 1, "ucl": 14, "cal": 15, "tl": 48, "cb": 4, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.ManagedHttpTransport", "rp": "GoodGlam_ManagedHttpTransport.html", "cl": 0, "ucl": 32, "cal": 32, "tl": 246, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.PopularityFilters", "rp": "GoodGlam_PopularityFilters.html", "cl": 39, "ucl": 0, "cal": 39, "tl": 90, "cb": 32, "tb": 32, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.History.HistoryNotifier", "rp": "GoodGlam_HistoryNotifier.html", "cl": 29, "ucl": 2, "cal": 31, "tl": 48, "cb": 2, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.History.NotificationHistoryStore", "rp": "GoodGlam_NotificationHistoryStore.html", "cl": 35, "ucl": 3, "cal": 38, "tl": 105, "cb": 7, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 105, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 0, "ucl": 68, "cal": 68, "tl": 148, "cb": 0, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 44, "cal": 44, "tl": 96, "cb": 0, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 1, "ucl": 6, "cal": 7, "tl": 20, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.ConfigWindow", "rp": "GoodGlam_ConfigWindow.html", "cl": 0, "ucl": 114, "cal": 114, "tl": 205, "cb": 0, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "System.Text.RegularExpressions.Generated", "rp": "GoodGlam_Generated.html", "cl": 67, "ucl": 19, "cal": 86, "tl": 276, "cb": 34, "tb": 56, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "cl": 64, "ucl": 19, "cal": 83, "tl": 258, "cb": 33, "tb": 54, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 54, "cal": 54, "tl": 116, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 3, "ucl": 4, "cal": 7, "tl": 20, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.ConfigWindow", "rp": "GoodGlam_ConfigWindow.html", "cl": 0, "ucl": 119, "cal": 119, "tl": 213, "cb": 0, "tb": 42, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.HistoryWindow", "rp": "GoodGlam_HistoryWindow.html", "cl": 0, "ucl": 51, "cal": 51, "tl": 107, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "System.Text.RegularExpressions.Generated", "rp": "GoodGlam_Generated.html", "cl": 157, "ucl": 39, "cal": 196, "tl": 593, "cb": 77, "tb": 118, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "cl": 64, "ucl": 19, "cal": 83, "tl": 313, "cb": 33, "tb": 54, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__NameRegex_1", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA742320574BAC24577939DA167294EA4A343__NameRegex_1.html", "cl": 89, "ucl": 20, "cal": 109, "tl": 572, "cb": 43, "tb": 62, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
 ];
 
@@ -326,13 +330,19 @@ var riskHotspotMetrics = [
 
 var riskHotspots = [
   {
+    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 65,
+    "metrics": [
+      { "value": 272, "exceeded": true },
+      { "value": 16, "exceeded": true },
+    ]},
+  {
     "assembly": "GoodGlam", "class": "GoodGlam.Loot.LootWatcher", "reportPath": "GoodGlam_LootWatcher.html", "methodName": "ScanLoot()", "methodShortName": "ScanLoot()", "fileIndex": 0, "line": 55,
     "metrics": [
       { "value": 156, "exceeded": true },
       { "value": 12, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawCombo(System.String,System.Collections.Generic.IReadOnlyList\u00601\u003CGoodGlam.Glam.EcFilterOption\u003E,System.String,System.Action\u00601\u003CSystem.String\u003E,System.String)", "methodShortName": "DrawCombo(...)", "fileIndex": 0, "line": 138,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawCombo(System.String,System.Collections.Generic.IReadOnlyList\u00601\u003CGoodGlam.Glam.EcFilterOption\u003E,System.String,System.Action\u00601\u003CSystem.String\u003E,System.String)", "methodShortName": "DrawCombo(...)", "fileIndex": 0, "line": 146,
     "metrics": [
       { "value": 156, "exceeded": true },
       { "value": 12, "exceeded": false },
@@ -350,13 +360,25 @@ var riskHotspots = [
       { "value": 10, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 56,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 25,
     "metrics": [
       { "value": 110, "exceeded": true },
       { "value": 10, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawRacePicker(GoodGlam.Glam.PopularityFilters)", "methodShortName": "DrawRacePicker(...)", "fileIndex": 0, "line": 158,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawRacePicker(GoodGlam.Glam.PopularityFilters)", "methodShortName": "DrawRacePicker(...)", "fileIndex": 0, "line": 166,
+    "metrics": [
+      { "value": 110, "exceeded": true },
+      { "value": 10, "exceeded": false },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.HistoryWindow", "reportPath": "GoodGlam_HistoryWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 29,
+    "metrics": [
+      { "value": 110, "exceeded": true },
+      { "value": 10, "exceeded": false },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.HistoryWindow", "reportPath": "GoodGlam_HistoryWindow.html", "methodName": "DrawLinkCell(System.String,System.String,System.String)", "methodShortName": "DrawLinkCell(...)", "fileIndex": 0, "line": 86,
     "metrics": [
       { "value": 110, "exceeded": true },
       { "value": 10, "exceeded": false },
@@ -368,25 +390,31 @@ var riskHotspots = [
       { "value": 8, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 23,
+    "assembly": "GoodGlam", "class": "System.Text.RegularExpressions.Generated", "reportPath": "GoodGlam_Generated.html", "methodName": "TryMatchAtCurrentPosition(System.ReadOnlySpan\u00601\u003CSystem.Char\u003E)", "methodShortName": "TryMatchAtCurrentPosition(...)", "fileIndex": 0, "line": 394,
     "metrics": [
-      { "value": 72, "exceeded": true },
-      { "value": 8, "exceeded": false },
+      { "value": 66, "exceeded": true },
+      { "value": 48, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "System.Text.RegularExpressions.Generated", "reportPath": "GoodGlam_Generated.html", "methodName": "TryMatchAtCurrentPosition(System.ReadOnlySpan\u00601\u003CSystem.Char\u003E)", "methodShortName": "TryMatchAtCurrentPosition(...)", "fileIndex": 0, "line": 138,
+    "assembly": "GoodGlam", "class": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__NameRegex_1", "reportPath": "GoodGlam__RegexGenerator_g_F011672748D06EA742320574BAC24577939DA167294EA4A343__NameRegex_1.html", "methodName": "TryMatchAtCurrentPosition(System.ReadOnlySpan\u00601\u003CSystem.Char\u003E)", "methodShortName": "TryMatchAtCurrentPosition(...)", "fileIndex": 0, "line": 394,
+    "metrics": [
+      { "value": 66, "exceeded": true },
+      { "value": 48, "exceeded": true },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "System.Text.RegularExpressions.Generated", "reportPath": "GoodGlam_Generated.html", "methodName": "TryMatchAtCurrentPosition(System.ReadOnlySpan\u00601\u003CSystem.Char\u003E)", "methodShortName": "TryMatchAtCurrentPosition(...)", "fileIndex": 0, "line": 193,
     "metrics": [
       { "value": 61, "exceeded": true },
       { "value": 40, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "reportPath": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "methodName": "TryMatchAtCurrentPosition(System.ReadOnlySpan\u00601\u003CSystem.Char\u003E)", "methodShortName": "TryMatchAtCurrentPosition(...)", "fileIndex": 0, "line": 138,
+    "assembly": "GoodGlam", "class": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "reportPath": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "methodName": "TryMatchAtCurrentPosition(System.ReadOnlySpan\u00601\u003CSystem.Char\u003E)", "methodShortName": "TryMatchAtCurrentPosition(...)", "fileIndex": 0, "line": 193,
     "metrics": [
       { "value": 61, "exceeded": true },
       { "value": 40, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawFilters()", "methodShortName": "DrawFilters()", "fileIndex": 0, "line": 84,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawFilters()", "methodShortName": "DrawFilters()", "fileIndex": 0, "line": 92,
     "metrics": [
       { "value": 42, "exceeded": true },
       { "value": 6, "exceeded": false },
