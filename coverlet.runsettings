@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <!--
+            Restrict instrumentation to the plugin assembly. The Windows Dalamud zip ships
+            PDBs for FFXIVClientStructs/Lumina/Dalamud, so without this coverlet counts tens
+            of thousands of generated game-library lines (see issue #19).
+          -->
+          <Include>[GoodGlam]*</Include>
+          <Format>cobertura</Format>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
