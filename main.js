@@ -305,16 +305,19 @@ var assemblies = [
       { "name": "GoodGlam.Glam.ItemResolver", "rp": "GoodGlam_ItemResolver.html", "cl": 1, "ucl": 14, "cal": 15, "tl": 48, "cb": 4, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.ManagedHttpTransport", "rp": "GoodGlam_ManagedHttpTransport.html", "cl": 0, "ucl": 32, "cal": 32, "tl": 246, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.PopularityFilters", "rp": "GoodGlam_PopularityFilters.html", "cl": 39, "ucl": 0, "cal": 39, "tl": 90, "cb": 32, "tb": 32, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.History.HistoryNotifier", "rp": "GoodGlam_HistoryNotifier.html", "cl": 29, "ucl": 2, "cal": 31, "tl": 48, "cb": 2, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.History.HistoryNotifier", "rp": "GoodGlam_HistoryNotifier.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 28, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.NotificationHistoryStore", "rp": "GoodGlam_NotificationHistoryStore.html", "cl": 35, "ucl": 3, "cal": 38, "tl": 105, "cb": 7, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.History.NotificationState", "rp": "GoodGlam_NotificationState.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 105, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 0, "ucl": 68, "cal": 68, "tl": 148, "cb": 0, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 63, "cal": 63, "tl": 129, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 5, "ucl": 4, "cal": 9, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 70, "cal": 70, "tl": 143, "cb": 0, "tb": 22, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 3, "ucl": 6, "cal": 9, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.ConfigWindow", "rp": "GoodGlam_ConfigWindow.html", "cl": 0, "ucl": 124, "cal": 124, "tl": 220, "cb": 0, "tb": 44, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.GlowStamp", "rp": "GoodGlam_GlowStamp.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 140, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.HistoryWindow", "rp": "GoodGlam_HistoryWindow.html", "cl": 0, "ucl": 51, "cal": 51, "tl": 107, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.LogoInteraction", "rp": "GoodGlam_LogoInteraction.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 54, "cb": 10, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 19, "ucl": 34, "cal": 53, "tl": 130, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 22, "ucl": 99, "cal": 121, "tl": 299, "cb": 0, "tb": 42, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.NotificationGlow", "rp": "GoodGlam_NotificationGlow.html", "cl": 31, "ucl": 2, "cal": 33, "tl": 140, "cb": 13, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated", "rp": "GoodGlam_Generated.html", "cl": 157, "ucl": 39, "cal": 196, "tl": 593, "cb": 77, "tb": 118, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "cl": 64, "ucl": 19, "cal": 83, "tl": 313, "cb": 33, "tb": 54, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__NameRegex_1", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA742320574BAC24577939DA167294EA4A343__NameRegex_1.html", "cl": 89, "ucl": 20, "cal": 109, "tl": 572, "cb": 43, "tb": 62, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -332,16 +335,16 @@ var riskHotspotMetrics = [
 
 var riskHotspots = [
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 58,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 88,
     "metrics": [
-      { "value": 420, "exceeded": true },
-      { "value": 20, "exceeded": true },
+      { "value": 506, "exceeded": true },
+      { "value": 22, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 71,
+    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 72,
     "metrics": [
-      { "value": 272, "exceeded": true },
-      { "value": 16, "exceeded": true },
+      { "value": 342, "exceeded": true },
+      { "value": 18, "exceeded": true },
     ]},
   {
     "assembly": "GoodGlam", "class": "GoodGlam.Loot.LootWatcher", "reportPath": "GoodGlam_LootWatcher.html", "methodName": "ScanLoot()", "methodShortName": "ScanLoot()", "fileIndex": 0, "line": 55,
@@ -393,6 +396,12 @@ var riskHotspots = [
     ]},
   {
     "assembly": "GoodGlam", "class": "GoodGlam.Glam.CurlTransport", "reportPath": "GoodGlam_CurlTransport.html", "methodName": "RunCurlAsync()", "methodShortName": "RunCurlAsync()", "fileIndex": 0, "line": 182,
+    "metrics": [
+      { "value": 72, "exceeded": true },
+      { "value": 8, "exceeded": false },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "BakeGlowTextureAsync()", "methodShortName": "BakeGlowTextureAsync()", "fileIndex": 0, "line": 233,
     "metrics": [
       { "value": 72, "exceeded": true },
       { "value": 8, "exceeded": false },
