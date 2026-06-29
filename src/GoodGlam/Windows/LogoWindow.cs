@@ -33,7 +33,7 @@ public sealed class LogoWindow : Window
         : base("GoodGlam###GoodGlamLogo",
             ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar
             | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoBackground
-            | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoDocking)
+            | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoMove)
     {
         this.config = config;
         this.openHistory = openHistory;
@@ -56,9 +56,11 @@ public sealed class LogoWindow : Window
         var clicked = ImGui.ImageButton(wrap.Handle, size, Vector2.Zero, Vector2.One, 0, transparent);
         ImGui.PopStyleColor();
 
-        // The button fills the whole window, so there's no empty body left for ImGui's built-in
-        // "drag to move" to grab. Drive the move/click/tooltip decisions through LogoInteraction
-        // (pure, testable) and act on its result here against live ImGui state.
+        // All movement is handled manually below via SetWindowPos. ImGui's built-in window move is
+        // disabled (NoMove) so it can't grab the window's padding border and bypass the lock — that
+        // border exists because AlwaysAutoResize keeps the default WindowPadding around the button.
+        // Drive the move/click/tooltip decisions through LogoInteraction (pure, testable) and act on
+        // its result here against live ImGui state.
         var outcome = this.interaction.Process(new LogoInteraction.Input(
             Held: ImGui.IsItemActive(),
             MouseDragging: ImGui.IsMouseDragging(ImGuiMouseButton.Left),
