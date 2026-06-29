@@ -36,7 +36,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open settings. Debug: /goodglam dump (log live loot window), /goodglam test <itemId> (run the full pipeline on demand).",
+            HelpMessage = "Open settings. Debug: /goodglam dump (log live loot window), /goodglam check <itemId> (run the full pipeline on demand).",
         });
 
         Services.Log.Information("GoodGlam loaded.");
@@ -66,11 +66,11 @@ public sealed class Plugin : IDalamudPlugin
                 this.lootWatcher.DumpCurrentLoot();
                 break;
 
-            case "test":
+            case "check":
                 if (parts.Length > 1 && uint.TryParse(parts[1].Trim(), out var itemId))
                     this.lootWatcher.SimulateDrop(itemId);
                 else
-                    Services.Log.Information("GoodGlam: usage is /goodglam test <itemId> (a numeric game item ID).");
+                    Services.Log.Information("GoodGlam: usage is /goodglam check <itemId> (a numeric game item ID).");
                 break;
 
             default:

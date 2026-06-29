@@ -113,7 +113,7 @@ public sealed class LootWatcher : IDisposable
     }
 
     /// <summary>
-    /// Debug helper (<c>/goodglam test &lt;itemId&gt;</c>): pushes a single game item ID through
+    /// Debug helper (<c>/goodglam check &lt;itemId&gt;</c>): pushes a single game item ID through
     /// the real resolve -> Eorzea Collection -> notify pipeline, decoupling an end-to-end check
     /// from waiting on a random loot roll. Lower the loves threshold first to see a toast.
     /// </summary>
@@ -122,11 +122,11 @@ public sealed class LootWatcher : IDisposable
         var drop = this.resolver.Resolve(itemId);
         if (drop is null)
         {
-            Services.Log.Information($"GoodGlam[test]: item {itemId} did not resolve to glamour-relevant gear.");
+            Services.Log.Information($"GoodGlam[check]: item {itemId} did not resolve to glamour-relevant gear.");
             return;
         }
 
-        Services.Log.Information($"GoodGlam[test]: simulating drop of {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}].");
+        Services.Log.Information($"GoodGlam[check]: simulating drop of {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}].");
         _ = this.ReportSimulatedDropAsync(drop);
     }
 
@@ -135,7 +135,7 @@ public sealed class LootWatcher : IDisposable
         var popularity = await this.popularity.ProcessAsync(drop).ConfigureAwait(false);
         var passed = popularity.TopLoves >= this.config.LovesThreshold;
         Services.Log.Information(
-            $"GoodGlam[test]: {drop.Name} -> topLoves={popularity.TopLoves}, " +
+            $"GoodGlam[check]: {drop.Name} -> topLoves={popularity.TopLoves}, " +
             $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
             $"{(passed ? "POPULAR — toast raised (bottom-right)" : "below threshold — no toast")}");
     }
