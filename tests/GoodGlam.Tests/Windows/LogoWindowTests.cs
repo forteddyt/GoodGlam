@@ -67,4 +67,23 @@ public class LogoWindowTests
 
         window.DrawConditions().Should().Be(loggedIn);
     }
+
+    [Fact]
+    public void DrawConditions_tracks_login_logout_transitions_on_one_instance()
+    {
+        var loggedIn = false;
+        A.CallTo(() => this.clientState.IsLoggedIn).ReturnsLazily(() => loggedIn);
+        var window = this.NewWindow(new Configuration());
+
+        // Character select (logged out): hidden.
+        window.DrawConditions().Should().BeFalse();
+
+        // Log in: appears.
+        loggedIn = true;
+        window.DrawConditions().Should().BeTrue();
+
+        // Log out: disappears again — no latched state keeps it visible.
+        loggedIn = false;
+        window.DrawConditions().Should().BeFalse();
+    }
 }
