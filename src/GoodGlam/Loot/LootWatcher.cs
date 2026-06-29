@@ -74,6 +74,72 @@ public sealed class LootWatcher : IDisposable
         }
     }
 
+    /// <summary>
+    /// Debug helper (<c>/goodglam dump</c>): logs every populated entry of the live
+    /// <see cref="Loot"/> struct so we can see exactly what the roll window exposes. Trigger
+    /// it during a roll window — running old content solo &amp; unsynced is a reliable,
+    /// repeatable way to open one on demand.
+    /// </summary>
+    public unsafe void DumpCurrentLoot()
+    {
+        var loot = CSLoot.Instance();
+        if (loot == null)
+        {
+            Services.Log.Information("GoodGlam[dump]: Loot.Instance() is null (no active loot session).");
+            return;
+        }
+
+        var items = loot->Items;
+        var populated = 0;
+        Services.Log.Information($"GoodGlam[dump]: SelectedIndex={loot->SelectedIndex}, {items.Length} slots:");
+        for (var i = 0; i < items.Length; i++)
+        {
+            var it = items[i];
+            if (it.ItemId == 0)
+                continue;
+
+            populated++;
+            var drop = this.resolver.Resolve(it.ItemId);
+            var resolved = drop is null ? "non-gear/unresolved" : $"{drop.Name} [slot={drop.Slot.Key}]";
+            Services.Log.Information(
+                $"  [{i}] ItemId={it.ItemId} Count={it.ItemCount} GlamourItemId={it.GlamourItemId} " +
+                $"RollState={it.RollState} RollResult={it.RollResult} RollValue={it.RollValue} " +
+                $"LootMode={it.LootMode} Weekly={it.WeeklyLootItem} Time={it.Time:F1}/{it.MaxTime:F1} " +
+                $"Chest(ObjId={it.ChestObjectId},Idx={it.ChestItemIndex}) => {resolved}");
+        }
+
+        if (populated == 0)
+            Services.Log.Information("GoodGlam[dump]: no populated loot entries (open this during a roll window).");
+    }
+
+    /// <summary>
+    /// Debug helper (<c>/goodglam test &lt;itemId&gt;</c>): pushes a single game item ID through
+    /// the real resolve -> Eorzea Collection -> notify pipeline, decoupling an end-to-end check
+    /// from waiting on a random loot roll. Lower the loves threshold first to see a toast.
+    /// </summary>
+    public void SimulateDrop(uint itemId)
+    {
+        var drop = this.resolver.Resolve(itemId);
+        if (drop is null)
+        {
+            Services.Log.Information($"GoodGlam[test]: item {itemId} did not resolve to glamour-relevant gear.");
+            return;
+        }
+
+        Services.Log.Information($"GoodGlam[test]: simulating drop of {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}].");
+        _ = this.ReportSimulatedDropAsync(drop);
+    }
+
+    private async Task ReportSimulatedDropAsync(DropItem drop)
+    {
+        var popularity = await this.popularity.ProcessAsync(drop).ConfigureAwait(false);
+        var passed = popularity.TopLoves >= this.config.LovesThreshold;
+        Services.Log.Information(
+            $"GoodGlam[test]: {drop.Name} -> topLoves={popularity.TopLoves}, " +
+            $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
+            $"{(passed ? "POPULAR — toast raised (bottom-right)" : "below threshold — no toast")}");
+    }
+
     public void Dispose()
     {
         Services.AddonLifecycle.UnregisterListener(this.OnAddonEvent);

@@ -21,13 +21,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         pluginInterface.Create<Services>();
 
-        this.config = Services.PluginInterface.GetPluginConfig() as Configuration;
-        if (this.config is null)
-        {
-            // First run: persist defaults so later loads reuse them and migrations have a baseline.
-            this.config = new Configuration();
-            this.config.Save();
-        }
+        this.config = Services.PluginInterface.GetPluginConfig() as Configuration ?? CreateDefaultConfig();
 
         this.ecClient = new EorzeaCollectionClient();
         var popularity = new GlamPopularityService(this.config, this.ecClient);
@@ -42,13 +36,48 @@ public sealed class Plugin : IDalamudPlugin
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open the GoodGlam settings window.",
+            HelpMessage = "Open settings. Debug: /goodglam dump (log live loot window), /goodglam test <itemId> (run the full pipeline on demand).",
         });
 
         Services.Log.Information("GoodGlam loaded.");
     }
 
-    private void OnCommand(string command, string args) => this.ToggleConfig();
+    private static Configuration CreateDefaultConfig()
+    {
+        // First run: persist defaults so later loads reuse them and migrations have a baseline.
+        var config = new Configuration();
+        config.Save();
+        return config;
+    }
+
+    private void OnCommand(string command, string args)
+    {
+        var trimmed = args.Trim();
+        if (trimmed.Length == 0)
+        {
+            this.ToggleConfig();
+            return;
+        }
+
+        var parts = trimmed.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        switch (parts[0].ToLowerInvariant())
+        {
+            case "dump":
+                this.lootWatcher.DumpCurrentLoot();
+                break;
+
+            case "test":
+                if (parts.Length > 1 && uint.TryParse(parts[1].Trim(), out var itemId))
+                    this.lootWatcher.SimulateDrop(itemId);
+                else
+                    Services.Log.Information("GoodGlam: usage is /goodglam test <itemId> (a numeric game item ID).");
+                break;
+
+            default:
+                this.ToggleConfig();
+                break;
+        }
+    }
 
     private void ToggleConfig() => this.configWindow.Toggle();
 
