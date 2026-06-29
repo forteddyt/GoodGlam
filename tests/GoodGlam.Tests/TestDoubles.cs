@@ -1,0 +1,113 @@
+using System.Reflection;
+using Dalamud.Plugin.Services;
+using GoodGlam.Glam;
+
+namespace GoodGlam.Tests;
+
+/// <summary>
+/// In-memory <see cref="IGlamSource"/> for deterministic popularity tests. Records calls so
+/// tests can assert caching (the source should not be hit twice for a cached item).
+/// </summary>
+internal sealed class FakeGlamSource : IGlamSource
+{
+    public int ResolveCalls;
+    public int PopularityCalls;
+    public EcItem? EcItem = new(14930, "X", 25430);
+    public GlamPopularity Popularity = new(0, null);
+    public Exception? Throw;
+    public PopularityFilters? LastFilters;
+
+    public Task<EcItem?> ResolveEcItemAsync(GlamSlot slot, string itemName, uint gameItemId, CancellationToken ct)
+    {
+        this.ResolveCalls++;
+        if (this.Throw is not null) throw this.Throw;
+        return Task.FromResult(this.EcItem);
+    }
+
+    public Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
+    {
+        this.PopularityCalls++;
+        this.LastFilters = filters;
+        if (this.Throw is not null) throw this.Throw;
+        return Task.FromResult(this.Popularity);
+    }
+}
+
+/// <summary>Captures the most recent notification so threshold tests can assert it fired.</summary>
+internal sealed class FakeNotifier : INotifier
+{
+    public int Count;
+    public DropItem? LastDrop;
+    public GlamPopularity? LastPopularity;
+
+    public void NotifyPopular(DropItem drop, GlamPopularity popularity)
+    {
+        this.Count++;
+        this.LastDrop = drop;
+        this.LastPopularity = popularity;
+    }
+}
+
+/// <summary>Scripted <see cref="IEcTransport"/> returning queued bodies and recording requests.</summary>
+internal sealed class FakeTransport : IEcTransport
+{
+    public readonly List<string> PostUrls = new();
+    public readonly List<string> PostBodies = new();
+    public readonly List<string> GetUrls = new();
+    public string? PostResult;
+    public string? GetResult;
+
+    public Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
+    {
+        this.PostUrls.Add(url);
+        this.PostBodies.Add(jsonBody);
+        return Task.FromResult(this.PostResult);
+    }
+
+    public Task<string?> GetAsync(string url, CancellationToken ct)
+    {
+        this.GetUrls.Add(url);
+        return Task.FromResult(this.GetResult);
+    }
+}
+
+/// <summary>One-shot transport: returns a fixed value and counts calls (for fallback tests).</summary>
+internal sealed class CountingTransport(string? result) : IEcTransport
+{
+    public int Calls;
+
+    public Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
+    {
+        this.Calls++;
+        return Task.FromResult(result);
+    }
+
+    public Task<string?> GetAsync(string url, CancellationToken ct)
+    {
+        this.Calls++;
+        return Task.FromResult(result);
+    }
+}
+
+/// <summary>
+/// Installs a no-op <see cref="IPluginLog"/> into the static <c>Services.Log</c> so code paths
+/// that log (warnings, transport switch) don't dereference a null static under test.
+/// </summary>
+internal static class TestServices
+{
+    private static bool initialized;
+
+    public static void EnsureLog()
+    {
+        if (initialized) return;
+        var log = DispatchProxy.Create<IPluginLog, NoopLog>();
+        typeof(GoodGlam.Services).GetProperty("Log", BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(null, log);
+        initialized = true;
+    }
+}
+
+internal class NoopLog : DispatchProxy
+{
+    protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => null;
+}

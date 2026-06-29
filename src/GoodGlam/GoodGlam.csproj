@@ -62,4 +62,8 @@
     <None Include="GoodGlam.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="GoodGlam.Tests" />
+  </ItemGroup>
+
 </Project>

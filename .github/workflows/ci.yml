@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build-test:
+    name: Build & test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore Dalamud dev libraries
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .dalamud | Out-Null
+          curl.exe -L -o .dalamud/latest.zip https://goatcorp.github.io/dalamud-distrib/latest.zip
+          Expand-Archive -Path .dalamud/latest.zip -DestinationPath .dalamud -Force
+
+      - name: Restore
+        run: dotnet restore GoodGlam.slnx
+
+      - name: Build
+        run: dotnet build GoodGlam.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test GoodGlam.slnx -c Release --no-build
