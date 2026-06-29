@@ -22,6 +22,7 @@ public sealed class Plugin : IDalamudPlugin
         pluginInterface.Create<Services>();
 
         this.config = Services.PluginInterface.GetPluginConfig() as Configuration ?? CreateDefaultConfig();
+        this.config.Filters ??= new();
 
         this.ecClient = new EorzeaCollectionClient();
         var popularity = new GlamPopularityService(this.config, this.ecClient);

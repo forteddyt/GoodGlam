@@ -10,7 +10,7 @@ namespace GoodGlam.Glam;
 /// </summary>
 public sealed class GlamPopularityService(Configuration config, IGlamSource source)
 {
-    private readonly ConcurrentDictionary<uint, CacheEntry> cache = new();
+    private readonly ConcurrentDictionary<string, CacheEntry> cache = new();
 
     /// <summary>
     /// Checks a dropped item and raises a notification if it qualifies as popular.
@@ -35,7 +35,11 @@ public sealed class GlamPopularityService(Configuration config, IGlamSource sour
 
     private async Task<GlamPopularity> GetPopularityAsync(DropItem drop)
     {
-        if (this.cache.TryGetValue(drop.ItemId, out var entry) && !entry.IsExpired(config.CacheTtlHours))
+        // Filters are global, but fold their signature into the cache key so toggling a filter
+        // is treated as a fresh lookup instead of returning a stale, differently-filtered result.
+        var filters = config.Filters;
+        var cacheKey = $"{drop.ItemId}|{filters.Signature()}";
+        if (this.cache.TryGetValue(cacheKey, out var entry) && !entry.IsExpired(config.CacheTtlHours))
             return entry.Popularity;
 
         var ecItem = await source.ResolveEcItemAsync(drop.Slot, drop.Name, drop.ItemId, CancellationToken.None)
@@ -43,9 +47,9 @@ public sealed class GlamPopularityService(Configuration config, IGlamSource sour
 
         var popularity = ecItem is null
             ? new GlamPopularity(0, null)
-            : await source.GetTopPopularityAsync(drop.Slot, ecItem.EcId, CancellationToken.None).ConfigureAwait(false);
+            : await source.GetTopPopularityAsync(drop.Slot, ecItem.EcId, filters, CancellationToken.None).ConfigureAwait(false);
 
-        this.cache[drop.ItemId] = new CacheEntry(popularity, DateTime.UtcNow);
+        this.cache[cacheKey] = new CacheEntry(popularity, DateTime.UtcNow);
         return popularity;
     }
 
