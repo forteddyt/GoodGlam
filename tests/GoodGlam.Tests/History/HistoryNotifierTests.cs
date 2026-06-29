@@ -1,7 +1,3 @@
-using Dalamud.Interface.ImGuiNotification;
-using Dalamud.Interface.ImGuiNotification.EventArgs;
-using Dalamud.Plugin.Services;
-using FakeItEasy;
 using FluentAssertions;
 using GoodGlam.Glam;
 using GoodGlam.History;
@@ -10,37 +6,25 @@ using Xunit;
 namespace GoodGlam.Tests.History;
 
 /// <summary>
-/// Exercises <see cref="HistoryNotifier"/> with FakeItEasy fakes of the Dalamud services it
-/// touches (injected into the static <c>Services</c> holder), so the record-write and bell-raise
-/// behaviour can be asserted without a running framework.
+/// Exercises <see cref="HistoryNotifier"/>: every qualifying drop is appended to the persistent
+/// store and the shared <see cref="NotificationState"/> is raised so the floating logo lights up.
+/// The notifier no longer touches any Dalamud service (the old bell is gone), so these run without
+/// a framework.
 /// </summary>
 public class HistoryNotifierTests : IDisposable
 {
     private readonly string path;
     private readonly NotificationHistoryStore store;
-    private readonly IFramework framework = A.Fake<IFramework>();
-    private readonly INotificationManager notifications = A.Fake<INotificationManager>();
-    private readonly IActiveNotification active = A.Fake<IActiveNotification>();
-    private int openHistoryCalls;
+    private readonly NotificationState notificationState = new();
 
     public HistoryNotifierTests()
     {
         TestServices.EnsureLog();
-
-        // Run the "framework thread" work inline so the bell-raising lambda actually executes.
-        A.CallTo(() => this.framework.RunOnFrameworkThread(A<Action>._))
-            .Invokes((Action a) => a())
-            .Returns(Task.CompletedTask);
-        A.CallTo(() => this.notifications.AddNotification(A<Notification>._)).Returns(this.active);
-
-        TestServices.Install<IFramework>("Framework", this.framework);
-        TestServices.Install<INotificationManager>("Notifications", this.notifications);
-
         this.path = Path.Combine(Path.GetTempPath(), $"goodglam-notifier-{Guid.NewGuid():N}.json");
         this.store = new NotificationHistoryStore(this.path);
     }
 
-    private HistoryNotifier Notifier() => new(this.store, () => this.openHistoryCalls++);
+    private HistoryNotifier Notifier() => new(this.store, this.notificationState);
 
     private static DropItem Drop() => new(3610, "Cavalry Gauntlets", GlamSlot.Hands);
 
@@ -74,42 +58,13 @@ public class HistoryNotifierTests : IDisposable
     }
 
     [Fact]
-    public void Raises_exactly_one_notification_dispatched_on_framework_thread()
+    public void Raises_the_notification_state_so_the_logo_glows()
     {
-        this.Notifier().NotifyPopular(Drop(), new GlamPopularity(250, "u", "Nirvana", "list"));
-
-        A.CallTo(() => this.framework.RunOnFrameworkThread(A<Action>._)).MustHaveHappenedOnceExactly();
-        A.CallTo(() => this.notifications.AddNotification(A<Notification>._)).MustHaveHappenedOnceExactly();
-    }
-
-    [Fact]
-    public void Notification_uses_glam_name_in_content_and_persists_until_dismissed()
-    {
-        Notification? captured = null;
-        A.CallTo(() => this.notifications.AddNotification(A<Notification>._))
-            .Invokes((Notification n) => captured = n)
-            .Returns(this.active);
+        this.notificationState.HasUnseen.Should().BeFalse();
 
         this.Notifier().NotifyPopular(Drop(), new GlamPopularity(250, "u", "Nirvana", "list"));
 
-        captured.Should().NotBeNull();
-        captured!.Title.Should().Be("GoodGlam");
-        captured.Content.Should().Contain("Cavalry Gauntlets").And.Contain("\"Nirvana\"").And.Contain("250");
-        captured.MinimizedText.Should().Contain("Cavalry Gauntlets").And.Contain("250");
-        captured.InitialDuration.Should().Be(TimeSpan.MaxValue);
-    }
-
-    [Fact]
-    public void Notification_content_falls_back_when_glam_name_is_null()
-    {
-        Notification? captured = null;
-        A.CallTo(() => this.notifications.AddNotification(A<Notification>._))
-            .Invokes((Notification n) => captured = n)
-            .Returns(this.active);
-
-        this.Notifier().NotifyPopular(Drop(), new GlamPopularity(120, null));
-
-        captured!.Content.Should().Contain("a popular glamour").And.NotContain("\"");
+        this.notificationState.HasUnseen.Should().BeTrue();
     }
 
     public void Dispose()

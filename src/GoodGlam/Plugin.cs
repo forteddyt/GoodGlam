@@ -18,6 +18,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly HistoryWindow historyWindow;
     private readonly LogoWindow logoWindow;
     private readonly NotificationHistoryStore history;
+    private readonly NotificationState notificationState = new();
     private readonly EorzeaCollectionClient ecClient;
     private readonly LootWatcher lootWatcher;
 
@@ -32,13 +33,13 @@ public sealed class Plugin : IDalamudPlugin
         this.history = new NotificationHistoryStore(historyPath);
 
         this.ecClient = new EorzeaCollectionClient();
-        var notifier = new HistoryNotifier(this.history, this.ToggleHistory);
+        var notifier = new HistoryNotifier(this.history, this.notificationState);
         var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
 
         this.configWindow = new ConfigWindow(this.config, this.ToggleHistory, this.SetLogoVisible);
         this.historyWindow = new HistoryWindow(this.history);
-        this.logoWindow = new LogoWindow(this.config, this.ToggleHistory, this.ToggleConfig)
+        this.logoWindow = new LogoWindow(this.config, this.ToggleHistory, this.ToggleConfig, this.notificationState)
         {
             IsOpen = this.config.ShowLogo,
         };
@@ -52,7 +53,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open the history window. /goodglam config (settings). Debug: /goodglam dump, /goodglam check <itemId>.",
+            HelpMessage = "Open the history window. /goodglam config (settings). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow.",
         });
 
         Services.Log.Information("GoodGlam loaded.");
@@ -98,6 +99,13 @@ public sealed class Plugin : IDalamudPlugin
                     Services.Log.Information("GoodGlam: usage is /goodglam check <itemId> (a numeric game item ID).");
                 break;
 
+            case "glow":
+                // Debug: light the logo glow directly, bypassing the EC lookup, so the
+                // notification animation can be verified without a qualifying drop.
+                this.notificationState.Raise();
+                Services.Log.Information("GoodGlam[glow]: notification glow raised — open the history (or click the logo) to clear it.");
+                break;
+
             default:
                 this.ToggleConfig();
                 break;
@@ -106,7 +114,12 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ToggleConfig() => this.configWindow.Toggle();
 
-    private void ToggleHistory() => this.historyWindow.Toggle();
+    private void ToggleHistory()
+    {
+        // Opening the history acknowledges any pending popular drop, so clear the logo glow.
+        this.notificationState.Clear();
+        this.historyWindow.Toggle();
+    }
 
     private void SetLogoVisible(bool visible)
     {
@@ -124,6 +137,7 @@ public sealed class Plugin : IDalamudPlugin
         Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleHistory;
         this.windowSystem.RemoveAllWindows();
 
+        this.logoWindow.Dispose();
         this.lootWatcher.Dispose();
     }
 }
