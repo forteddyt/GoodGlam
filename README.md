@@ -26,22 +26,31 @@ Results are cached per item to stay polite to Eorzea Collection.
 
 ### A note on the data transport (important)
 
-Eorzea Collection has **no public API**, and its Cloudflare WAF **blocks .NET's managed HTTP
-stacks** (`SocketsHttpHandler` *and* `WinHttpHandler`) via TLS fingerprinting — they get a `403`
-even with browser-like headers. The system **`curl.exe`** (shipped with Windows 10 1803+) produces
-a TLS handshake Cloudflare accepts, so the MVP shells out to it.
+Eorzea Collection has **no public API**, and on **native Windows** its Cloudflare WAF **blocks
+.NET's managed HTTP stacks** (`SocketsHttpHandler` *and* `WinHttpHandler`) via TLS fingerprinting —
+they get a `403` even with browser-like headers. The system **`curl.exe`** (shipped with Windows 10
+1803+) produces a TLS handshake Cloudflare accepts, so on Windows the plugin shells out to it.
 
-This is a pragmatic MVP choice with known trade-offs (a child process spawned from the game looks
-unusual to AV/EDR, and would not be accepted into the official Dalamud plugin repository). The
-planned replacement is a **GitHub Actions** crawler that builds a static JSON index which the
-plugin downloads in-process — see [`docs/STATUS.md`](docs/STATUS.md#planned-replacement-deferred-preferred).
+**On Linux (XIVLauncher.Core / Wine)** the situation is the opposite: there is no `curl.exe` in the
+Wine prefix (and launching a native `curl` via `Process.Start` fails), but .NET's in-process
+`HttpClient` *does* reach Eorzea Collection — Wine's TLS goes through GnuTLS/OpenSSL, a fingerprint
+Cloudflare accepts. So rather than sniff the OS, the plugin **tries in-process `HttpClient` first and
+falls back to the `curl.exe` subprocess only if managed HTTP comes back blocked**, remembering which
+one worked. This is self-correcting: it uses curl only on native Windows where it's needed, and drops
+it automatically if Cloudflare ever stops blocking. The transport seam lives in `Glam/EcTransport.cs`.
+
+The `curl.exe` subprocess is a pragmatic Windows-only choice with known trade-offs (a child process
+spawned from the game looks unusual to AV/EDR, and would not be accepted into the official Dalamud
+plugin repository). The planned replacement is a **GitHub Actions** crawler that builds a static JSON
+index which the plugin downloads in-process — see
+[`docs/STATUS.md`](docs/STATUS.md#planned-replacement-deferred-preferred).
 
 ## Building
 
-Requirements: **.NET 10 SDK** (Windows).
+Requirements: **.NET 10 SDK** (Windows **or** Linux — the plugin builds and runs on both).
 
-The project references the Dalamud dev libraries directly. Restore them once into the repo-root
-`.dalamud/` folder:
+The project references the Dalamud dev libraries directly. On Windows, restore them once into the
+repo-root `.dalamud/` folder:
 
 ```powershell
 # from the repo root
@@ -61,6 +70,20 @@ The plugin (`GoodGlam.dll`) and manifest (`GoodGlam.json`) are emitted to
 
 > Prefer your own XIVLauncher dev hooks? Set the `DALAMUD_HOME` environment variable to that folder
 > and it will be used instead of `.dalamud/`.
+
+### Building on Linux (XIVLauncher.Core)
+
+You don't need Windows. Build against the same Dalamud dev libraries XIVLauncher.Core already keeps
+on disk by pointing `DALAMUD_HOME` at them:
+
+```bash
+export DALAMUD_HOME="$HOME/.xlcore/dalamud/Hooks/dev"
+dotnet build src/GoodGlam/GoodGlam.csproj -c Release
+```
+
+Then add the **Linux path** to the built `GoodGlam.dll` under `/xlsettings` → *Experimental* →
+*Dev Plugin Locations* (XIVLauncher.Core maps your home directory into the Wine prefix, so the
+native path works directly).
 
 ### Loading in-game (dev)
 
@@ -89,7 +112,8 @@ src/GoodGlam/
   Configuration.cs               persisted settings
   Glam/GlamSlot.cs               EquipSlotCategory -> EC slot mapping
   Glam/ItemResolver.cs           game item ID -> name + slot (Lumina)
-  Glam/EorzeaCollectionClient.cs IGlamSource (curl-backed EC client)
+  Glam/EcTransport.cs            managed-first HttpClient w/ curl.exe fallback
+  Glam/EorzeaCollectionClient.cs IGlamSource (EC request building + parsing)
   Glam/GlamPopularityService.cs  orchestration + caching + notify
   Loot/LootWatcher.cs            NeedGreed addon hook + Loot struct read
   Windows/ConfigWindow.cs        settings UI

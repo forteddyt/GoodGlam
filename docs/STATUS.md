@@ -13,16 +13,20 @@ For end-user build/run instructions see the [README](../README.md); this file fo
 - **State:** MVP **feature-complete and compiles clean** (0 warnings / 0 errors) against
   **Dalamud API 15 / `net10.0-windows`**. EC integration logic is **runtime-verified** against the
   live site. **Not yet tested inside the running game.**
-- **Biggest gotcha:** EC blocks .NET's HTTP stacks via Cloudflare TLS fingerprinting. The MVP works
-  around this by shelling out to the system **`curl.exe`** (see [Transport](#transport-important)).
+- **Biggest gotcha:** on **native Windows** EC blocks .NET's HTTP stacks via Cloudflare TLS
+  fingerprinting, so the plugin shells out to the system **`curl.exe`**. Under **Wine (Linux)** the
+  opposite holds — in-process `HttpClient` works but `curl.exe` doesn't — so the transport is chosen
+  at runtime (see [Transport](#transport-important)).
 
 ## Quick start on a fresh machine
 
-Requires the **.NET 10 SDK** on **Windows** (the plugin is Windows-only; it also relies on
-`C:\Windows\System32\curl.exe`, present on Windows 10 1803+).
+Requires the **.NET 10 SDK**. The plugin builds and runs on **Windows and Linux**:
+
+- **Windows:** also relies on `C:\Windows\System32\curl.exe` (present on Windows 10 1803+).
+- **Linux:** runs under XIVLauncher.Core (Wine); no `curl.exe` needed — it uses in-process HTTP.
 
 ```powershell
-# 1. Restore the Dalamud dev libraries into .dalamud/ (gitignored, ~56 MB)
+# 1. Restore the Dalamud dev libraries into .dalamud/ (gitignored, ~56 MB)  [Windows]
 New-Item -ItemType Directory -Force -Path .dalamud | Out-Null
 curl.exe -L -o .dalamud/latest.zip https://goatcorp.github.io/dalamud-distrib/latest.zip
 Expand-Archive -Path .dalamud/latest.zip -DestinationPath .dalamud -Force
@@ -33,7 +37,9 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
 ```
 
 > The csproj defaults to the repo-local `.dalamud/` folder. To use your own XIVLauncher dev hooks
-> instead, set the `DALAMUD_HOME` environment variable to that folder.
+> instead, set the `DALAMUD_HOME` environment variable to that folder. On Linux this is the easiest
+> route: `export DALAMUD_HOME="$HOME/.xlcore/dalamud/Hooks/dev"` then `dotnet build` — no `.dalamud/`
+> download required.
 
 ### Load in-game (dev)
 
@@ -47,10 +53,12 @@ dotnet build src/GoodGlam/GoodGlam.csproj -c Release
 
 | Area | Status |
 |---|---|
-| Project builds (API 15, net10.0-windows) | ✅ 0 warn / 0 err |
+| Project builds (API 15, net10.0-windows) | ✅ 0 err (Windows **and** Linux) |
 | EC item search `POST /gear/<slot>/search` (game ID → EC ID) | ✅ runtime-verified (25430 → 14930) |
 | EC popularity scrape `GET /glamours?...orderBy=loves` (parse loves) | ✅ runtime-verified |
-| `curl.exe` transport from .NET subprocess | ✅ verified |
+| `curl.exe` transport from .NET subprocess (native Windows) | ✅ verified |
+| In-process `HttpClient` transport under Wine (Linux) | ✅ runtime-verified (POST + GET, HTTP 200) |
+| Managed-first transport with curl fallback (auto-select) | ✅ verified under XIVLauncher Wine |
 | `NeedGreed` addon hook + `Loot` struct read | ⛔ not tested in-game |
 | Toast notification on qualifying drop | ⛔ not tested in-game |
 | Config window / `/goodglam` command | ⛔ not tested in-game |
@@ -61,17 +69,34 @@ remainder.
 
 ## Transport (important)
 
-EC has **no public API**, and its Cloudflare WAF **hard-blocks .NET's managed HTTP** — both
-`SocketsHttpHandler` and `WinHttpHandler` return `403` even with full browser headers, because
-Cloudflare fingerprints the TLS ClientHello (JA3/JA4). The system **`curl.exe`** (libcurl/Schannel)
-produces a handshake Cloudflare accepts, so the MVP shells out to it via `System.Diagnostics.Process`.
+EC has **no public API**, and on **native Windows** its Cloudflare WAF **hard-blocks .NET's managed
+HTTP** — both `SocketsHttpHandler` and `WinHttpHandler` return `403` even with full browser headers,
+because Cloudflare fingerprints the TLS ClientHello (JA3/JA4). The system **`curl.exe`**
+(libcurl/Schannel) produces a handshake Cloudflare accepts, so on Windows the plugin shells out to it
+via `System.Diagnostics.Process`.
 
-- Dalamud does **not** sandbox plugins, so `Process.Start` is allowed.
-- **Known trade-offs:** a child process spawned from the game can look unusual to AV/EDR; this design
-  would be rejected by the official Dalamud plugin repo; there's per-lookup spawn overhead.
+**Cross-platform selection.** The plugin runs on Linux too (XIVLauncher.Core under Wine), where the
+opposite holds: there is no `curl.exe` in the prefix (a native ELF launched via `Process.Start` fails
+with `E_HANDLE`) but in-process `HttpClient` reaches EC fine — Wine's TLS goes through GnuTLS/OpenSSL,
+a fingerprint Cloudflare **accepts** (`HTTP 200`, verified against the live site).
+
+Rather than sniff the OS, `Glam/EcTransport.cs` uses a **try-managed-first, fall-back-to-curl**
+composite (`FallbackEcTransport`):
+
+- Try `ManagedHttpTransport` (in-process `HttpClient`) first. Works under Wine and most platforms.
+- If it comes back blocked (Cloudflare `403` → `null`), fall back to `CurlTransport` (`curl.exe`).
+- Whichever last succeeded becomes primary, so steady-state traffic uses one working path.
+
+This is self-correcting: curl is spawned only on native Windows where managed HTTP is blocked, and is
+dropped automatically if Cloudflare ever stops fingerprinting .NET's stack — no Wine detection needed.
+
+- Dalamud does **not** sandbox plugins, so `Process.Start` is allowed (Windows path).
+- **Known trade-offs (Windows path):** a child process spawned from the game can look unusual to
+  AV/EDR; this design would be rejected by the official Dalamud plugin repo; there's per-lookup spawn
+  overhead.
 - **Verified:** in-process .NET `HttpClient` *can* reach GitHub static hosting
-  (`raw.githubusercontent.com`, `*.github.io`) — only EC is blocked. This is what makes the planned
-  replacement viable.
+  (`raw.githubusercontent.com`, `*.github.io`) on Windows too — only EC is blocked there. This is what
+  makes the planned replacement viable.
 
 ### Planned replacement (deferred, preferred)
 
@@ -102,7 +127,8 @@ src/GoodGlam/
   Configuration.cs               persisted settings (Enabled, LovesThreshold=100, CacheTtlHours=12)
   Glam/GlamSlot.cs               EquipSlotCategory -> EC slot; FilterParam = "<key>Piece"
   Glam/ItemResolver.cs           game item ID -> name + slot (Lumina Item sheet); HQ normalize; skips non-gear
-  Glam/EorzeaCollectionClient.cs IGlamSource via curl.exe subprocess (search + popularity scrape)
+  Glam/EcTransport.cs            IEcTransport; managed-first HttpClient w/ curl.exe fallback (FallbackEcTransport)
+  Glam/EorzeaCollectionClient.cs IGlamSource; builds EC requests + parses results (delegates HTTP to IEcTransport)
   Glam/GlamPopularityService.cs  orchestration + per-item TTL cache + toast
   Loot/LootWatcher.cs            NeedGreed AddonLifecycle hook; reads CSLoot.Instance()->Items
   Windows/ConfigWindow.cs        ImGui settings UI
