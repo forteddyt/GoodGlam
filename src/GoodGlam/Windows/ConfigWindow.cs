@@ -10,12 +10,14 @@ public sealed class ConfigWindow : Window
 {
     private readonly Configuration config;
     private readonly Action openHistory;
+    private readonly Action<bool> setLogoVisible;
 
-    public ConfigWindow(Configuration config, Action openHistory)
+    public ConfigWindow(Configuration config, Action openHistory, Action<bool> setLogoVisible)
         : base("GoodGlam Settings###GoodGlamConfig")
     {
         this.config = config;
         this.openHistory = openHistory;
+        this.setLogoVisible = setLogoVisible;
         this.Size = new Vector2(460, 520);
         this.SizeCondition = ImGuiCond.FirstUseEver;
     }
@@ -25,6 +27,11 @@ public sealed class ConfigWindow : Window
         if (ImGui.Button("Open history"))
             this.openHistory();
         Help("Opens the browsable history of popular drops (persists across sessions).");
+
+        var showLogo = this.config.ShowLogo;
+        if (ImGui.Checkbox("Show floating logo button", ref showLogo))
+            this.setLogoVisible(showLogo);
+        Help("Shows a small draggable GoodGlam logo in-game; click it to open the history window.");
 
         ImGui.Separator();
 

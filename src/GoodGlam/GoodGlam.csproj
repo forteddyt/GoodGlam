@@ -63,6 +63,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Brand logo drawn by LogoWindow; loaded at runtime via ITextureProvider.GetFromManifestResource. -->
+    <EmbeddedResource Include="Assets/Logo.png" LogicalName="GoodGlam.Assets.Logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="GoodGlam.Tests" />
   </ItemGroup>
 
