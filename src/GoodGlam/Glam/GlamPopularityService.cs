@@ -40,7 +40,7 @@ public sealed class DalamudNotifier : INotifier
 /// </summary>
 public sealed class GlamPopularityService
 {
-    private readonly ConcurrentDictionary<uint, CacheEntry> cache = new();
+    private readonly ConcurrentDictionary<string, CacheEntry> cache = new();
     private readonly Configuration config;
     private readonly IGlamSource source;
     private readonly INotifier notifier;
@@ -80,7 +80,11 @@ public sealed class GlamPopularityService
 
     private async Task<GlamPopularity> GetPopularityAsync(DropItem drop)
     {
-        if (this.cache.TryGetValue(drop.ItemId, out var entry) && !entry.IsExpired(this.config.CacheTtlHours))
+        // Filters are global, but fold their signature into the cache key so toggling a filter
+        // is treated as a fresh lookup instead of returning a stale, differently-filtered result.
+        var filters = this.config.Filters;
+        var cacheKey = $"{drop.ItemId}|{filters.Signature()}";
+        if (this.cache.TryGetValue(cacheKey, out var entry) && !entry.IsExpired(this.config.CacheTtlHours))
             return entry.Popularity;
 
         var ecItem = await this.source.ResolveEcItemAsync(drop.Slot, drop.Name, drop.ItemId, CancellationToken.None)
@@ -88,9 +92,9 @@ public sealed class GlamPopularityService
 
         var popularity = ecItem is null
             ? new GlamPopularity(0, null)
-            : await this.source.GetTopPopularityAsync(drop.Slot, ecItem.EcId, CancellationToken.None).ConfigureAwait(false);
+            : await this.source.GetTopPopularityAsync(drop.Slot, ecItem.EcId, filters, CancellationToken.None).ConfigureAwait(false);
 
-        this.cache[drop.ItemId] = new CacheEntry(popularity, DateTime.UtcNow);
+        this.cache[cacheKey] = new CacheEntry(popularity, DateTime.UtcNow);
         return popularity;
     }
 
