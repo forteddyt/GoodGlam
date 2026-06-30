@@ -14,10 +14,10 @@ namespace GoodGlam.Windows;
 /// A small, frameless floating button that shows the GoodGlam logo (the brand mark adapted from
 /// Eorzea Collection). It is only drawn once a character is logged in (see
 /// <see cref="DrawConditions"/>), so it stays hidden on the title / character-select screen.
-/// Clicking it opens the history window. The logo is drawn from an embedded high-resolution PNG,
+/// Clicking it opens the GoodGlam window. The logo is drawn from an embedded high-resolution PNG,
 /// scaled by the current UI/DPI factor so it stays crisp and correctly sized on any monitor. The
 /// window is draggable; ImGui persists its position by window id. A right-click context menu
-/// exposes settings and a hide option.
+/// exposes opening the window and a hide option.
 /// </summary>
 public sealed class LogoWindow : Window, IDisposable
 {
@@ -32,8 +32,7 @@ public sealed class LogoWindow : Window, IDisposable
     private static readonly Assembly OwnAssembly = typeof(LogoWindow).Assembly;
 
     private readonly Configuration config;
-    private readonly Action openHistory;
-    private readonly Action openConfig;
+    private readonly Action openMain;
     private readonly NotificationState notificationState;
 
     /// <summary>Pure pointer-interaction logic (drag/lock/click decisions); see LogoInteraction.</summary>
@@ -58,15 +57,14 @@ public sealed class LogoWindow : Window, IDisposable
     /// </summary>
     private readonly object glowLock = new();
 
-    public LogoWindow(Configuration config, Action openHistory, Action openConfig, NotificationState notificationState)
+    public LogoWindow(Configuration config, Action openMain, NotificationState notificationState)
         : base("GoodGlam###GoodGlamLogo",
             ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar
             | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoBackground
             | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoMove)
     {
         this.config = config;
-        this.openHistory = openHistory;
-        this.openConfig = openConfig;
+        this.openMain = openMain;
         this.notificationState = notificationState;
 
         // It's a toolbar widget, not a dialog: Escape shouldn't close it and it shouldn't click-clack.
@@ -132,18 +130,15 @@ public sealed class LogoWindow : Window, IDisposable
         }
 
         if (outcome.AllowTooltip && ImGui.IsItemHovered())
-            ImGui.SetTooltip("GoodGlam — open history (right-click for more)");
+            ImGui.SetTooltip("GoodGlam — open window (right-click for more)");
 
-        if (outcome.OpenHistory)
-            this.openHistory();
+        if (outcome.OpenWindow)
+            this.openMain();
 
         if (ImGui.BeginPopupContextItem("##GoodGlamLogoContext"))
         {
-            if (ImGui.MenuItem("Open history"))
-                this.openHistory();
-
-            if (ImGui.MenuItem("Open settings"))
-                this.openConfig();
+            if (ImGui.MenuItem("Open GoodGlam"))
+                this.openMain();
 
             ImGui.Separator();
 

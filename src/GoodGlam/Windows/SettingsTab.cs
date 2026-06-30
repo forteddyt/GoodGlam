@@ -1,39 +1,33 @@
-using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
-using Dalamud.Interface.Windowing;
 using GoodGlam.Glam;
 
 namespace GoodGlam.Windows;
 
-public sealed class ConfigWindow : Window
+/// <summary>
+/// The Settings tab of the unified <see cref="MainWindow"/>: notification toggle, loves threshold,
+/// cache lifetime, the EC filter controls, and the floating-logo toggle. (Formerly the standalone
+/// ConfigWindow; the old "Open history" button is gone now that History is a sibling tab.)
+/// </summary>
+internal sealed class SettingsTab
 {
     private readonly Configuration config;
     private readonly EcFilterCatalog filterCatalog;
-    private readonly Action openHistory;
     private readonly Action<bool> setLogoVisible;
 
-    public ConfigWindow(Configuration config, EcFilterCatalog filterCatalog, Action openHistory, Action<bool> setLogoVisible)
-        : base("GoodGlam Settings###GoodGlamConfig")
+    internal SettingsTab(Configuration config, EcFilterCatalog filterCatalog, Action<bool> setLogoVisible)
     {
         this.config = config;
         this.filterCatalog = filterCatalog;
-        this.openHistory = openHistory;
         this.setLogoVisible = setLogoVisible;
-        this.Size = new Vector2(460, 520);
-        this.SizeCondition = ImGuiCond.FirstUseEver;
     }
 
-    public override void Draw()
+    internal void Draw()
     {
-        if (ImGui.Button("Open history"))
-            this.openHistory();
-        Help("Opens the browsable history of popular drops (persists across sessions).");
-
         var showLogo = this.config.ShowLogo;
         if (ImGui.Checkbox("Show floating logo button", ref showLogo))
             this.setLogoVisible(showLogo);
-        Help("Shows a small draggable GoodGlam logo in-game; click it to open the history window.");
+        Help("Shows a small draggable GoodGlam logo in-game; click it to open the GoodGlam window.");
 
         ImGui.Separator();
 

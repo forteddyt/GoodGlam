@@ -25,9 +25,9 @@ internal sealed class LogoInteraction
 
     /// <summary>The actions the window should take for a frame.</summary>
     /// <param name="MoveWindow">Move the window by the current mouse delta.</param>
-    /// <param name="OpenHistory">Treat this frame as a click that opens the history window.</param>
+    /// <param name="OpenWindow">Treat this frame as a click that opens the GoodGlam window.</param>
     /// <param name="AllowTooltip">Whether the hover tooltip may be shown (suppressed mid-drag).</param>
-    internal readonly record struct Output(bool MoveWindow, bool OpenHistory, bool AllowTooltip);
+    internal readonly record struct Output(bool MoveWindow, bool OpenWindow, bool AllowTooltip);
 
     /// <summary>
     /// Advances the interaction by one frame. When unlocked and the held button is being dragged,
@@ -44,11 +44,11 @@ internal sealed class LogoInteraction
         }
 
         var allowTooltip = !this.dragging;
-        var openHistory = input.Clicked && !this.dragging;
+        var openWindow = input.Clicked && !this.dragging;
 
         if (input.MouseReleased)
             this.dragging = false;
 
-        return new Output(moveWindow, openHistory, allowTooltip);
+        return new Output(moveWindow, openWindow, allowTooltip);
     }
 }

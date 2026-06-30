@@ -1,30 +1,25 @@
-using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Windowing;
 using Dalamud.Utility;
 using GoodGlam.History;
 
 namespace GoodGlam.Windows;
 
 /// <summary>
-/// Browsable, persistent replacement for the old toast: a scrollable table of every qualifying
-/// drop. Each row shows when it dropped, the item, the top loves count, and a clickable glamour
-/// name that opens the Eorzea Collection page.
+/// The History tab of the unified <see cref="MainWindow"/>: a browsable, persistent table of every
+/// qualifying drop. Each row shows when it dropped, the item, the top loves count, and a clickable
+/// glamour name that opens the Eorzea Collection page. (Formerly the standalone HistoryWindow.)
 /// </summary>
-public sealed class HistoryWindow : Window
+internal sealed class HistoryTab
 {
     private readonly NotificationHistoryStore store;
 
-    public HistoryWindow(NotificationHistoryStore store)
-        : base("GoodGlam History###GoodGlamHistory")
+    internal HistoryTab(NotificationHistoryStore store)
     {
         this.store = store;
-        this.Size = new Vector2(560, 460);
-        this.SizeCondition = ImGuiCond.FirstUseEver;
     }
 
-    public override void Draw()
+    internal void Draw()
     {
         var records = this.store.Snapshot();
 
