@@ -37,7 +37,7 @@ public sealed class Plugin : IDalamudPlugin
         var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
 
-        this.configWindow = new ConfigWindow(this.config, this.ToggleHistory, this.SetLogoVisible);
+        this.configWindow = new ConfigWindow(this.config, EcFilterCatalog.LoadEmbedded(), this.ToggleHistory, this.SetLogoVisible);
         this.historyWindow = new HistoryWindow(this.history);
         this.logoWindow = new LogoWindow(this.config, this.ToggleHistory, this.ToggleConfig, this.notificationState)
         {
