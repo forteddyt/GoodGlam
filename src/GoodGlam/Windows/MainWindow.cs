@@ -40,6 +40,16 @@ public sealed class MainWindow : Window
 
     public override void Draw()
     {
+        // All GoodGlam metadata is per-character, so there's nothing to show or edit until a
+        // character is logged in. Present a read-only note instead of the tabs on the title /
+        // character-select screen.
+        if (!Services.ClientState.IsLoggedIn)
+        {
+            ImGui.TextWrapped("Log in to a character to view or change GoodGlam. " +
+                "Each character keeps its own history, filters, and settings.");
+            return;
+        }
+
         if (!ImGui.BeginTabBar("##GoodGlamTabs"))
             return;
 

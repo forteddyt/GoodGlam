@@ -20,16 +20,20 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NotificationState notificationState = new();
     private readonly EorzeaCollectionClient ecClient;
     private readonly LootWatcher lootWatcher;
+    private readonly CharacterDataManager characterData;
 
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
         pluginInterface.Create<Services>();
 
-        this.config = Services.PluginInterface.GetPluginConfig() as Configuration ?? CreateDefaultConfig();
-        this.config.Filters ??= new();
+        // The live config + history start neutral (defaults, no backing file); CharacterDataManager
+        // binds them to the logged-in character's own files on login. Every window/service below
+        // captures these single instances, which are re-bound in place across character switches.
+        this.config = new Configuration { Filters = new() };
+        this.history = new NotificationHistoryStore(string.Empty);
 
-        var historyPath = Path.Combine(Services.PluginInterface.ConfigDirectory.FullName, "history.json");
-        this.history = new NotificationHistoryStore(historyPath);
+        var charactersRoot = Path.Combine(Services.PluginInterface.ConfigDirectory.FullName, "characters");
+        this.characterData = new CharacterDataManager(charactersRoot, this.config, this.history, this.notificationState);
 
         this.ecClient = new EorzeaCollectionClient();
         var notifier = new HistoryNotifier(this.history, this.notificationState);
@@ -37,16 +41,24 @@ public sealed class Plugin : IDalamudPlugin
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
 
         this.mainWindow = new MainWindow(this.config, EcFilterCatalog.LoadEmbedded(), this.history, this.SetLogoVisible);
-        this.logoWindow = new LogoWindow(this.config, this.ToggleMain, this.notificationState)
-        {
-            IsOpen = this.config.ShowLogo,
-        };
+
+        // No IsOpen initializer here: the config is neutral until a character logs in, so the logo's
+        // per-character show/hide preference is applied in ActivateCurrentCharacter instead.
+        this.logoWindow = new LogoWindow(this.config, this.ToggleMain, this.notificationState);
         this.windowSystem.AddWindow(this.mainWindow);
         this.windowSystem.AddWindow(this.logoWindow);
 
         Services.PluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
         Services.PluginInterface.UiBuilder.OpenConfigUi += this.ToggleMain;
         Services.PluginInterface.UiBuilder.OpenMainUi += this.ToggleMain;
+
+        Services.ClientState.Login += this.OnLogin;
+        Services.ClientState.Logout += this.OnLogout;
+
+        // If the plugin is (re)loaded while already in-game, the Login event won't fire, so adopt
+        // the current character right away.
+        if (Services.ClientState.IsLoggedIn)
+            this.OnLogin();
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
@@ -56,12 +68,69 @@ public sealed class Plugin : IDalamudPlugin
         Services.Log.Information("GoodGlam loaded.");
     }
 
-    private static Configuration CreateDefaultConfig()
+    /// <summary>
+    /// Adopts the logged-in character's per-character config + history. The character's content id
+    /// can lag the Login event by a frame, so when it isn't ready yet we retry on the next framework
+    /// tick until it resolves.
+    /// </summary>
+    private void OnLogin()
     {
-        // First run: persist defaults so later loads reuse them and migrations have a baseline.
-        var config = new Configuration();
-        config.Save();
-        return config;
+        if (Services.PlayerState.ContentId == 0)
+        {
+            // Dedupe in case login somehow fires again while we're still waiting.
+            Services.Framework.Update -= this.AwaitContentId;
+            Services.Framework.Update += this.AwaitContentId;
+            return;
+        }
+
+        this.ActivateCurrentCharacter();
+    }
+
+    private void AwaitContentId(Dalamud.Plugin.Services.IFramework framework)
+    {
+        // Stop waiting if the player logged back out before the id resolved.
+        if (!Services.ClientState.IsLoggedIn)
+        {
+            Services.Framework.Update -= this.AwaitContentId;
+            return;
+        }
+
+        if (Services.PlayerState.ContentId == 0)
+            return;
+
+        Services.Framework.Update -= this.AwaitContentId;
+        this.ActivateCurrentCharacter();
+    }
+
+    private void ActivateCurrentCharacter()
+    {
+        var contentId = Services.PlayerState.ContentId;
+        this.characterData.Activate(contentId, Services.PlayerState.CharacterName, ResolveHomeWorldName());
+
+        // Each character has its own logo show/hide preference; reflect it now.
+        this.logoWindow.IsOpen = this.config.ShowLogo;
+    }
+
+    private void OnLogout(int type, int code)
+    {
+        Services.Framework.Update -= this.AwaitContentId;
+
+        // Deactivate resets the live per-character state — including clearing the unseen-drop glow
+        // latch — so a pending drop can't carry over to the next character.
+        this.characterData.Deactivate();
+        this.logoWindow.IsOpen = false;
+    }
+
+    private static string? ResolveHomeWorldName()
+    {
+        try
+        {
+            return Services.PlayerState.HomeWorld.ValueNullable?.Name.ExtractText();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void OnCommand(string command, string args)
@@ -124,6 +193,10 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Services.Commands.RemoveHandler(CommandName);
+
+        Services.ClientState.Login -= this.OnLogin;
+        Services.ClientState.Logout -= this.OnLogout;
+        Services.Framework.Update -= this.AwaitContentId;
 
         Services.PluginInterface.UiBuilder.Draw -= this.windowSystem.Draw;
         Services.PluginInterface.UiBuilder.OpenConfigUi -= this.ToggleMain;
