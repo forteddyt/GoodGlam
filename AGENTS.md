@@ -1,19 +1,14 @@
 # AGENTS.md
 
-Guidance for coding agents working in this repository. Keep this file lean: it covers the
-high-level shape, conventions, and commands. **For anything deeper, search the wiki** - it is the
-source of truth for user and developer documentation.
+Guidance for coding agents working in this repository. Keep this file lean: it covers the high-level shape, conventions, and commands. **For anything deeper, search the wiki** - it is the source of truth for user and developer documentation.
 
 ## What this is
 
-GoodGlam is a **.NET 10 / C# Dalamud plugin** for FINAL FANTASY XIV. It watches the Need/Greed roll
-window and flags drops that are used in *popular* glamours on Eorzea Collection. It builds and runs
-on **Windows and Linux**.
+GoodGlam is a **.NET 10 / C# Dalamud plugin** for FINAL FANTASY XIV. It watches the Need/Greed roll window and flags drops that are used in *popular* glamours on Eorzea Collection. It builds and runs on **Windows and Linux**.
 
 ## Build & test
 
-The Dalamud dev libraries must be available, either restored into `.dalamud/` (gitignored) or via
-the `DALAMUD_HOME` environment variable. On Linux, `DALAMUD_HOME` is easiest:
+The Dalamud dev libraries must be available, either restored into `.dalamud/` (gitignored) or via the `DALAMUD_HOME` environment variable. On Linux, `DALAMUD_HOME` is easiest:
 
 ```bash
 export DALAMUD_HOME="$HOME/.xlcore/dalamud/Hooks/dev"   # or restore .dalamud/ (see wiki: Development)
@@ -27,14 +22,12 @@ The plugin alone builds via `dotnet build src/GoodGlam/GoodGlam.csproj -c Releas
 
 ## Architecture (high level)
 
-Loot detection -> item resolution -> Eorzea Collection lookup -> popularity verdict -> history + logo
-glow. Two key seams keep the layers decoupled:
+Loot detection -> item resolution -> Eorzea Collection lookup -> popularity verdict -> history + logo glow. Two key seams keep the layers decoupled:
 
 - **`IGlamSource`** - where popularity data comes from (today the live Eorzea Collection client).
 - **`IEcTransport`** - how EC is reached (managed `HttpClient` first, `curl.exe` fallback).
 
-Honor these interfaces when adding data sources or transports. The component overview and data flow
-are in the wiki (**Architecture**, **Data transport**).
+Honor these interfaces when adding data sources or transports. The component overview and data flow are in the wiki (**Architecture**, **Data transport**).
 
 ## Conventions
 
@@ -51,14 +44,9 @@ are in the wiki (**Architecture**, **Data transport**).
 
 ## Gotchas
 
-- **Transport:** on native Windows EC blocks .NET's HTTP via Cloudflare TLS fingerprinting, so the
-  plugin shells out to `curl.exe`; under Wine/Linux the in-process client works and `curl.exe`
-  doesn't. The fallback is automatic - don't add OS sniffing. See the wiki **Data transport** page.
-- **No product-direction in the repo.** Roadmap/status decisions live in GitHub Issues/Projects, not
-  in committed docs.
-- **The wiki is a submodule** (`forteddyt/GoodGlam.wiki`). If it isn't checked out, run
-  `git submodule update --init wiki`. Edit pages under `wiki/`, commit there, push, then bump the
-  submodule pointer.
+- **Transport:** on native Windows EC blocks .NET's HTTP via Cloudflare TLS fingerprinting, so the plugin shells out to `curl.exe`; under Wine/Linux the in-process client works and `curl.exe` doesn't. The fallback is automatic - don't add OS sniffing. See the wiki **Data transport** page.
+- **No product-direction in the repo.** Roadmap/status decisions live in GitHub Issues/Projects, not in committed docs.
+- **The wiki is a submodule** (`forteddyt/GoodGlam.wiki`). If it isn't checked out, run `git submodule update --init wiki`. Edit pages under `wiki/`, commit there, push, then bump the submodule pointer.
 
 ## Where to look next (wiki pages)
 
