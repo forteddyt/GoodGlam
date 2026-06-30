@@ -18,13 +18,13 @@ public sealed class MainWindow : Window
     private readonly SettingsTab settingsTab;
 
     /// <summary>
-    /// Set on each open transition so the next <see cref="Draw"/> frame force-selects the History
-    /// tab. ImGui persists a tab bar's active tab in its own state (keyed by the tab-bar id), which
-    /// Dalamud does not reset when the window is hidden — so without this, reopening after a visit
-    /// to Settings would land back on Settings, breaking the "always open on History" contract (and
-    /// letting the glow be acknowledged without the new drop ever being seen).
+    /// Drives force-selecting the History tab on each open (see <see cref="HistoryTabFocus"/>).
+    /// ImGui persists a tab bar's active tab in its own state, which Dalamud does not reset when the
+    /// window is hidden — so without this, reopening after a visit to Settings would land back on
+    /// Settings, breaking the "always open on History" contract (and letting the glow be
+    /// acknowledged without the new drop ever being seen).
     /// </summary>
-    private bool forceHistoryTab = true;
+    private readonly HistoryTabFocus historyFocus = new();
 
     public MainWindow(Configuration config, EcFilterCatalog filterCatalog, NotificationHistoryStore store, Action<bool> setLogoVisible)
         : base("GoodGlam###GoodGlamMain")
@@ -35,8 +35,8 @@ public sealed class MainWindow : Window
         this.SizeCondition = ImGuiCond.FirstUseEver;
     }
 
-    /// <summary>Land on the History tab every time the window opens (see <see cref="forceHistoryTab"/>).</summary>
-    public override void OnOpen() => this.forceHistoryTab = true;
+    /// <summary>Land on the History tab every time the window opens (see <see cref="HistoryTabFocus"/>).</summary>
+    public override void OnOpen() => this.historyFocus.OnOpen();
 
     public override void Draw()
     {
@@ -44,8 +44,9 @@ public sealed class MainWindow : Window
             return;
 
         // History is listed first and force-selected on each open so it is the default landing tab.
-        var historyFlags = this.forceHistoryTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
-        this.forceHistoryTab = false;
+        var historyFlags = this.historyFocus.ConsumeForceSelect()
+            ? ImGuiTabItemFlags.SetSelected
+            : ImGuiTabItemFlags.None;
 
         if (ImGui.BeginTabItem("History", historyFlags))
         {
