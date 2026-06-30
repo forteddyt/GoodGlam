@@ -3,30 +3,30 @@
 
 |||
 |:---|:---|
-| Generated on: | 6/30/2026 - 4:40:41 AM |
-| Coverage date: | 6/30/2026 - 4:40:29 AM - 6/30/2026 - 4:40:37 AM |
+| Generated on: | 6/30/2026 - 2:47:15 PM |
+| Coverage date: | 6/30/2026 - 2:46:57 PM - 6/30/2026 - 2:47:06 PM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 31 |
-| Files: | 21 |
-| **Line coverage:** | 55.5% (706 of 1272) |
-| Covered lines: | 706 |
-| Uncovered lines: | 566 |
-| Coverable lines: | 1272 |
-| Total lines: | 2238 |
-| **Branch coverage:** | 57.3% (321 of 560) |
+| Classes: | 33 |
+| Files: | 23 |
+| **Line coverage:** | 55.4% (711 of 1283) |
+| Covered lines: | 711 |
+| Uncovered lines: | 572 |
+| Coverable lines: | 1283 |
+| Total lines: | 2313 |
+| **Branch coverage:** | 56.9% (321 of 564) |
 | Covered branches: | 321 |
-| Total branches: | 560 |
+| Total branches: | 564 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 55.5%</summary>
+<details><summary>GoodGlam - 55.4%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**55.5%**|**57.3%**|
+|**GoodGlam**|**55.4%**|**56.9%**|
 |GoodGlam.Configuration|100%||
 |GoodGlam.Glam.CurlTransport|1.5%|0%|
 |GoodGlam.Glam.DropItem|100%||
@@ -49,12 +49,14 @@
 |GoodGlam.Loot.LootWatcher|0%|0%|
 |GoodGlam.Plugin|0%|0%|
 |GoodGlam.Services|33.3%||
-|GoodGlam.Windows.ConfigWindow|0%|0%|
 |GoodGlam.Windows.GlowStamp|100%||
-|GoodGlam.Windows.HistoryWindow|0%|0%|
+|GoodGlam.Windows.HistoryTab|0%|0%|
+|GoodGlam.Windows.HistoryTabFocus|100%||
 |GoodGlam.Windows.LogoInteraction|100%|100%|
-|GoodGlam.Windows.LogoWindow|18.1%|0%|
+|GoodGlam.Windows.LogoWindow|17.7%|0%|
+|GoodGlam.Windows.MainWindow|0%|0%|
 |GoodGlam.Windows.NotificationGlow|93.9%|81.2%|
+|GoodGlam.Windows.SettingsTab|0%|0%|
 |System.Text.RegularExpressions.Generated|86.2%|78.8%|
 |System.Text.RegularExpressions.Generated.<RegexGenerator_g>F011672748D06EA7<br/>423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0|84.3%|77.7%|
 |System.Text.RegularExpressions.Generated.<RegexGenerator_g>F011672748D06EA7<br/>423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__NameRegex_1|87.1%|80.6%|

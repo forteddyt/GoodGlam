@@ -310,14 +310,16 @@ var assemblies = [
       { "name": "GoodGlam.History.NotificationState", "rp": "GoodGlam_NotificationState.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 105, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 0, "ucl": 68, "cal": 68, "tl": 148, "cb": 0, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 70, "cal": 70, "tl": 143, "cb": 0, "tb": 22, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 0, "ucl": 65, "cal": 65, "tl": 136, "cb": 0, "tb": 22, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 3, "ucl": 6, "cal": 9, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.ConfigWindow", "rp": "GoodGlam_ConfigWindow.html", "cl": 0, "ucl": 125, "cal": 125, "tl": 222, "cb": 0, "tb": 44, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.GlowStamp", "rp": "GoodGlam_GlowStamp.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 140, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.HistoryWindow", "rp": "GoodGlam_HistoryWindow.html", "cl": 0, "ucl": 51, "cal": 51, "tl": 107, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.HistoryTab", "rp": "GoodGlam_HistoryTab.html", "cl": 0, "ucl": 49, "cal": 49, "tl": 102, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.HistoryTabFocus", "rp": "GoodGlam_HistoryTabFocus.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 33, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.LogoInteraction", "rp": "GoodGlam_LogoInteraction.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 54, "cb": 10, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 22, "ucl": 99, "cal": 121, "tl": 299, "cb": 0, "tb": 42, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 21, "ucl": 97, "cal": 118, "tl": 294, "cb": 0, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.MainWindow", "rp": "GoodGlam_MainWindow.html", "cl": 0, "ucl": 21, "cal": 21, "tl": 65, "cb": 0, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.NotificationGlow", "rp": "GoodGlam_NotificationGlow.html", "cl": 31, "ucl": 2, "cal": 33, "tl": 140, "cb": 13, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.SettingsTab", "rp": "GoodGlam_SettingsTab.html", "cl": 0, "ucl": 119, "cal": 119, "tl": 216, "cb": 0, "tb": 42, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated", "rp": "GoodGlam_Generated.html", "cl": 169, "ucl": 27, "cal": 196, "tl": 593, "cb": 93, "tb": 118, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__LovesRegex_0", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA74232057BAC24577939DA167294EA4A343__LovesRegex_0.html", "cl": 70, "ucl": 13, "cal": 83, "tl": 313, "cb": 42, "tb": 54, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "System.Text.RegularExpressions.Generated.\u003CRegexGenerator_g\u003EF011672748D06EA7423205706886C3CEBFC67A4BAC24577939DA167294EA4A343__NameRegex_1", "rp": "GoodGlam__RegexGenerator_g_F011672748D06EA742320574BAC24577939DA167294EA4A343__NameRegex_1.html", "cl": 95, "ucl": 14, "cal": 109, "tl": 572, "cb": 50, "tb": 62, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -335,13 +337,13 @@ var riskHotspotMetrics = [
 
 var riskHotspots = [
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 88,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 86,
     "metrics": [
-      { "value": 506, "exceeded": true },
-      { "value": 22, "exceeded": true },
+      { "value": 420, "exceeded": true },
+      { "value": 20, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 72,
+    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 69,
     "metrics": [
       { "value": 342, "exceeded": true },
       { "value": 18, "exceeded": true },
@@ -353,13 +355,7 @@ var riskHotspots = [
       { "value": 12, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 29,
-    "metrics": [
-      { "value": 156, "exceeded": true },
-      { "value": 12, "exceeded": false },
-    ]},
-  {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawCombo(System.String,System.Collections.Generic.IReadOnlyList\u00601\u003CGoodGlam.Glam.EcFilterOption\u003E,System.String,System.Action\u00601\u003CSystem.String\u003E,System.String)", "methodShortName": "DrawCombo(...)", "fileIndex": 0, "line": 155,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.SettingsTab", "reportPath": "GoodGlam_SettingsTab.html", "methodName": "DrawCombo(System.String,System.Collections.Generic.IReadOnlyList\u00601\u003CGoodGlam.Glam.EcFilterOption\u003E,System.String,System.Action\u00601\u003CSystem.String\u003E,System.String)", "methodShortName": "DrawCombo(...)", "fileIndex": 0, "line": 149,
     "metrics": [
       { "value": 156, "exceeded": true },
       { "value": 12, "exceeded": false },
@@ -377,19 +373,25 @@ var riskHotspots = [
       { "value": 10, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawRacePicker(GoodGlam.Glam.PopularityFilters)", "methodShortName": "DrawRacePicker(...)", "fileIndex": 0, "line": 175,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.HistoryTab", "reportPath": "GoodGlam_HistoryTab.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 24,
     "metrics": [
       { "value": 110, "exceeded": true },
       { "value": 10, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.HistoryWindow", "reportPath": "GoodGlam_HistoryWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 29,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.HistoryTab", "reportPath": "GoodGlam_HistoryTab.html", "methodName": "DrawLinkCell(System.String,System.String,System.String)", "methodShortName": "DrawLinkCell(...)", "fileIndex": 0, "line": 81,
     "metrics": [
       { "value": 110, "exceeded": true },
       { "value": 10, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.HistoryWindow", "reportPath": "GoodGlam_HistoryWindow.html", "methodName": "DrawLinkCell(System.String,System.String,System.String)", "methodShortName": "DrawLinkCell(...)", "fileIndex": 0, "line": 86,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.SettingsTab", "reportPath": "GoodGlam_SettingsTab.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 27,
+    "metrics": [
+      { "value": 110, "exceeded": true },
+      { "value": 10, "exceeded": false },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.SettingsTab", "reportPath": "GoodGlam_SettingsTab.html", "methodName": "DrawRacePicker(GoodGlam.Glam.PopularityFilters)", "methodShortName": "DrawRacePicker(...)", "fileIndex": 0, "line": 169,
     "metrics": [
       { "value": 110, "exceeded": true },
       { "value": 10, "exceeded": false },
@@ -401,7 +403,13 @@ var riskHotspots = [
       { "value": 8, "exceeded": false },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "BakeGlowTextureAsync()", "methodShortName": "BakeGlowTextureAsync()", "fileIndex": 0, "line": 233,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.LogoWindow", "reportPath": "GoodGlam_LogoWindow.html", "methodName": "BakeGlowTextureAsync()", "methodShortName": "BakeGlowTextureAsync()", "fileIndex": 0, "line": 228,
+    "metrics": [
+      { "value": 72, "exceeded": true },
+      { "value": 8, "exceeded": false },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.MainWindow", "reportPath": "GoodGlam_MainWindow.html", "methodName": "Draw()", "methodShortName": "Draw()", "fileIndex": 0, "line": 43,
     "metrics": [
       { "value": 72, "exceeded": true },
       { "value": 8, "exceeded": false },
@@ -431,7 +439,7 @@ var riskHotspots = [
       { "value": 40, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.ConfigWindow", "reportPath": "GoodGlam_ConfigWindow.html", "methodName": "DrawFilters()", "methodShortName": "DrawFilters()", "fileIndex": 0, "line": 101,
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.SettingsTab", "reportPath": "GoodGlam_SettingsTab.html", "methodName": "DrawFilters()", "methodShortName": "DrawFilters()", "fileIndex": 0, "line": 95,
     "metrics": [
       { "value": 42, "exceeded": true },
       { "value": 6, "exceeded": false },
