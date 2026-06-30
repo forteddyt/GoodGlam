@@ -3,35 +3,35 @@
 
 |||
 |:---|:---|
-| Generated on: | 6/30/2026 - 3:36:28 AM |
-| Coverage date: | 6/30/2026 - 3:36:25 AM |
+| Generated on: | 6/30/2026 - 4:24:46 AM |
+| Coverage date: | 6/30/2026 - 4:24:42 AM |
 | Parser: | Cobertura |
 | Assemblies: | 1 |
 | Classes: | 31 |
-| Files: | 20 |
-| **Line coverage:** | 43.3% (613 of 1415) |
-| Covered lines: | 613 |
-| Uncovered lines: | 802 |
-| Coverable lines: | 1415 |
-| Total lines: | 2343 |
-| **Branch coverage:** | 51.4% (286 of 556) |
-| Covered branches: | 286 |
-| Total branches: | 556 |
+| Files: | 21 |
+| **Line coverage:** | 51.3% (653 of 1272) |
+| Covered lines: | 653 |
+| Uncovered lines: | 619 |
+| Coverable lines: | 1272 |
+| Total lines: | 2238 |
+| **Branch coverage:** | 51.4% (288 of 560) |
+| Covered branches: | 288 |
+| Total branches: | 560 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 43.3%</summary>
+<details><summary>GoodGlam - 51.3%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**43.3%**|**51.4%**|
+|**GoodGlam**|**51.3%**|**51.4%**|
 |GoodGlam.Configuration|100%||
 |GoodGlam.Glam.CurlTransport|0%|0%|
 |GoodGlam.Glam.DropItem|100%||
-|GoodGlam.Glam.EcFilterOption|0%||
-|GoodGlam.Glam.EcFilterOptions|0%||
+|GoodGlam.Glam.EcFilterCatalog|100%|50%|
+|GoodGlam.Glam.EcFilterOption|100%||
 |GoodGlam.Glam.EcItem|100%||
 |GoodGlam.Glam.EcTransportFactory|0%||
 |GoodGlam.Glam.EorzeaCollectionClient|94.8%|92.8%|
