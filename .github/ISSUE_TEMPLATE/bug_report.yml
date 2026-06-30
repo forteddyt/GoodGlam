@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a problem with GoodGlam
+labels: [bug]
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please fill in the details below, the more information
+        you provide, the better!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the bug - what you saw go wrong.
+      placeholder: e.g. The logo never glows even though a known popular item dropped.
+    validations:
+      required: true
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What you expected
+      description: What you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The steps to reproduce the behavior.
+      placeholder: |
+        1. Open the Need/Greed/Pass window with ...
+        2. See ...
+    validations:
+      required: false
+  - type: input
+    id: goodglam-version
+    attributes:
+      label: GoodGlam version
+      description: The GoodGlam plugin version you are running.
+      placeholder: e.g. 1.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: Which operating system you run FFXIV / GoodGlam on.
+      options:
+        - Linux
+        - Windows
+        - MacOS
+      default: 1
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: >-
+        Paste relevant lines from the Dalamud log (`/xllog`).
+      render: shell
+    validations:
+      required: false

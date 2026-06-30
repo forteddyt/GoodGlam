@@ -71,6 +71,12 @@ internal sealed class SettingsTab
         if (ImGui.Button("Restore Defaults"))
             this.RestoreDefaults();
         Help("Reverts every GoodGlam setting (notifications, threshold, cache, and all filters) to defaults.");
+
+        // A small "Feedback" section at the bottom of Settings, modeled on the Restore Defaults row.
+        ImGui.Separator();
+        ImGui.TextDisabled("Feedback");
+        Feedback.DrawReportBugButton();
+        Help("Found a problem? Report it!");
     }
 
     /// <summary>Draws Dalamud's standard info "(?)" icon on the same line, with a hover tooltip.</summary>
