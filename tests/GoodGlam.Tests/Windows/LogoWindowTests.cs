@@ -31,7 +31,8 @@ public class LogoWindowTests
     [Fact]
     public void ToggleLock_locks_then_unlocks_and_persists_each_time()
     {
-        var config = new Configuration { LockLogo = false };
+        var saves = 0;
+        var config = new Configuration { LockLogo = false, SaveSink = _ => saves++ };
         var window = this.NewWindow(config);
 
         window.ToggleLock();
@@ -40,13 +41,14 @@ public class LogoWindowTests
         window.ToggleLock();
         config.LockLogo.Should().BeFalse();
 
-        A.CallTo(() => this.pluginInterface.SavePluginConfig(config)).MustHaveHappenedTwiceExactly();
+        saves.Should().Be(2);
     }
 
     [Fact]
     public void Hide_clears_show_flag_closes_window_and_persists()
     {
-        var config = new Configuration { ShowLogo = true };
+        var saves = 0;
+        var config = new Configuration { ShowLogo = true, SaveSink = _ => saves++ };
         var window = this.NewWindow(config);
         window.IsOpen = true;
 
@@ -54,7 +56,7 @@ public class LogoWindowTests
 
         config.ShowLogo.Should().BeFalse();
         window.IsOpen.Should().BeFalse();
-        A.CallTo(() => this.pluginInterface.SavePluginConfig(config)).MustHaveHappenedOnceExactly();
+        saves.Should().Be(1);
     }
 
     [Theory]

@@ -24,7 +24,7 @@ public class HistoryNotifierTests : IDisposable
         this.store = new NotificationHistoryStore(this.path);
     }
 
-    private HistoryNotifier Notifier() => new(this.store, this.notificationState);
+    private INotificationTarget Notifier() => new HistoryNotifier(this.store, this.notificationState).CaptureTarget();
 
     private static DropItem Drop() => new(3610, "Cavalry Gauntlets", GlamSlot.Hands);
 

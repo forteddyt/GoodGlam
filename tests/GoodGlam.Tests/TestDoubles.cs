@@ -34,11 +34,13 @@ internal sealed class FakeGlamSource : IGlamSource
 }
 
 /// <summary>Captures the most recent notification so threshold tests can assert it fired.</summary>
-internal sealed class FakeNotifier : INotifier
+internal sealed class FakeNotifier : INotifier, INotificationTarget
 {
     public int Count;
     public DropItem? LastDrop;
     public GlamPopularity? LastPopularity;
+
+    public INotificationTarget CaptureTarget() => this;
 
     public void NotifyPopular(DropItem drop, GlamPopularity popularity)
     {

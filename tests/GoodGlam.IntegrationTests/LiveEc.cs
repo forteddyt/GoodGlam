@@ -100,11 +100,13 @@ internal class NoopLog : DispatchProxy
 /// Captures the most recent popularity notification so the end-to-end check-flow test can assert
 /// the threshold path fired.
 /// </summary>
-internal sealed class CapturingNotifier : INotifier
+internal sealed class CapturingNotifier : INotifier, INotificationTarget
 {
     public int Count;
     public DropItem? LastDrop;
     public GlamPopularity? LastPopularity;
+
+    public INotificationTarget CaptureTarget() => this;
 
     public void NotifyPopular(DropItem drop, GlamPopularity popularity)
     {

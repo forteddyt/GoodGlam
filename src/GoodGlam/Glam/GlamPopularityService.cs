@@ -5,8 +5,20 @@ namespace GoodGlam.Glam;
 /// <summary>
 /// Raises the "popular glamour" notification for a qualifying drop. Abstracted so the
 /// orchestration/threshold logic can be unit-tested without the Dalamud framework thread.
+///
+/// Because the popularity check is dispatched fire-and-forget and completes on a thread-pool
+/// thread (potentially after the player has switched characters), the target is <em>captured</em>
+/// up front via <see cref="CaptureTarget"/> on the dispatching (framework) thread. The resulting
+/// <see cref="INotificationTarget"/> records against the character that actually saw the drop, so a
+/// mid-lookup character switch can never misattribute or lose the entry.
 /// </summary>
 public interface INotifier
+{
+    INotificationTarget CaptureTarget();
+}
+
+/// <summary>The character-bound sink a captured popularity result is delivered to on completion.</summary>
+public interface INotificationTarget
 {
     void NotifyPopular(DropItem drop, GlamPopularity popularity);
 }
@@ -37,11 +49,15 @@ public sealed class GlamPopularityService
     /// </summary>
     public async Task<GlamPopularity> ProcessAsync(DropItem drop)
     {
+        // Capture the history target now, synchronously on the caller's (framework) thread, before
+        // any await hands control to a thread-pool continuation. This pins the drop to the character
+        // that's logged in right now, even if they switch before the lookup finishes.
+        var target = this.notifier.CaptureTarget();
         try
         {
             var popularity = await this.GetPopularityAsync(drop).ConfigureAwait(false);
             if (popularity.TopLoves >= this.config.LovesThreshold)
-                this.notifier.NotifyPopular(drop, popularity);
+                target.NotifyPopular(drop, popularity);
             return popularity;
         }
         catch (Exception ex)
