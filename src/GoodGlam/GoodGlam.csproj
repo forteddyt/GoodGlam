@@ -69,6 +69,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="GoodGlam.Tests" />
+    <InternalsVisibleTo Include="GoodGlam.IntegrationTests" />
   </ItemGroup>
 
 </Project>
