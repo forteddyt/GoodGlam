@@ -14,8 +14,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly Configuration config;
     private readonly WindowSystem windowSystem = new("GoodGlam");
-    private readonly ConfigWindow configWindow;
-    private readonly HistoryWindow historyWindow;
+    private readonly MainWindow mainWindow;
     private readonly LogoWindow logoWindow;
     private readonly NotificationHistoryStore history;
     private readonly NotificationState notificationState = new();
@@ -37,23 +36,21 @@ public sealed class Plugin : IDalamudPlugin
         var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
 
-        this.configWindow = new ConfigWindow(this.config, EcFilterCatalog.LoadEmbedded(), this.ToggleHistory, this.SetLogoVisible);
-        this.historyWindow = new HistoryWindow(this.history);
-        this.logoWindow = new LogoWindow(this.config, this.ToggleHistory, this.ToggleConfig, this.notificationState)
+        this.mainWindow = new MainWindow(this.config, EcFilterCatalog.LoadEmbedded(), this.history, this.SetLogoVisible);
+        this.logoWindow = new LogoWindow(this.config, this.ToggleMain, this.notificationState)
         {
             IsOpen = this.config.ShowLogo,
         };
-        this.windowSystem.AddWindow(this.configWindow);
-        this.windowSystem.AddWindow(this.historyWindow);
+        this.windowSystem.AddWindow(this.mainWindow);
         this.windowSystem.AddWindow(this.logoWindow);
 
         Services.PluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
-        Services.PluginInterface.UiBuilder.OpenConfigUi += this.ToggleConfig;
-        Services.PluginInterface.UiBuilder.OpenMainUi += this.ToggleHistory;
+        Services.PluginInterface.UiBuilder.OpenConfigUi += this.ToggleMain;
+        Services.PluginInterface.UiBuilder.OpenMainUi += this.ToggleMain;
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open the history window. /goodglam config (settings). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow.",
+            HelpMessage = "Open the GoodGlam window (History + Settings tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow.",
         });
 
         Services.Log.Information("GoodGlam loaded.");
@@ -72,7 +69,7 @@ public sealed class Plugin : IDalamudPlugin
         var trimmed = args.Trim();
         if (trimmed.Length == 0)
         {
-            this.ToggleHistory();
+            this.ToggleMain();
             return;
         }
 
@@ -81,11 +78,8 @@ public sealed class Plugin : IDalamudPlugin
         {
             case "config":
             case "settings":
-                this.ToggleConfig();
-                break;
-
             case "history":
-                this.ToggleHistory();
+                this.ToggleMain();
                 break;
 
             case "dump":
@@ -103,22 +97,21 @@ public sealed class Plugin : IDalamudPlugin
                 // Debug: light the logo glow directly, bypassing the EC lookup, so the
                 // notification animation can be verified without a qualifying drop.
                 this.notificationState.Raise();
-                Services.Log.Information("GoodGlam[glow]: notification glow raised — open the history (or click the logo) to clear it.");
+                Services.Log.Information("GoodGlam[glow]: notification glow raised — open the window (or click the logo) to clear it.");
                 break;
 
             default:
-                this.ToggleConfig();
+                this.ToggleMain();
                 break;
         }
     }
 
-    private void ToggleConfig() => this.configWindow.Toggle();
-
-    private void ToggleHistory()
+    private void ToggleMain()
     {
-        // Opening the history acknowledges any pending popular drop, so clear the logo glow.
+        // Opening the window lands on the History tab, which acknowledges any pending popular drop,
+        // so clear the logo glow.
         this.notificationState.Clear();
-        this.historyWindow.Toggle();
+        this.mainWindow.Toggle();
     }
 
     private void SetLogoVisible(bool visible)
@@ -133,8 +126,8 @@ public sealed class Plugin : IDalamudPlugin
         Services.Commands.RemoveHandler(CommandName);
 
         Services.PluginInterface.UiBuilder.Draw -= this.windowSystem.Draw;
-        Services.PluginInterface.UiBuilder.OpenConfigUi -= this.ToggleConfig;
-        Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleHistory;
+        Services.PluginInterface.UiBuilder.OpenConfigUi -= this.ToggleMain;
+        Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleMain;
         this.windowSystem.RemoveAllWindows();
 
         this.logoWindow.Dispose();

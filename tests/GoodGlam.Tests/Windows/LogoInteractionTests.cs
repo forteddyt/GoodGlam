@@ -6,7 +6,7 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// Covers <see cref="LogoInteraction"/>, the pure pointer-interaction logic behind the floating
-/// logo button: a plain click opens history, an unlocked drag moves the window and suppresses the
+/// logo button: a plain click opens the window, an unlocked drag moves the window and suppresses the
 /// trailing click, a locked logo never drags, and the drag latch clears on mouse release.
 /// </summary>
 public class LogoInteractionTests
@@ -17,13 +17,13 @@ public class LogoInteractionTests
         => new(held, mouseDragging, clicked, mouseReleased, locked);
 
     [Fact]
-    public void Plain_click_opens_history_and_does_not_move()
+    public void Plain_click_opens_window_and_does_not_move()
     {
         var sut = new LogoInteraction();
 
         var outcome = sut.Process(Frame(clicked: true));
 
-        outcome.OpenHistory.Should().BeTrue();
+        outcome.OpenWindow.Should().BeTrue();
         outcome.MoveWindow.Should().BeFalse();
         outcome.AllowTooltip.Should().BeTrue();
         sut.Dragging.Should().BeFalse();
@@ -45,11 +45,11 @@ public class LogoInteractionTests
     {
         var sut = new LogoInteraction();
 
-        // ImageButton can report a click on the release that ends a drag; it must not open history.
+        // ImageButton can report a click on the release that ends a drag; it must not open the window.
         var outcome = sut.Process(Frame(held: true, mouseDragging: true, clicked: true));
 
         outcome.MoveWindow.Should().BeTrue();
-        outcome.OpenHistory.Should().BeFalse();
+        outcome.OpenWindow.Should().BeFalse();
         outcome.AllowTooltip.Should().BeFalse();
     }
 
@@ -62,7 +62,7 @@ public class LogoInteractionTests
         // Next frame: still held, a click flag appears but the latch is not yet cleared.
         var outcome = sut.Process(Frame(held: true, clicked: true));
 
-        outcome.OpenHistory.Should().BeFalse();
+        outcome.OpenWindow.Should().BeFalse();
         sut.Dragging.Should().BeTrue();
     }
 
@@ -74,7 +74,7 @@ public class LogoInteractionTests
         var outcome = sut.Process(Frame(held: true, mouseDragging: true, clicked: true, locked: true));
 
         outcome.MoveWindow.Should().BeFalse();
-        outcome.OpenHistory.Should().BeTrue();
+        outcome.OpenWindow.Should().BeTrue();
         outcome.AllowTooltip.Should().BeTrue();
         sut.Dragging.Should().BeFalse();
     }
@@ -92,7 +92,7 @@ public class LogoInteractionTests
     }
 
     [Fact]
-    public void Full_drag_then_release_then_click_opens_history()
+    public void Full_drag_then_release_then_click_opens_window()
     {
         var sut = new LogoInteraction();
 
@@ -101,7 +101,7 @@ public class LogoInteractionTests
         sut.Process(Frame(mouseReleased: true));                        // release clears latch
         var outcome = sut.Process(Frame(clicked: true));               // fresh click
 
-        outcome.OpenHistory.Should().BeTrue();
+        outcome.OpenWindow.Should().BeTrue();
         sut.Dragging.Should().BeFalse();
     }
 

@@ -7,7 +7,7 @@ namespace GoodGlam.Glam;
 /// <summary>
 /// Loaded catalog of the Eorzea Collection glamour filter dimensions, mirroring the dropdowns/inputs
 /// on EC's /glamours page. The option lists live in the embedded <c>EcFilterOptions.json</c> resource
-/// (the single source of truth for the selectable values), so the settings UI (<c>ConfigWindow</c>)
+/// (the single source of truth for the selectable values), so the settings UI (<c>SettingsTab</c>)
 /// reads them from one place and they never drift apart.
 ///
 /// EC sends each filter as <c>filter[name]=value</c> (race is the array form <c>filter[race][]=v</c>).
