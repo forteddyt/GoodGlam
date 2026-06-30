@@ -9,13 +9,15 @@ namespace GoodGlam.Windows;
 public sealed class ConfigWindow : Window
 {
     private readonly Configuration config;
+    private readonly EcFilterCatalog filterCatalog;
     private readonly Action openHistory;
     private readonly Action<bool> setLogoVisible;
 
-    public ConfigWindow(Configuration config, Action openHistory, Action<bool> setLogoVisible)
+    public ConfigWindow(Configuration config, EcFilterCatalog filterCatalog, Action openHistory, Action<bool> setLogoVisible)
         : base("GoodGlam Settings###GoodGlamConfig")
     {
         this.config = config;
+        this.filterCatalog = filterCatalog;
         this.openHistory = openHistory;
         this.setLogoVisible = setLogoVisible;
         this.Size = new Vector2(460, 520);
@@ -102,22 +104,22 @@ public sealed class ConfigWindow : Window
 
         var filters = this.config.Filters;
 
-        this.DrawCombo("Gender", EcFilterOptions.Genders, filters.Gender, v => filters.Gender = v,
+        this.DrawCombo("Gender", this.filterCatalog.Genders, filters.Gender, v => filters.Gender = v,
             "Only count glamours shown for this character gender.");
         this.DrawRacePicker(filters);
-        this.DrawCombo("Intended for", EcFilterOptions.Jobs, filters.Job, v => filters.Job = v,
+        this.DrawCombo("Intended for", this.filterCatalog.Jobs, filters.Job, v => filters.Job = v,
             "Only count glamours tagged for this role or job.");
-        this.DrawCombo("Date submitted", EcFilterOptions.DatePeriods, filters.DatePeriod, v => filters.DatePeriod = v,
+        this.DrawCombo("Date submitted", this.filterCatalog.DatePeriods, filters.DatePeriod, v => filters.DatePeriod = v,
             "Only count glamours submitted within this time window.");
         this.DrawLevelRange(filters);
 
-        this.DrawCombo("Classification", EcFilterOptions.Classifications, filters.Classification, v => filters.Classification = v,
+        this.DrawCombo("Classification", this.filterCatalog.Classifications, filters.Classification, v => filters.Classification = v,
             "EC overall vibe tag (e.g. Cute, Cool, Sexy).");
-        this.DrawCombo("Style", EcFilterOptions.Styles, filters.Style, v => filters.Style = v,
+        this.DrawCombo("Style", this.filterCatalog.Styles, filters.Style, v => filters.Style = v,
             "EC style tag (e.g. Casual, Fantasy, Modern).");
-        this.DrawCombo("Theme", EcFilterOptions.Themes, filters.Theme, v => filters.Theme = v,
+        this.DrawCombo("Theme", this.filterCatalog.Themes, filters.Theme, v => filters.Theme = v,
             "EC theme tag (e.g. Swimwear, Battle Gear, Royalty).");
-        this.DrawCombo("Color", EcFilterOptions.Colors, filters.Color, v => filters.Color = v,
+        this.DrawCombo("Color", this.filterCatalog.Colors, filters.Color, v => filters.Color = v,
             "EC dominant color tag.");
 
         var noMog = filters.ExcludeMogstation;
@@ -172,11 +174,11 @@ public sealed class ConfigWindow : Window
     {
         var preview = filters.Races.Count == 0
             ? "All races"
-            : string.Join(", ", EcFilterOptions.Races.Where(r => filters.Races.Contains(r.Value)).Select(r => r.Label));
+            : string.Join(", ", this.filterCatalog.Races.Where(r => filters.Races.Contains(r.Value)).Select(r => r.Label));
 
         if (ImGui.BeginCombo("Race", preview))
         {
-            foreach (var race in EcFilterOptions.Races)
+            foreach (var race in this.filterCatalog.Races)
             {
                 var selected = filters.Races.Contains(race.Value);
                 if (!ImGui.Selectable(race.Label, selected, ImGuiSelectableFlags.DontClosePopups))
