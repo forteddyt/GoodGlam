@@ -1,6 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
-using Dalamud.Utility;
+using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
 using GoodGlam.History;
 
@@ -11,14 +11,27 @@ namespace GoodGlam.Windows;
 /// qualifying drop. Each row shows when it dropped, the item, the top loves count, and a clickable
 /// glamour name that opens the Eorzea Collection page. (Formerly the standalone HistoryWindow.)
 /// </summary>
+/// <remarks>
+/// Rendering only. The link-vs-text decision lives in the tested <see cref="HistoryLinkCell"/> and the
+/// open effect in the tested <see cref="HistoryActions"/>; this class just draws from those, so it is
+/// excluded from coverage while the logic behind it is tested.
+/// </remarks>
+[ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the link decision (HistoryLinkCell) and open effect (HistoryActions) are extracted and tested, and a live ImGui context can't run in CI.")]
 internal sealed class HistoryTab
 {
     private readonly NotificationHistoryStore store;
     private readonly ITraceLogger<HistoryTab> log = new TraceLogger<HistoryTab>();
+    private readonly HistoryActions actions;
 
     internal HistoryTab(NotificationHistoryStore store)
+        : this(store, new DalamudLinkOpener())
+    {
+    }
+
+    internal HistoryTab(NotificationHistoryStore store, ILinkOpener linkOpener)
     {
         this.store = store;
+        this.actions = new HistoryActions(linkOpener);
     }
 
     internal void Draw()
@@ -79,32 +92,38 @@ internal sealed class HistoryTab
 
     /// <summary>
     /// Renders a cell as a clickable Eorzea Collection link. Falls back to plain/disabled text when
-    /// there's no URL (e.g. older history entries saved before the link was captured).
+    /// there's no URL (e.g. older history entries saved before the link was captured). The decision
+    /// is made by <see cref="HistoryLinkCell.Resolve"/>; this only paints it.
     /// </summary>
     private void DrawLinkCell(string? label, string? url, string fallback)
     {
-        if (string.IsNullOrEmpty(url))
+        var cell = HistoryLinkCell.Resolve(label, url, fallback);
+
+        if (cell.Kind == HistoryLinkKind.Disabled)
         {
-            if (string.IsNullOrEmpty(label))
-                ImGui.TextDisabled(fallback);
-            else
-                ImGui.TextUnformatted(label);
+            ImGui.TextDisabled(cell.Text);
+            return;
+        }
+
+        if (cell.Kind == HistoryLinkKind.PlainText)
+        {
+            ImGui.TextUnformatted(cell.Text);
             return;
         }
 
         ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudViolet);
-        ImGui.TextUnformatted(string.IsNullOrEmpty(label) ? url : label);
+        ImGui.TextUnformatted(cell.Text);
         ImGui.PopStyleColor();
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip(url);
+            ImGui.SetTooltip(cell.Url!);
         }
 
         if (ImGui.IsItemClicked())
         {
-            this.log.Debug($"opening Eorzea Collection link {url}.");
-            Util.OpenLink(url);
+            this.log.Debug($"opening Eorzea Collection link {cell.Url}.");
+            this.actions.OpenLink(cell.Url);
         }
     }
 }

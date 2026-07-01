@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
 using Lumina.Excel.Sheets;
 
@@ -7,10 +8,21 @@ namespace GoodGlam.Glam;
 public sealed record DropItem(uint ItemId, string Name, GlamSlot Slot);
 
 /// <summary>
+/// Resolves a game item ID (as reported by the loot roll window) into the name + Eorzea
+/// Collection slot needed for a lookup, or <c>null</c> when it isn't glamour-relevant gear.
+/// Split out as an interface so <see cref="Loot.LootWatcher"/> can be tested against a fake
+/// resolver without the game's Lumina data sheets.
+/// </summary>
+public interface IItemResolver
+{
+    DropItem? Resolve(uint itemId);
+}
+
+/// <summary>
 /// Resolves game item IDs (as reported by the loot roll window) into a name and
 /// Eorzea Collection slot using the game's own data sheets via Lumina.
 /// </summary>
-public sealed class ItemResolver
+public sealed class ItemResolver : IItemResolver
 {
     private readonly ITraceLogger<ItemResolver> log;
 
@@ -21,6 +33,7 @@ public sealed class ItemResolver
     /// Returns a <see cref="DropItem"/> for a glamour-relevant gear piece, or
     /// <c>null</c> when the item does not exist or is not equippable glamour gear.
     /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Resolves via Lumina's live game data sheets (Item/EquipSlotCategory); can't run outside the game. The pure HQ math is factored into NormalizeItemId, which is tested.")]
     public DropItem? Resolve(uint itemId)
     {
         // Normalise HQ items (HQ id = base id + 1,000,000); collectables sit even higher.

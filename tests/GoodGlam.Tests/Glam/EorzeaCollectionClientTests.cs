@@ -152,6 +152,8 @@ public class EorzeaCollectionClientTests
     [Fact]
     public async Task GetTopPopularity_encodes_each_race_as_array_param()
     {
+        // Exercises BuildListingUrl's array-parameter escaping branch (name ending in "[]"), which
+        // produces EC's filter[race][] query form — the only place that branch is covered.
         var transport = new FakeTransport { GetResult = "" };
         var filters = new PopularityFilters { Races = ["miqote", "aura"] };
 
@@ -159,5 +161,21 @@ public class EorzeaCollectionClientTests
 
         transport.GetUrls.Single().Should()
             .Contain("filter%5Brace%5D%5B%5D=miqote").And.Contain("filter%5Brace%5D%5B%5D=aura");
+    }
+
+    [Fact]
+    public void Parameterless_ctor_wires_the_default_transport_stack()
+    {
+        // Exercises the production constructor (EcTransportFactory.Create()); no network is touched.
+        new EorzeaCollectionClient().Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ResolveEcItem_returns_null_when_body_deserializes_to_null()
+    {
+        // A literal "null" JSON body deserializes to a null list — treated as no match.
+        var item = await new EorzeaCollectionClient(new FakeTransport { PostResult = "null" })
+            .ResolveEcItemAsync(GlamSlot.Hands, "x", 3610, CancellationToken.None);
+        item.Should().BeNull();
     }
 }

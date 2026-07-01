@@ -3,36 +3,43 @@ using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
-using CSLoot = FFXIVClientStructs.FFXIV.Client.Game.UI.Loot;
 
 namespace GoodGlam.Loot;
 
 /// <summary>
 /// Hooks the Need/Greed roll window. When it appears (or refreshes), each rollable
-/// item is read straight from the game's <see cref="Loot"/> struct and dispatched to
+/// item is read straight from the game's <c>Loot</c> struct and dispatched to
 /// the popularity check. No packet capture required.
 /// </summary>
 public sealed class LootWatcher : IDisposable
 {
     private const string AddonName = "NeedGreed";
 
-    private readonly ItemResolver resolver;
+    private readonly IItemResolver resolver;
     private readonly GlamPopularityService popularity;
     private readonly Configuration config;
+    private readonly ILootReader lootReader;
     private readonly ITraceLogger<LootWatcher> log;
 
     // Avoids dispatching the same item twice while a single roll window is open.
     private readonly HashSet<uint> seenThisWindow = [];
 
-    public LootWatcher(
-        ItemResolver resolver,
+    public LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config)
+        : this(resolver, popularity, config, new GameLootReader())
+    {
+    }
+
+    internal LootWatcher(
+        IItemResolver resolver,
         GlamPopularityService popularity,
         Configuration config,
+        ILootReader lootReader,
         ITraceLogger<LootWatcher>? log = null)
     {
         this.resolver = resolver;
         this.popularity = popularity;
         this.config = config;
+        this.lootReader = lootReader;
         this.log = log ?? new TraceLogger<LootWatcher>();
 
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, AddonName, this.OnAddonEvent);
@@ -64,22 +71,20 @@ public sealed class LootWatcher : IDisposable
         this.seenThisWindow.Clear();
     }
 
-    private unsafe void ScanLoot(AddonEvent type)
+    private void ScanLoot(AddonEvent type)
     {
-        var loot = CSLoot.Instance();
-        if (loot == null)
+        if (this.lootReader.Read() is not { } loot)
         {
-            this.log.Verbose($"{AddonName} {type} but Loot.Instance() is null; nothing to scan.");
+            this.log.Verbose($"{AddonName} {type} but no active loot session; nothing to scan.");
             return;
         }
 
-        var items = loot->Items;
         var dispatched = 0;
         var skipped = 0;
-        this.log.Debug($"{AddonName} {type} — scanning {items.Length} slot(s).");
-        for (var i = 0; i < items.Length; i++)
+        this.log.Debug($"{AddonName} {type} — scanning {loot.Items.Count} slot(s).");
+        for (var i = 0; i < loot.Items.Count; i++)
         {
-            var lootItem = items[i];
+            var lootItem = loot.Items[i];
             if (lootItem.ItemId == 0 || lootItem.RollState == RollState.Unavailable)
             {
                 skipped++;
@@ -107,30 +112,28 @@ public sealed class LootWatcher : IDisposable
             _ = this.popularity.ProcessAsync(drop);
         }
 
-        this.log.Debug($"scan complete — {dispatched} dispatched, {skipped} skipped of {items.Length} slot(s).");
+        this.log.Debug($"scan complete — {dispatched} dispatched, {skipped} skipped of {loot.Items.Count} slot(s).");
     }
 
     /// <summary>
     /// Debug helper (<c>/goodglam dump</c>): logs every populated entry of the live
-    /// <see cref="Loot"/> struct so we can see exactly what the roll window exposes. Trigger
+    /// <c>Loot</c> struct so we can see exactly what the roll window exposes. Trigger
     /// it during a roll window — running old content solo &amp; unsynced is a reliable,
     /// repeatable way to open one on demand.
     /// </summary>
-    public unsafe void DumpCurrentLoot()
+    public void DumpCurrentLoot()
     {
-        var loot = CSLoot.Instance();
-        if (loot == null)
+        if (this.lootReader.Read() is not { } loot)
         {
-            this.log.Information("dump: Loot.Instance() is null (no active loot session).");
+            this.log.Information("dump: no active loot session.");
             return;
         }
 
-        var items = loot->Items;
         var populated = 0;
-        this.log.Information($"dump: SelectedIndex={loot->SelectedIndex}, {items.Length} slots:");
-        for (var i = 0; i < items.Length; i++)
+        this.log.Information($"dump: SelectedIndex={loot.SelectedIndex}, {loot.Items.Count} slots:");
+        for (var i = 0; i < loot.Items.Count; i++)
         {
-            var it = items[i];
+            var it = loot.Items[i];
             if (it.ItemId == 0)
                 continue;
 

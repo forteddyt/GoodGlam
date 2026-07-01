@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Diagnostics.CodeAnalysis;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using GoodGlam.Diagnostics;
@@ -44,6 +45,7 @@ public sealed class MainWindow : Window
         this.historyFocus.OnOpen();
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; requires a live ImGui context that can't run in CI.")]
     public override void Draw()
     {
         // All GoodGlam metadata is per-character, so there's nothing to show or edit until a

@@ -1,5 +1,5 @@
 using Dalamud.Bindings.ImGui;
-using Dalamud.Utility;
+using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
 
 namespace GoodGlam.Windows;
@@ -12,8 +12,8 @@ namespace GoodGlam.Windows;
 /// </summary>
 /// <remarks>
 /// The button lives in a "Feedback" section at the bottom of the Settings tab
-/// (<see cref="SettingsTab"/>). Keeping the URL here (rather than inline) lets it be unit-tested
-/// without a running ImGui context, mirroring the pure-logic split used by
+/// (<see cref="SettingsTab"/>). The URL and the open action live here (not inline in the draw call)
+/// so they can be unit-tested without a running ImGui context, mirroring the pure-logic split used by
 /// <see cref="LogoInteraction"/> and <see cref="HistoryTabFocus"/>.
 /// </remarks>
 internal sealed class Feedback
@@ -32,16 +32,20 @@ internal sealed class Feedback
     internal const string BugReportUrl =
         "https://github.com/forteddyt/GoodGlam/issues/new?template=bug_report.yml";
 
+    /// <summary>Opens the bug-report page. Split out from the button so the URL choice is testable.</summary>
+    internal static void OpenBugReport(ILinkOpener linkOpener) => linkOpener.Open(BugReportUrl);
+
     /// <summary>
     /// Draws the <b>Report Bug</b> button. On click it opens <see cref="BugReportUrl"/> in the user's
-    /// browser via <see cref="Util.OpenLink"/> (the same mechanism the History tab uses for EC links).
+    /// browser via <see cref="OpenBugReport"/> (the same <see cref="ILinkOpener"/> the History tab uses).
     /// </summary>
-    internal static void DrawReportBugButton()
+    [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the URL + open effect are extracted into the tested OpenBugReport.")]
+    internal static void DrawReportBugButton(ILinkOpener linkOpener)
     {
         if (ImGui.Button("Report Bug"))
         {
             Log.Debug("Report Bug clicked; opening the GitHub issue form.");
-            Util.OpenLink(BugReportUrl);
+            OpenBugReport(linkOpener);
         }
 
         if (ImGui.IsItemHovered())

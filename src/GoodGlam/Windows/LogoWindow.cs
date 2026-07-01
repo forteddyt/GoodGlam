@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -81,6 +82,7 @@ public sealed class LogoWindow : Window, IDisposable
     /// </summary>
     public override bool DrawConditions() => Services.ClientState.IsLoggedIn;
 
+    [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the drag/click/tooltip decisions live in the tested LogoInteraction and the menu actions (ToggleLock/Hide) are tested. Needs a live ImGui context that can't run in CI.")]
     public override void Draw()
     {
         // Bake the gold halo sprite from the logo's own pixels on the first frame (the render/GPU
@@ -168,6 +170,7 @@ public sealed class LogoWindow : Window, IDisposable
     /// background used to give. Rendered on the background draw list (beneath the notification glow)
     /// so the glow is never painted over by it; the crisp logo on the window still sits on top.
     /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; requires a live ImGui context that can't run in CI.")]
     private void DrawHoverHighlight(Vector2 logoMin, Vector2 logoMax)
     {
         uint color;
@@ -190,6 +193,7 @@ public sealed class LogoWindow : Window, IDisposable
     /// the crisp logo (which keeps it sharp) and isn't clipped by the button's tiny auto-resizing
     /// window. <see cref="NotificationGlow"/> breathes the overall brightness each frame.
     /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Submits ImGui draw-list calls; the pulse/stamp layout it iterates lives in the tested NotificationGlow. Needs a live ImGui context that can't run in CI.")]
     private void DrawNotificationGlow(Vector2 logoMin, Vector2 logoMax)
     {
         // Until the async bake finishes (first couple of frames after load), there's simply no glow
@@ -220,6 +224,7 @@ public sealed class LogoWindow : Window, IDisposable
     /// and upload the result. Deriving the halo from the art means it always matches the current logo
     /// shape — change the logo and the glow follows, with no geometry to update.
     /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Guards/kicks off the GPU texture bake; only reachable from the ImGui Draw path.")]
     private void EnsureGlowBaked()
     {
         if (this.glowBakeStarted)
@@ -229,6 +234,7 @@ public sealed class LogoWindow : Window, IDisposable
         _ = this.BakeGlowTextureAsync();
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Decodes the logo and uploads a GPU texture via ITextureProvider; needs a live render device.")]
     private async Task BakeGlowTextureAsync()
     {
         try

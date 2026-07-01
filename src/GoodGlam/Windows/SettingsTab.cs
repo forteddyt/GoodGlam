@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
+using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 
@@ -10,25 +11,39 @@ namespace GoodGlam.Windows;
 /// cache lifetime, the EC filter controls, and the floating-logo toggle. (Formerly the standalone
 /// ConfigWindow; the old "Open history" button is gone now that History is a sibling tab.)
 /// </summary>
+/// <remarks>
+/// Rendering only. Every control's effect (config mutation, clamping, restore/reset) lives in the
+/// pure, unit-tested <see cref="SettingsActions"/>; each widget here is thin wiring that reads an
+/// ImGui control and calls one action. That's why this class is excluded from coverage while the
+/// behavior behind it is fully tested.
+/// </remarks>
+[ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the control effects are extracted into the tested SettingsActions, and a live ImGui context can't run in CI.")]
 internal sealed class SettingsTab
 {
     private readonly Configuration config;
     private readonly EcFilterCatalog filterCatalog;
-    private readonly Action<bool> setLogoVisible;
+    private readonly SettingsActions actions;
+    private readonly ILinkOpener linkOpener;
     private readonly ITraceLogger<SettingsTab> log = new TraceLogger<SettingsTab>();
 
     internal SettingsTab(Configuration config, EcFilterCatalog filterCatalog, Action<bool> setLogoVisible)
+        : this(config, filterCatalog, setLogoVisible, new DalamudLinkOpener())
+    {
+    }
+
+    internal SettingsTab(Configuration config, EcFilterCatalog filterCatalog, Action<bool> setLogoVisible, ILinkOpener linkOpener)
     {
         this.config = config;
         this.filterCatalog = filterCatalog;
-        this.setLogoVisible = setLogoVisible;
+        this.actions = new SettingsActions(config, setLogoVisible);
+        this.linkOpener = linkOpener;
     }
 
     internal void Draw()
     {
         var showLogo = this.config.ShowLogo;
         if (ImGui.Checkbox("Show floating logo button", ref showLogo))
-            this.setLogoVisible(showLogo);
+            this.actions.SetShowLogo(showLogo); // logged in Plugin.SetLogoVisible
         Help("Shows a small draggable GoodGlam logo in-game; click it to open the GoodGlam window.");
 
         ImGui.Separator();
@@ -37,8 +52,7 @@ internal sealed class SettingsTab
         if (ImGui.Checkbox("Enable drop notifications", ref enabled))
         {
             this.log.Debug($"setting changed: Enabled = {enabled}.");
-            this.config.Enabled = enabled;
-            this.config.Save();
+            this.actions.SetEnabled(enabled);
         }
 
         Help("Master switch. When off, GoodGlam never checks dropped items or logs popular drops.");
@@ -50,9 +64,8 @@ internal sealed class SettingsTab
         var threshold = this.config.LovesThreshold;
         if (ImGui.InputInt("Loves threshold", ref threshold, 10, 100, default))
         {
-            this.config.LovesThreshold = Math.Max(0, threshold);
+            this.actions.SetLovesThreshold(threshold);
             this.log.Debug($"setting changed: LovesThreshold = {this.config.LovesThreshold}.");
-            this.config.Save();
         }
 
         Help("Minimum 'loves' a glamour must have for a drop to count as popular. Higher = pickier.");
@@ -60,9 +73,8 @@ internal sealed class SettingsTab
         var ttl = this.config.CacheTtlHours;
         if (ImGui.InputInt("Cache lifetime (hours)", ref ttl, 1, 6, default))
         {
-            this.config.CacheTtlHours = Math.Clamp(ttl, 1, 72);
+            this.actions.SetCacheTtlHours(ttl);
             this.log.Debug($"setting changed: CacheTtlHours = {this.config.CacheTtlHours}.");
-            this.config.Save();
         }
 
         Help("How long a popularity result is reused before re-checking Eorzea Collection. " +
@@ -74,13 +86,17 @@ internal sealed class SettingsTab
         ImGui.Separator();
         ImGui.Spacing();
         if (ImGui.Button("Restore Defaults"))
-            this.RestoreDefaults();
+        {
+            this.log.Debug("Restore Defaults clicked; resetting all settings and filters.");
+            this.actions.RestoreDefaults();
+        }
+
         Help("Reverts every GoodGlam setting (notifications, threshold, cache, and all filters) to defaults.");
 
         // A small "Feedback" section at the bottom of Settings, modeled on the Restore Defaults row.
         ImGui.Separator();
         ImGui.TextDisabled("Feedback");
-        Feedback.DrawReportBugButton();
+        Feedback.DrawReportBugButton(this.linkOpener);
         Help("Found a problem? Report it!");
     }
 
@@ -91,17 +107,6 @@ internal sealed class SettingsTab
         ImGuiComponents.HelpMarker(text);
     }
 
-    private void RestoreDefaults()
-    {
-        this.log.Debug("Restore Defaults clicked; resetting all settings and filters.");
-        var defaults = new Configuration();
-        this.config.Enabled = defaults.Enabled;
-        this.config.LovesThreshold = defaults.LovesThreshold;
-        this.config.CacheTtlHours = defaults.CacheTtlHours;
-        this.config.Filters = defaults.Filters;
-        this.config.Save();
-    }
-
     private void DrawFilters()
     {
         ImGui.TextWrapped(
@@ -110,30 +115,29 @@ internal sealed class SettingsTab
 
         var filters = this.config.Filters;
 
-        this.DrawCombo("Gender", this.filterCatalog.Genders, filters.Gender, v => filters.Gender = v,
+        this.DrawCombo("Gender", this.filterCatalog.Genders, FilterField.Gender,
             "Only count glamours shown for this character gender.");
         this.DrawRacePicker(filters);
-        this.DrawCombo("Intended for", this.filterCatalog.Jobs, filters.Job, v => filters.Job = v,
+        this.DrawCombo("Intended for", this.filterCatalog.Jobs, FilterField.Job,
             "Only count glamours tagged for this role or job.");
-        this.DrawCombo("Date submitted", this.filterCatalog.DatePeriods, filters.DatePeriod, v => filters.DatePeriod = v,
+        this.DrawCombo("Date submitted", this.filterCatalog.DatePeriods, FilterField.DatePeriod,
             "Only count glamours submitted within this time window.");
         this.DrawLevelRange(filters);
 
-        this.DrawCombo("Classification", this.filterCatalog.Classifications, filters.Classification, v => filters.Classification = v,
+        this.DrawCombo("Classification", this.filterCatalog.Classifications, FilterField.Classification,
             "EC overall vibe tag (e.g. Cute, Cool, Sexy).");
-        this.DrawCombo("Style", this.filterCatalog.Styles, filters.Style, v => filters.Style = v,
+        this.DrawCombo("Style", this.filterCatalog.Styles, FilterField.Style,
             "EC style tag (e.g. Casual, Fantasy, Modern).");
-        this.DrawCombo("Theme", this.filterCatalog.Themes, filters.Theme, v => filters.Theme = v,
+        this.DrawCombo("Theme", this.filterCatalog.Themes, FilterField.Theme,
             "EC theme tag (e.g. Swimwear, Battle Gear, Royalty).");
-        this.DrawCombo("Color", this.filterCatalog.Colors, filters.Color, v => filters.Color = v,
+        this.DrawCombo("Color", this.filterCatalog.Colors, FilterField.Color,
             "EC dominant color tag.");
 
         var noMog = filters.ExcludeMogstation;
         if (ImGui.Checkbox("Exclude Mog Station", ref noMog))
         {
-            filters.ExcludeMogstation = noMog;
             this.log.Debug($"filter changed: ExcludeMogstation = {noMog}.");
-            this.config.Save();
+            this.actions.SetExcludeMogstation(noMog);
         }
 
         Help("Ignore glamours that use Mog Station (cash-shop) items.");
@@ -141,9 +145,8 @@ internal sealed class SettingsTab
         var noSeasonal = filters.ExcludeSeasonal;
         if (ImGui.Checkbox("Exclude seasonal", ref noSeasonal))
         {
-            filters.ExcludeSeasonal = noSeasonal;
             this.log.Debug($"filter changed: ExcludeSeasonal = {noSeasonal}.");
-            this.config.Save();
+            this.actions.SetExcludeSeasonal(noSeasonal);
         }
 
         Help("Ignore glamours that use limited seasonal event gear.");
@@ -152,15 +155,15 @@ internal sealed class SettingsTab
         if (ImGui.Button("Reset filters"))
         {
             this.log.Debug("Reset filters clicked; clearing all filter selections.");
-            this.config.Filters = new PopularityFilters();
-            this.config.Save();
+            this.actions.ResetFilters();
         }
 
         Help("Clears only the filters above; keeps notifications, threshold, and cache settings.");
     }
 
-    private void DrawCombo(string label, IReadOnlyList<EcFilterOption> options, string current, Action<string> set, string help)
+    private void DrawCombo(string label, IReadOnlyList<EcFilterOption> options, FilterField field, string help)
     {
+        var current = this.actions.GetFilter(field);
         var preview = options.FirstOrDefault(o => o.Value == current)?.Label ?? options[0].Label;
         if (ImGui.BeginCombo(label, preview))
         {
@@ -168,9 +171,8 @@ internal sealed class SettingsTab
             {
                 if (ImGui.Selectable(option.Label, option.Value == current) && option.Value != current)
                 {
-                    set(option.Value);
                     this.log.Debug($"filter changed: {label} = '{option.Label}'.");
-                    this.config.Save();
+                    this.actions.SelectFilter(field, option.Value);
                 }
             }
 
@@ -191,15 +193,11 @@ internal sealed class SettingsTab
             foreach (var race in this.filterCatalog.Races)
             {
                 var selected = filters.Races.Contains(race.Value);
-                if (!ImGui.Selectable(race.Label, selected, ImGuiSelectableFlags.DontClosePopups))
-                    continue;
-
-                if (selected)
-                    filters.Races.Remove(race.Value);
-                else
-                    filters.Races.Add(race.Value);
-                this.log.Debug($"filter changed: Race '{race.Label}' {(selected ? "removed" : "added")}.");
-                this.config.Save();
+                if (ImGui.Selectable(race.Label, selected, ImGuiSelectableFlags.DontClosePopups))
+                {
+                    this.log.Debug($"filter changed: Race '{race.Label}' {(selected ? "removed" : "added")}.");
+                    this.actions.ToggleRace(race.Value);
+                }
             }
 
             ImGui.EndCombo();
@@ -214,20 +212,16 @@ internal sealed class SettingsTab
         var max = filters.MaxLevel;
         if (ImGui.InputInt("Min level to equip", ref min, 1, 5, default))
         {
-            filters.MinLevel = Math.Clamp(min, EcFilterOptions.MinLevel, EcFilterOptions.MaxLevel);
-            filters.MaxLevel = Math.Max(filters.MaxLevel, filters.MinLevel);
+            this.actions.SetMinLevel(min);
             this.log.Debug($"filter changed: level range = {filters.MinLevel}-{filters.MaxLevel}.");
-            this.config.Save();
         }
 
         Help("Lowest item equip level to include. Stays at or below the max.");
 
         if (ImGui.InputInt("Max level to equip", ref max, 1, 5, default))
         {
-            filters.MaxLevel = Math.Clamp(max, EcFilterOptions.MinLevel, EcFilterOptions.MaxLevel);
-            filters.MinLevel = Math.Min(filters.MinLevel, filters.MaxLevel);
+            this.actions.SetMaxLevel(max);
             this.log.Debug($"filter changed: level range = {filters.MinLevel}-{filters.MaxLevel}.");
-            this.config.Save();
         }
 
         Help("Highest item equip level to include. Stays at or above the min.");
