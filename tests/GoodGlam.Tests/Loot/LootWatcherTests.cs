@@ -238,6 +238,21 @@ public class LootWatcherTests
     }
 
     [Fact]
+    public void ResetDispatchedDrops_lets_the_same_loot_dispatch_again()
+    {
+        // Dev helper for testing: clearing the dispatched set makes the currently-open, unchanged loot
+        // dispatch again on the next scan, without needing a fresh coffer.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var watcher = this.New(new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100))));
+
+        this.Fire(AddonEvent.PostSetup);   // dispatch #1
+        watcher.ResetDispatchedDrops();    // dev reset
+        this.Fire(AddonEvent.PostRefresh); // same loot re-dispatches
+
+        this.notifier.CaptureCalls.Should().Be(2);
+    }
+
+    [Fact]
     public void Scan_errors_are_swallowed()
     {
         // A resolver that throws must not let the exception escape the addon callback.

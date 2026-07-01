@@ -223,6 +223,19 @@ public sealed class LootWatcher : IDisposable
             $"{(passed ? "POPULAR — logged to history (logo glow raised)" : "below threshold — not logged")}");
     }
 
+    /// <summary>
+    /// Debug helper (<c>/goodglam reset</c>): clears the set of already-dispatched drops so the same,
+    /// still-open loot is re-dispatched through the pipeline on the next scan. Intended for testing the
+    /// detection/notify path repeatedly without needing a fresh coffer.
+    /// </summary>
+    public void ResetDispatchedDrops()
+    {
+        var count = this.dispatchedDrops.Count;
+        this.dispatchedDrops.Clear();
+        this.log.Information(
+            $"reset: cleared {count} dispatched drop(s); the next loot scan will re-dispatch all rollable items.");
+    }
+
     public void Dispose()
     {
         Services.AddonLifecycle.UnregisterListener(this.OnAddonEvent);
