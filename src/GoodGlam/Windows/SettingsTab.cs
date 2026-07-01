@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
+using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 
 namespace GoodGlam.Windows;
@@ -14,6 +15,7 @@ internal sealed class SettingsTab
     private readonly Configuration config;
     private readonly EcFilterCatalog filterCatalog;
     private readonly Action<bool> setLogoVisible;
+    private readonly ITraceLogger<SettingsTab> log = new TraceLogger<SettingsTab>();
 
     internal SettingsTab(Configuration config, EcFilterCatalog filterCatalog, Action<bool> setLogoVisible)
     {
@@ -34,6 +36,7 @@ internal sealed class SettingsTab
         var enabled = this.config.Enabled;
         if (ImGui.Checkbox("Enable drop notifications", ref enabled))
         {
+            this.log.Debug($"setting changed: Enabled = {enabled}.");
             this.config.Enabled = enabled;
             this.config.Save();
         }
@@ -48,6 +51,7 @@ internal sealed class SettingsTab
         if (ImGui.InputInt("Loves threshold", ref threshold, 10, 100, default))
         {
             this.config.LovesThreshold = Math.Max(0, threshold);
+            this.log.Debug($"setting changed: LovesThreshold = {this.config.LovesThreshold}.");
             this.config.Save();
         }
 
@@ -57,6 +61,7 @@ internal sealed class SettingsTab
         if (ImGui.InputInt("Cache lifetime (hours)", ref ttl, 1, 6, default))
         {
             this.config.CacheTtlHours = Math.Clamp(ttl, 1, 72);
+            this.log.Debug($"setting changed: CacheTtlHours = {this.config.CacheTtlHours}.");
             this.config.Save();
         }
 
@@ -88,6 +93,7 @@ internal sealed class SettingsTab
 
     private void RestoreDefaults()
     {
+        this.log.Debug("Restore Defaults clicked; resetting all settings and filters.");
         var defaults = new Configuration();
         this.config.Enabled = defaults.Enabled;
         this.config.LovesThreshold = defaults.LovesThreshold;
@@ -126,6 +132,7 @@ internal sealed class SettingsTab
         if (ImGui.Checkbox("Exclude Mog Station", ref noMog))
         {
             filters.ExcludeMogstation = noMog;
+            this.log.Debug($"filter changed: ExcludeMogstation = {noMog}.");
             this.config.Save();
         }
 
@@ -135,6 +142,7 @@ internal sealed class SettingsTab
         if (ImGui.Checkbox("Exclude seasonal", ref noSeasonal))
         {
             filters.ExcludeSeasonal = noSeasonal;
+            this.log.Debug($"filter changed: ExcludeSeasonal = {noSeasonal}.");
             this.config.Save();
         }
 
@@ -143,6 +151,7 @@ internal sealed class SettingsTab
         ImGui.Spacing();
         if (ImGui.Button("Reset filters"))
         {
+            this.log.Debug("Reset filters clicked; clearing all filter selections.");
             this.config.Filters = new PopularityFilters();
             this.config.Save();
         }
@@ -160,6 +169,7 @@ internal sealed class SettingsTab
                 if (ImGui.Selectable(option.Label, option.Value == current) && option.Value != current)
                 {
                     set(option.Value);
+                    this.log.Debug($"filter changed: {label} = '{option.Label}'.");
                     this.config.Save();
                 }
             }
@@ -188,6 +198,7 @@ internal sealed class SettingsTab
                     filters.Races.Remove(race.Value);
                 else
                     filters.Races.Add(race.Value);
+                this.log.Debug($"filter changed: Race '{race.Label}' {(selected ? "removed" : "added")}.");
                 this.config.Save();
             }
 
@@ -205,6 +216,7 @@ internal sealed class SettingsTab
         {
             filters.MinLevel = Math.Clamp(min, EcFilterOptions.MinLevel, EcFilterOptions.MaxLevel);
             filters.MaxLevel = Math.Max(filters.MaxLevel, filters.MinLevel);
+            this.log.Debug($"filter changed: level range = {filters.MinLevel}-{filters.MaxLevel}.");
             this.config.Save();
         }
 
@@ -214,6 +226,7 @@ internal sealed class SettingsTab
         {
             filters.MaxLevel = Math.Clamp(max, EcFilterOptions.MinLevel, EcFilterOptions.MaxLevel);
             filters.MinLevel = Math.Min(filters.MinLevel, filters.MaxLevel);
+            this.log.Debug($"filter changed: level range = {filters.MinLevel}-{filters.MaxLevel}.");
             this.config.Save();
         }
 

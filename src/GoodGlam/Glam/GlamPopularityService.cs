@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using GoodGlam.Diagnostics;
 
 namespace GoodGlam.Glam;
 
@@ -34,12 +35,18 @@ public sealed class GlamPopularityService
     private readonly Configuration config;
     private readonly IGlamSource source;
     private readonly INotifier notifier;
+    private readonly ITraceLogger<GlamPopularityService> log;
 
-    public GlamPopularityService(Configuration config, IGlamSource source, INotifier notifier)
+    public GlamPopularityService(
+        Configuration config,
+        IGlamSource source,
+        INotifier notifier,
+        ITraceLogger<GlamPopularityService>? log = null)
     {
         this.config = config;
         this.source = source;
         this.notifier = notifier;
+        this.log = log ?? new TraceLogger<GlamPopularityService>();
     }
 
     /// <summary>
@@ -53,16 +60,22 @@ public sealed class GlamPopularityService
         // any await hands control to a thread-pool continuation. This pins the drop to the character
         // that's logged in right now, even if they switch before the lookup finishes.
         var target = this.notifier.CaptureTarget();
+        this.log.Debug(
+            $"checking {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] against threshold {this.config.LovesThreshold}.");
         try
         {
             var popularity = await this.GetPopularityAsync(drop).ConfigureAwait(false);
-            if (popularity.TopLoves >= this.config.LovesThreshold)
+            var qualifies = popularity.TopLoves >= this.config.LovesThreshold;
+            this.log.Debug(
+                $"{drop.Name} -> topLoves={popularity.TopLoves} vs threshold={this.config.LovesThreshold} => " +
+                $"{(qualifies ? "POPULAR (notifying)" : "below threshold")}.");
+            if (qualifies)
                 target.NotifyPopular(drop, popularity);
             return popularity;
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, $"GoodGlam: failed to check popularity for {drop.Name} ({drop.ItemId}).");
+            this.log.Warning(ex, $"failed to check popularity for {drop.Name} ({drop.ItemId}).");
             return new GlamPopularity(0, null);
         }
     }
@@ -74,10 +87,20 @@ public sealed class GlamPopularityService
         var filters = this.config.Filters;
         var cacheKey = $"{drop.ItemId}|{filters.Signature()}";
         if (this.cache.TryGetValue(cacheKey, out var entry) && !entry.IsExpired(this.config.CacheTtlHours))
+        {
+            this.log.Debug($"cache hit for key '{cacheKey}' (topLoves={entry.Popularity.TopLoves}).");
             return entry.Popularity;
+        }
+
+        this.log.Debug($"cache miss for key '{cacheKey}'; querying Eorzea Collection.");
 
         var ecItem = await this.source.ResolveEcItemAsync(drop.Slot, drop.Name, drop.ItemId, CancellationToken.None)
             .ConfigureAwait(false);
+
+        if (ecItem is null)
+        {
+            this.log.Debug($"{drop.Name} ({drop.ItemId}) did not resolve to an EC item; treating as unpopular.");
+        }
 
         var popularity = ecItem is null
             ? new GlamPopularity(0, null)

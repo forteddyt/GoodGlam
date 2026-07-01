@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GoodGlam.Diagnostics;
 
 namespace GoodGlam.History;
 
@@ -32,13 +33,15 @@ public sealed class NotificationHistoryStore
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
     private readonly object gate = new();
+    private readonly ITraceLogger<NotificationHistoryStore> log;
     private string filePath;
     private List<PopularDropRecord> records;
 
-    public NotificationHistoryStore(string filePath)
+    public NotificationHistoryStore(string filePath, ITraceLogger<NotificationHistoryStore>? log = null)
     {
+        this.log = log ?? new TraceLogger<NotificationHistoryStore>();
         this.filePath = filePath;
-        this.records = Load(filePath);
+        this.records = this.Load(filePath);
     }
 
     /// <summary>
@@ -52,7 +55,11 @@ public sealed class NotificationHistoryStore
         lock (this.gate)
         {
             this.filePath = filePath ?? string.Empty;
-            this.records = string.IsNullOrEmpty(this.filePath) ? [] : Load(this.filePath);
+            this.records = string.IsNullOrEmpty(this.filePath) ? [] : this.Load(this.filePath);
+            this.log.Debug(
+                string.IsNullOrEmpty(this.filePath)
+                    ? "detached from any history file (title screen)."
+                    : $"bound to '{this.filePath}' with {this.records.Count} existing entry(ies).");
         }
     }
 
@@ -124,12 +131,14 @@ public sealed class NotificationHistoryStore
     {
         lock (this.gate)
         {
+            var cleared = this.records.Count;
             this.records.Clear();
             this.Save();
+            this.log.Debug($"cleared {cleared} history entry(ies).");
         }
     }
 
-    private static List<PopularDropRecord> Load(string path)
+    private List<PopularDropRecord> Load(string path)
     {
         try
         {
@@ -141,7 +150,7 @@ public sealed class NotificationHistoryStore
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, "GoodGlam: failed to load notification history; starting empty.");
+            this.log.Warning(ex, "failed to load notification history; starting empty.");
             return [];
         }
     }
@@ -151,11 +160,11 @@ public sealed class NotificationHistoryStore
     /// loading it, inserting newest-first, pruning to the cap, and writing it back. Used when a
     /// lookup completes after the player has switched away from the character that saw the drop.
     /// </summary>
-    private static void AppendDirect(string path, PopularDropRecord record)
+    private void AppendDirect(string path, PopularDropRecord record)
     {
         try
         {
-            var records = Load(path);
+            var records = this.Load(path);
             records.Insert(0, record);
             if (records.Count > MaxEntries)
                 records.RemoveRange(MaxEntries, records.Count - MaxEntries);
@@ -165,10 +174,11 @@ public sealed class NotificationHistoryStore
                 Directory.CreateDirectory(dir);
 
             File.WriteAllText(path, JsonSerializer.Serialize(records, Json));
+            this.log.Verbose($"appended a late drop directly to '{path}' ({records.Count} entries).");
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, "GoodGlam: failed to append a late drop to its character's history.");
+            this.log.Warning(ex, "failed to append a late drop to its character's history.");
         }
     }
 
@@ -188,7 +198,7 @@ public sealed class NotificationHistoryStore
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, "GoodGlam: failed to save notification history.");
+            this.log.Warning(ex, "failed to save notification history.");
         }
     }
 }

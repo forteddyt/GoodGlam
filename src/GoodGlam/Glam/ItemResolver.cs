@@ -1,3 +1,4 @@
+using GoodGlam.Diagnostics;
 using Lumina.Excel.Sheets;
 
 namespace GoodGlam.Glam;
@@ -11,6 +12,11 @@ public sealed record DropItem(uint ItemId, string Name, GlamSlot Slot);
 /// </summary>
 public sealed class ItemResolver
 {
+    private readonly ITraceLogger<ItemResolver> log;
+
+    public ItemResolver(ITraceLogger<ItemResolver>? log = null)
+        => this.log = log ?? new TraceLogger<ItemResolver>();
+
     /// <summary>
     /// Returns a <see cref="DropItem"/> for a glamour-relevant gear piece, or
     /// <c>null</c> when the item does not exist or is not equippable glamour gear.
@@ -22,20 +28,33 @@ public sealed class ItemResolver
 
         var sheet = Services.DataManager.GetExcelSheet<Item>();
         if (sheet is null || !sheet.TryGetRow(baseId, out var item))
+        {
+            this.log.Debug($"item {itemId} (base {baseId}) has no Item sheet row; not gear.");
             return null;
+        }
 
         var name = item.Name.ExtractText();
         if (string.IsNullOrWhiteSpace(name))
+        {
+            this.log.Debug($"item {itemId} (base {baseId}) has an empty name; skipping.");
             return null;
+        }
 
         var escRef = item.EquipSlotCategory;
         if (!escRef.IsValid)
+        {
+            this.log.Debug($"'{name}' ({baseId}) has no valid EquipSlotCategory; not equippable gear.");
             return null;
+        }
 
         var slot = GlamSlot.FromEquipSlotCategory(escRef.Value);
         if (slot is null)
+        {
+            this.log.Debug($"'{name}' ({baseId}) is equippable but maps to no glamour slot (e.g. belt/soul crystal); skipping.");
             return null;
+        }
 
+        this.log.Verbose($"item {itemId} -> '{name}' ({baseId}) [slot={slot.Key}].");
         return new DropItem(baseId, name, slot);
     }
 

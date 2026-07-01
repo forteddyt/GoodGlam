@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GoodGlam.Diagnostics;
 using GoodGlam.History;
 
 namespace GoodGlam;
@@ -29,6 +30,7 @@ public sealed class CharacterDataManager
     private readonly Configuration liveConfig;
     private readonly NotificationHistoryStore liveHistory;
     private readonly NotificationState notificationState;
+    private readonly ITraceLogger<CharacterDataManager> log;
 
     private ulong activeContentId;
 
@@ -36,16 +38,19 @@ public sealed class CharacterDataManager
     /// <param name="liveConfig">The single configuration instance shared by every window/service.</param>
     /// <param name="liveHistory">The single history store shared by the history window and notifier.</param>
     /// <param name="notificationState">The shared unseen-drop glow latch, reset on deactivate.</param>
+    /// <param name="log">Component logger; defaults to a real one when not supplied (tests can fake it).</param>
     public CharacterDataManager(
         string charactersRoot,
         Configuration liveConfig,
         NotificationHistoryStore liveHistory,
-        NotificationState notificationState)
+        NotificationState notificationState,
+        ITraceLogger<CharacterDataManager>? log = null)
     {
         this.charactersRoot = charactersRoot;
         this.liveConfig = liveConfig;
         this.liveHistory = liveHistory;
         this.notificationState = notificationState;
+        this.log = log ?? new TraceLogger<CharacterDataManager>();
     }
 
     /// <summary>Content id of the character whose data is currently loaded; 0 when none.</summary>
@@ -71,6 +76,7 @@ public sealed class CharacterDataManager
         var configStore = new ConfigurationStore(Path.Combine(folder, ConfigFileName));
         var historyPath = Path.Combine(folder, HistoryFileName);
 
+        var hadConfig = configStore.Exists();
         var loaded = configStore.Load();
         this.liveConfig.CopyFrom(loaded);
         this.liveConfig.SaveSink = configStore.Save;
@@ -79,9 +85,12 @@ public sealed class CharacterDataManager
         configStore.Save(this.liveConfig);
 
         this.liveHistory.Rebind(historyPath);
-        WriteMeta(folder, contentId, name, world);
+        this.WriteMeta(folder, contentId, name, world);
 
         this.activeContentId = contentId;
+        this.log.Debug(
+            $"activated contentId={contentId:x16} (name={name ?? "(unknown)"}, world={world ?? "(unknown)"}) " +
+            $"from '{folder}' — {(hadConfig ? "loaded existing config" : "seeded a new config")}.");
     }
 
     /// <summary>
@@ -96,10 +105,12 @@ public sealed class CharacterDataManager
         this.liveConfig.SaveSink = null;
         this.liveHistory.Rebind(null);
         this.notificationState.Clear();
+        if (this.activeContentId != 0)
+            this.log.Debug($"deactivated contentId={this.activeContentId:x16}; reset to defaults.");
         this.activeContentId = 0;
     }
 
-    private static void WriteMeta(string folder, ulong contentId, string? name, string? world)
+    private void WriteMeta(string folder, ulong contentId, string? name, string? world)
     {
         try
         {
@@ -109,7 +120,7 @@ public sealed class CharacterDataManager
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, "GoodGlam: failed to write character meta.json.");
+            this.log.Warning(ex, "failed to write character meta.json.");
         }
     }
 

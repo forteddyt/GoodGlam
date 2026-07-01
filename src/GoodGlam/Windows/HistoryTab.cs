@@ -1,6 +1,7 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Utility;
+using GoodGlam.Diagnostics;
 using GoodGlam.History;
 
 namespace GoodGlam.Windows;
@@ -13,6 +14,7 @@ namespace GoodGlam.Windows;
 internal sealed class HistoryTab
 {
     private readonly NotificationHistoryStore store;
+    private readonly ITraceLogger<HistoryTab> log = new TraceLogger<HistoryTab>();
 
     internal HistoryTab(NotificationHistoryStore store)
     {
@@ -26,7 +28,10 @@ internal sealed class HistoryTab
         ImGui.TextDisabled($"{records.Count} qualifying drop(s) logged.");
         ImGui.SameLine();
         if (ImGui.Button("Clear"))
+        {
+            this.log.Debug($"history Clear clicked ({records.Count} entries).");
             this.store.Clear();
+        }
 
         ImGui.Separator();
 
@@ -63,10 +68,10 @@ internal sealed class HistoryTab
             ImGui.TextUnformatted(record.Loves.ToString());
 
             ImGui.TableSetColumnIndex(3);
-            DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
+            this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
 
             ImGui.TableSetColumnIndex(4);
-            DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+            this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
         }
 
         ImGui.EndTable();
@@ -76,7 +81,7 @@ internal sealed class HistoryTab
     /// Renders a cell as a clickable Eorzea Collection link. Falls back to plain/disabled text when
     /// there's no URL (e.g. older history entries saved before the link was captured).
     /// </summary>
-    private static void DrawLinkCell(string? label, string? url, string fallback)
+    private void DrawLinkCell(string? label, string? url, string fallback)
     {
         if (string.IsNullOrEmpty(url))
         {
@@ -97,6 +102,9 @@ internal sealed class HistoryTab
         }
 
         if (ImGui.IsItemClicked())
+        {
+            this.log.Debug($"opening Eorzea Collection link {url}.");
             Util.OpenLink(url);
+        }
     }
 }

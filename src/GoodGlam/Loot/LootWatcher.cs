@@ -1,6 +1,7 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 using CSLoot = FFXIVClientStructs.FFXIV.Client.Game.UI.Loot;
 
@@ -18,15 +19,21 @@ public sealed class LootWatcher : IDisposable
     private readonly ItemResolver resolver;
     private readonly GlamPopularityService popularity;
     private readonly Configuration config;
+    private readonly ITraceLogger<LootWatcher> log;
 
     // Avoids dispatching the same item twice while a single roll window is open.
     private readonly HashSet<uint> seenThisWindow = [];
 
-    public LootWatcher(ItemResolver resolver, GlamPopularityService popularity, Configuration config)
+    public LootWatcher(
+        ItemResolver resolver,
+        GlamPopularityService popularity,
+        Configuration config,
+        ITraceLogger<LootWatcher>? log = null)
     {
         this.resolver = resolver;
         this.popularity = popularity;
         this.config = config;
+        this.log = log ?? new TraceLogger<LootWatcher>();
 
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, AddonName, this.OnAddonEvent);
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostRefresh, AddonName, this.OnAddonEvent);
@@ -36,42 +43,71 @@ public sealed class LootWatcher : IDisposable
     private void OnAddonEvent(AddonEvent type, AddonArgs args)
     {
         if (!this.config.Enabled)
+        {
+            this.log.Verbose($"{AddonName} {type} ignored — plugin disabled in settings.");
             return;
+        }
 
         try
         {
-            this.ScanLoot();
+            this.ScanLoot(type);
         }
         catch (Exception ex)
         {
-            Services.Log.Error(ex, "GoodGlam: failed to scan the loot roll window.");
+            this.log.Error(ex, "failed to scan the loot roll window.");
         }
     }
 
-    private void OnAddonClosed(AddonEvent type, AddonArgs args) => this.seenThisWindow.Clear();
+    private void OnAddonClosed(AddonEvent type, AddonArgs args)
+    {
+        this.log.Verbose($"{AddonName} closed — clearing {this.seenThisWindow.Count} seen item(s).");
+        this.seenThisWindow.Clear();
+    }
 
-    private unsafe void ScanLoot()
+    private unsafe void ScanLoot(AddonEvent type)
     {
         var loot = CSLoot.Instance();
         if (loot == null)
+        {
+            this.log.Verbose($"{AddonName} {type} but Loot.Instance() is null; nothing to scan.");
             return;
+        }
 
         var items = loot->Items;
+        var dispatched = 0;
+        var skipped = 0;
+        this.log.Debug($"{AddonName} {type} — scanning {items.Length} slot(s).");
         for (var i = 0; i < items.Length; i++)
         {
             var lootItem = items[i];
             if (lootItem.ItemId == 0 || lootItem.RollState == RollState.Unavailable)
+            {
+                skipped++;
                 continue;
+            }
+
+            this.log.Verbose($"slot {i} ItemId={lootItem.ItemId} RollState={lootItem.RollState}.");
 
             var drop = this.resolver.Resolve(lootItem.ItemId);
             if (drop is null)
+            {
+                skipped++;
                 continue;
+            }
 
             if (!this.seenThisWindow.Add(drop.ItemId))
+            {
+                this.log.Verbose($"{drop.Name} ({drop.ItemId}) already dispatched this window; skipping.");
+                skipped++;
                 continue;
+            }
 
+            this.log.Debug($"dispatching {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] for popularity check.");
+            dispatched++;
             _ = this.popularity.ProcessAsync(drop);
         }
+
+        this.log.Debug($"scan complete — {dispatched} dispatched, {skipped} skipped of {items.Length} slot(s).");
     }
 
     /// <summary>
@@ -85,13 +121,13 @@ public sealed class LootWatcher : IDisposable
         var loot = CSLoot.Instance();
         if (loot == null)
         {
-            Services.Log.Information("GoodGlam[dump]: Loot.Instance() is null (no active loot session).");
+            this.log.Information("dump: Loot.Instance() is null (no active loot session).");
             return;
         }
 
         var items = loot->Items;
         var populated = 0;
-        Services.Log.Information($"GoodGlam[dump]: SelectedIndex={loot->SelectedIndex}, {items.Length} slots:");
+        this.log.Information($"dump: SelectedIndex={loot->SelectedIndex}, {items.Length} slots:");
         for (var i = 0; i < items.Length; i++)
         {
             var it = items[i];
@@ -101,7 +137,7 @@ public sealed class LootWatcher : IDisposable
             populated++;
             var drop = this.resolver.Resolve(it.ItemId);
             var resolved = drop is null ? "non-gear/unresolved" : $"{drop.Name} [slot={drop.Slot.Key}]";
-            Services.Log.Information(
+            this.log.Information(
                 $"  [{i}] ItemId={it.ItemId} Count={it.ItemCount} GlamourItemId={it.GlamourItemId} " +
                 $"RollState={it.RollState} RollResult={it.RollResult} RollValue={it.RollValue} " +
                 $"LootMode={it.LootMode} Weekly={it.WeeklyLootItem} Time={it.Time:F1}/{it.MaxTime:F1} " +
@@ -109,7 +145,7 @@ public sealed class LootWatcher : IDisposable
         }
 
         if (populated == 0)
-            Services.Log.Information("GoodGlam[dump]: no populated loot entries (open this during a roll window).");
+            this.log.Information("dump: no populated loot entries (open this during a roll window).");
     }
 
     /// <summary>
@@ -122,11 +158,11 @@ public sealed class LootWatcher : IDisposable
         var drop = this.resolver.Resolve(itemId);
         if (drop is null)
         {
-            Services.Log.Information($"GoodGlam[check]: item {itemId} did not resolve to glamour-relevant gear.");
+            this.log.Information($"check: item {itemId} did not resolve to glamour-relevant gear.");
             return;
         }
 
-        Services.Log.Information($"GoodGlam[check]: simulating drop of {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}].");
+        this.log.Information($"check: simulating drop of {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}].");
         _ = this.ReportSimulatedDropAsync(drop);
     }
 
@@ -134,8 +170,8 @@ public sealed class LootWatcher : IDisposable
     {
         var popularity = await this.popularity.ProcessAsync(drop).ConfigureAwait(false);
         var passed = popularity.TopLoves >= this.config.LovesThreshold;
-        Services.Log.Information(
-            $"GoodGlam[check]: {drop.Name} -> topLoves={popularity.TopLoves}, " +
+        this.log.Information(
+            $"check: {drop.Name} -> topLoves={popularity.TopLoves}, " +
             $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
             $"{(passed ? "POPULAR — logged to history (logo glow raised)" : "below threshold — not logged")}");
     }
