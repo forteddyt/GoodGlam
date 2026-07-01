@@ -134,6 +134,11 @@ internal sealed class ManagedHttpTransport(string userAgent) : IEcTransport
 /// (libcurl/Schannel), whose TLS ClientHello Cloudflare accepts. Returns <c>null</c> when
 /// curl is unavailable (e.g. under Wine), letting the in-process transport take over.
 /// </summary>
+/// <remarks>
+/// Deliberately not <c>[ExcludeFromCodeCoverage]</c>: GoodGlam ships on both Windows and Linux, and
+/// the <c>curl.exe</c> subprocess can't be driven deterministically from either CI runner, so the
+/// report should honestly show this path as uncovered rather than hiding it.
+/// </remarks>
 internal sealed class CurlTransport(string userAgent) : IEcTransport
 {
     private static readonly string CurlPath = ResolveCurlPath();

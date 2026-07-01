@@ -2,31 +2,37 @@ using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using GoodGlam.Glam;
-using CSLoot = FFXIVClientStructs.FFXIV.Client.Game.UI.Loot;
 
 namespace GoodGlam.Loot;
 
 /// <summary>
 /// Hooks the Need/Greed roll window. When it appears (or refreshes), each rollable
-/// item is read straight from the game's <see cref="Loot"/> struct and dispatched to
+/// item is read straight from the game's <c>Loot</c> struct and dispatched to
 /// the popularity check. No packet capture required.
 /// </summary>
 public sealed class LootWatcher : IDisposable
 {
     private const string AddonName = "NeedGreed";
 
-    private readonly ItemResolver resolver;
+    private readonly IItemResolver resolver;
     private readonly GlamPopularityService popularity;
     private readonly Configuration config;
+    private readonly ILootReader lootReader;
 
     // Avoids dispatching the same item twice while a single roll window is open.
     private readonly HashSet<uint> seenThisWindow = [];
 
-    public LootWatcher(ItemResolver resolver, GlamPopularityService popularity, Configuration config)
+    public LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config)
+        : this(resolver, popularity, config, new GameLootReader())
+    {
+    }
+
+    internal LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config, ILootReader lootReader)
     {
         this.resolver = resolver;
         this.popularity = popularity;
         this.config = config;
+        this.lootReader = lootReader;
 
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, AddonName, this.OnAddonEvent);
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostRefresh, AddonName, this.OnAddonEvent);
@@ -50,16 +56,13 @@ public sealed class LootWatcher : IDisposable
 
     private void OnAddonClosed(AddonEvent type, AddonArgs args) => this.seenThisWindow.Clear();
 
-    private unsafe void ScanLoot()
+    private void ScanLoot()
     {
-        var loot = CSLoot.Instance();
-        if (loot == null)
+        if (this.lootReader.Read() is not { } loot)
             return;
 
-        var items = loot->Items;
-        for (var i = 0; i < items.Length; i++)
+        foreach (var lootItem in loot.Items)
         {
-            var lootItem = items[i];
             if (lootItem.ItemId == 0 || lootItem.RollState == RollState.Unavailable)
                 continue;
 
@@ -76,25 +79,23 @@ public sealed class LootWatcher : IDisposable
 
     /// <summary>
     /// Debug helper (<c>/goodglam dump</c>): logs every populated entry of the live
-    /// <see cref="Loot"/> struct so we can see exactly what the roll window exposes. Trigger
+    /// <c>Loot</c> struct so we can see exactly what the roll window exposes. Trigger
     /// it during a roll window — running old content solo &amp; unsynced is a reliable,
     /// repeatable way to open one on demand.
     /// </summary>
-    public unsafe void DumpCurrentLoot()
+    public void DumpCurrentLoot()
     {
-        var loot = CSLoot.Instance();
-        if (loot == null)
+        if (this.lootReader.Read() is not { } loot)
         {
             Services.Log.Information("GoodGlam[dump]: Loot.Instance() is null (no active loot session).");
             return;
         }
 
-        var items = loot->Items;
         var populated = 0;
-        Services.Log.Information($"GoodGlam[dump]: SelectedIndex={loot->SelectedIndex}, {items.Length} slots:");
-        for (var i = 0; i < items.Length; i++)
+        Services.Log.Information($"GoodGlam[dump]: SelectedIndex={loot.SelectedIndex}, {loot.Items.Count} slots:");
+        for (var i = 0; i < loot.Items.Count; i++)
         {
-            var it = items[i];
+            var it = loot.Items[i];
             if (it.ItemId == 0)
                 continue;
 

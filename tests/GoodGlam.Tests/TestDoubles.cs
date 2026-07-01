@@ -1,6 +1,8 @@
 using System.Reflection;
 using Dalamud.Plugin.Services;
 using GoodGlam.Glam;
+using GoodGlam.Loot;
+using GoodGlam.Windows;
 
 namespace GoodGlam.Tests;
 
@@ -37,10 +39,15 @@ internal sealed class FakeGlamSource : IGlamSource
 internal sealed class FakeNotifier : INotifier, INotificationTarget
 {
     public int Count;
+    public int CaptureCalls;
     public DropItem? LastDrop;
     public GlamPopularity? LastPopularity;
 
-    public INotificationTarget CaptureTarget() => this;
+    public INotificationTarget CaptureTarget()
+    {
+        this.CaptureCalls++;
+        return this;
+    }
 
     public void NotifyPopular(DropItem drop, GlamPopularity popularity)
     {
@@ -48,6 +55,29 @@ internal sealed class FakeNotifier : INotifier, INotificationTarget
         this.LastDrop = drop;
         this.LastPopularity = popularity;
     }
+}
+
+/// <summary>Scripted <see cref="ILootReader"/>: returns a fixed snapshot and counts reads.</summary>
+internal sealed class StubLootReader : ILootReader
+{
+    public int ReadCalls;
+    public LootSnapshot? Snapshot;
+
+    public StubLootReader(LootSnapshot? snapshot = null) => this.Snapshot = snapshot;
+
+    public LootSnapshot? Read()
+    {
+        this.ReadCalls++;
+        return this.Snapshot;
+    }
+}
+
+/// <summary>Records URLs passed to <see cref="ILinkOpener.Open"/> so link-open effects are assertable.</summary>
+internal sealed class FakeLinkOpener : ILinkOpener
+{
+    public readonly List<string> Opened = new();
+
+    public void Open(string url) => this.Opened.Add(url);
 }
 
 /// <summary>Scripted <see cref="IEcTransport"/> returning queued bodies and recording requests.</summary>
@@ -112,6 +142,25 @@ internal static class TestServices
     {
         typeof(GoodGlam.Services).GetProperty(property, BindingFlags.NonPublic | BindingFlags.Static)!
             .SetValue(null, value);
+    }
+
+    /// <summary>
+    /// Clears every installed Dalamud service except <c>Log</c> from the static holder. The holder is
+    /// process-global with no per-class isolation, so a class that installs a broad set of fakes (e.g.
+    /// <c>PluginTests</c>) should reset here in teardown to avoid leaking them into later-running
+    /// classes and making outcomes depend on xUnit's execution order. <c>Log</c> stays installed
+    /// because <see cref="EnsureLog"/> seeds it once behind an idempotency guard.
+    /// </summary>
+    public static void ResetServices()
+    {
+        string[] services =
+        [
+            "PluginInterface", "Commands", "DataManager", "ClientState", "PlayerState",
+            "AddonLifecycle", "Notifications", "Framework", "TextureProvider",
+        ];
+
+        foreach (var name in services)
+            Install<object?>(name, null);
     }
 }
 

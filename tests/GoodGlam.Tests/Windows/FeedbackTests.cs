@@ -23,4 +23,14 @@ public class FeedbackTests
     {
         Feedback.BugReportUrl.Should().Contain("template=bug_report.yml");
     }
+
+    [Fact]
+    public void OpenBugReport_opens_exactly_the_bug_report_url()
+    {
+        var opener = new FakeLinkOpener();
+
+        Feedback.OpenBugReport(opener);
+
+        opener.Opened.Should().ContainSingle().Which.Should().Be(Feedback.BugReportUrl);
+    }
 }

@@ -145,6 +145,20 @@ public class CharacterDataManagerTests : IDisposable
         history.Snapshot().Should().BeEmpty();
     }
 
+    [Fact]
+    public void Activate_swallows_meta_write_errors()
+    {
+        var (manager, _, _, _) = this.NewManager();
+
+        // Pre-create a directory where meta.json should go, so writing the file fails while the rest
+        // of activation (config.json) still succeeds — exercising WriteMeta's catch without throwing.
+        var folder = Path.Combine(this.charactersRoot, CharacterA.ToString("x16"));
+        Directory.CreateDirectory(Path.Combine(folder, "meta.json"));
+
+        manager.Invoking(m => m.Activate(CharacterA, "Alpha", "Behemoth")).Should().NotThrow();
+        manager.IsActive.Should().BeTrue();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(this.root))

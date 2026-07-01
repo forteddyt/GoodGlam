@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Lumina.Excel.Sheets;
 
 namespace GoodGlam.Glam;
@@ -29,6 +30,7 @@ public sealed record GlamSlot(string Key)
     /// Collection slot, or <c>null</c> when the item is not glamour-relevant gear
     /// (e.g. materia, crafting materials, soul crystals, belts).
     /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Thin adapter over the Lumina EquipSlotCategory game-data struct; the priority logic is factored into FromSlotFlags, which is tested.")]
     public static GlamSlot? FromEquipSlotCategory(EquipSlotCategory esc)
         => FromSlotFlags(esc.Head, esc.Body, esc.Gloves, esc.Legs, esc.Feet,
             esc.MainHand, esc.OffHand, esc.Ears, esc.Neck, esc.Wrists, esc.FingerL, esc.FingerR);

@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Diagnostics.CodeAnalysis;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using GoodGlam.Glam;
@@ -38,6 +39,7 @@ public sealed class MainWindow : Window
     /// <summary>Land on the History tab every time the window opens (see <see cref="HistoryTabFocus"/>).</summary>
     public override void OnOpen() => this.historyFocus.OnOpen();
 
+    [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; requires a live ImGui context that can't run in CI.")]
     public override void Draw()
     {
         // All GoodGlam metadata is per-character, so there's nothing to show or edit until a
