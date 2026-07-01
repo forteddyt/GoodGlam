@@ -10,6 +10,13 @@
             of thousands of generated game-library lines (see issue #19).
           -->
           <Include>[GoodGlam]*</Include>
+          <!--
+            Drop source-generated code from the report. The only source generator here is the
+            regex generator (EorzeaCollectionClient's [GeneratedRegex] runners), which otherwise
+            adds ~390 lines of machinery we don't own. Only GeneratedCodeAttribute is excluded:
+            NOT CompilerGeneratedAttribute, so our own async state machines and lambdas still count.
+          -->
+          <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
           <Format>cobertura</Format>
         </Configuration>
       </DataCollector>

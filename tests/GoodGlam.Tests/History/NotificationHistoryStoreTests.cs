@@ -200,6 +200,90 @@ public class NotificationHistoryStoreTests : IDisposable
         }
     }
 
+    [Fact]
+    public void AddTo_active_binding_prunes_to_the_cap()
+    {
+        var store = new NotificationHistoryStore(this.path);
+        var binding = store.CaptureBinding();
+
+        for (uint i = 0; i < MaxEntriesPlus(10); i++)
+            store.AddTo(binding, Record(i)).Should().BeTrue();
+
+        store.Snapshot().Should().HaveCount(NotificationHistoryStore.MaxEntries);
+    }
+
+    [Fact]
+    public void AddTo_after_switch_appends_to_origin_and_prunes_it_to_the_cap()
+    {
+        var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
+        try
+        {
+            // Fill character A (this.path) to the cap, capture its binding, then switch to B.
+            var store = new NotificationHistoryStore(this.path);
+            for (uint i = 0; i < NotificationHistoryStore.MaxEntries; i++)
+                store.Add(Record(i));
+            var bindingForA = store.CaptureBinding();
+            store.Rebind(other);
+
+            // A late drop for A is appended directly to A's file, which then prunes back to the cap.
+            store.AddTo(bindingForA, Record(9999)).Should().BeFalse();
+
+            var reloaded = new NotificationHistoryStore(this.path).Snapshot();
+            reloaded.Should().HaveCount(NotificationHistoryStore.MaxEntries);
+            reloaded[0].ItemId.Should().Be(9999);
+        }
+        finally
+        {
+            if (File.Exists(other))
+                File.Delete(other);
+        }
+    }
+
+    [Fact]
+    public void AddTo_swallows_io_errors_when_appending_to_a_since_switched_origin()
+    {
+        // Character A's history path is unwritable ("<file>/history.json"); after switching to B, a
+        // late drop for A hits AppendDirect's catch and is reported as not-active without throwing.
+        var blocker = Path.Combine(Path.GetTempPath(), $"goodglam-blocker-{Guid.NewGuid():N}");
+        File.WriteAllText(blocker, "x");
+        var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new NotificationHistoryStore(Path.Combine(blocker, "history.json"));
+            var bindingForA = store.CaptureBinding();
+            store.Rebind(other);
+
+            store.Invoking(s => s.AddTo(bindingForA, Record(1)).Should().BeFalse()).Should().NotThrow();
+        }
+        finally
+        {
+            File.Delete(blocker);
+            if (File.Exists(other))
+                File.Delete(other);
+        }
+    }
+
+    [Fact]
+    public void Add_swallows_io_errors_when_the_file_cannot_be_written()
+    {
+        var blocker = Path.Combine(Path.GetTempPath(), $"goodglam-blocker-{Guid.NewGuid():N}");
+        File.WriteAllText(blocker, "x");
+        try
+        {
+            var store = new NotificationHistoryStore(Path.Combine(blocker, "history.json"));
+            store.Invoking(s => s.Add(Record(1))).Should().NotThrow();
+
+            // The record still lives in memory even though persistence failed.
+            store.Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(1);
+        }
+        finally
+        {
+            File.Delete(blocker);
+        }
+    }
+
+    private static uint MaxEntriesPlus(uint extra) => (uint)NotificationHistoryStore.MaxEntries + extra;
+
     public void Dispose()
     {
         if (File.Exists(this.path))

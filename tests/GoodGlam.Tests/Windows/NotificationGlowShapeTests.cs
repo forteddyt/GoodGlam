@@ -55,6 +55,36 @@ public class NotificationGlowShapeTests
         diamond.Should().NotEqual(pyramid);
     }
 
+    [Theory]
+    [InlineData(0, 8)]
+    [InlineData(-1, 8)]
+    [InlineData(8, 0)]
+    public void BuildGoldSilhouette_rejects_non_positive_dimensions(int width, int height)
+    {
+        var source = new byte[Math.Max(1, width) * Math.Max(1, height) * 4];
+
+        var act = () => NotificationGlow.BuildGoldSilhouette(width, height, Math.Max(1, width) * 4, source);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void BuildGoldSilhouette_rejects_a_pitch_too_small_for_a_row()
+    {
+        var act = () => NotificationGlow.BuildGoldSilhouette(8, 8, 8 * 4 - 1, new byte[8 * 8 * 4]);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void BuildGoldSilhouette_rejects_a_source_buffer_smaller_than_the_image()
+    {
+        // Pitch is valid, but the buffer is one row short of width * height * 4.
+        var act = () => NotificationGlow.BuildGoldSilhouette(8, 8, 8 * 4, new byte[8 * 7 * 4]);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
     /// <summary>
     /// Bakes the glow sprite for a shape and asserts every pixel is gold with alpha exactly equal to
     /// the shape's own coverage mask — i.e. the halo silhouette is the logo silhouette.

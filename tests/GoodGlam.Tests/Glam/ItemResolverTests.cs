@@ -1,3 +1,5 @@
+using Dalamud.Plugin.Services;
+using FakeItEasy;
 using FluentAssertions;
 using GoodGlam.Glam;
 using Xunit;
@@ -15,4 +17,18 @@ public class ItemResolverTests
     [InlineData(0u, 0u)]
     public void NormalizeItemId_strips_hq_offset(uint input, uint expected)
         => ItemResolver.NormalizeItemId(input).Should().Be(expected);
+
+    [Fact]
+    public void Resolve_returns_null_when_the_item_sheet_is_unavailable()
+    {
+        // The Lumina success path needs real game data, but the guard for a missing sheet is pure
+        // logic: a faked IDataManager whose GetExcelSheet<Item>() yields null must resolve to null.
+        // An un-configured fake returns null for GetExcelSheet by default.
+        var data = A.Fake<IDataManager>();
+        TestServices.EnsureLog();
+        TestServices.Install("DataManager", data);
+
+        new ItemResolver().Resolve(3610).Should().BeNull();
+    }
 }
+

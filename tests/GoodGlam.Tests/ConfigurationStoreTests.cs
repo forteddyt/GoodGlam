@@ -69,6 +69,39 @@ public class ConfigurationStoreTests : IDisposable
         store.Exists().Should().BeTrue();
     }
 
+    [Fact]
+    public void FilePath_reports_the_backing_file()
+        => new ConfigurationStore(this.path).FilePath.Should().Be(this.path);
+
+    [Fact]
+    public void Json_null_literal_loads_defaults()
+    {
+        // Deserialize returning null (the literal "null") must fall back to a defaults instance.
+        File.WriteAllText(this.path, "null");
+
+        var loaded = new ConfigurationStore(this.path).Load();
+        loaded.LovesThreshold.Should().Be(new Configuration().LovesThreshold);
+        loaded.Filters.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Save_swallows_io_errors()
+    {
+        // Point the store at "<file>/config.json": creating that directory fails because a file of
+        // the same name already exists, exercising Save's catch without throwing to the caller.
+        var blocker = Path.Combine(Path.GetTempPath(), $"goodglam-blocker-{Guid.NewGuid():N}");
+        File.WriteAllText(blocker, "x");
+        try
+        {
+            var store = new ConfigurationStore(Path.Combine(blocker, "config.json"));
+            store.Invoking(s => s.Save(new Configuration())).Should().NotThrow();
+        }
+        finally
+        {
+            File.Delete(blocker);
+        }
+    }
+
     public void Dispose()
     {
         if (File.Exists(this.path))

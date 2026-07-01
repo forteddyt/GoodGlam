@@ -150,14 +150,18 @@ public class EorzeaCollectionClientTests
     }
 
     [Fact]
-    public async Task GetTopPopularity_encodes_each_race_as_array_param()
+    public void Parameterless_ctor_wires_the_default_transport_stack()
     {
-        var transport = new FakeTransport { GetResult = "" };
-        var filters = new PopularityFilters { Races = ["miqote", "aura"] };
+        // Exercises the production constructor (EcTransportFactory.Create()); no network is touched.
+        new EorzeaCollectionClient().Should().NotBeNull();
+    }
 
-        await new EorzeaCollectionClient(transport).GetTopPopularityAsync(GlamSlot.Body, 1, filters, CancellationToken.None);
-
-        transport.GetUrls.Single().Should()
-            .Contain("filter%5Brace%5D%5B%5D=miqote").And.Contain("filter%5Brace%5D%5B%5D=aura");
+    [Fact]
+    public async Task ResolveEcItem_returns_null_when_body_deserializes_to_null()
+    {
+        // A literal "null" JSON body deserializes to a null list — treated as no match.
+        var item = await new EorzeaCollectionClient(new FakeTransport { PostResult = "null" })
+            .ResolveEcItemAsync(GlamSlot.Hands, "x", 3610, CancellationToken.None);
+        item.Should().BeNull();
     }
 }

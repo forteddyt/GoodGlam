@@ -23,6 +23,11 @@ public sealed class Plugin : IDalamudPlugin
     private readonly CharacterDataManager characterData;
 
     public Plugin(IDalamudPluginInterface pluginInterface)
+        : this(pluginInterface, new GameLootReader())
+    {
+    }
+
+    internal Plugin(IDalamudPluginInterface pluginInterface, ILootReader lootReader)
     {
         pluginInterface.Create<Services>();
 
@@ -38,7 +43,7 @@ public sealed class Plugin : IDalamudPlugin
         this.ecClient = new EorzeaCollectionClient();
         var notifier = new HistoryNotifier(this.history, this.notificationState);
         var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
-        this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config);
+        this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config, lootReader);
 
         this.mainWindow = new MainWindow(this.config, EcFilterCatalog.LoadEmbedded(), this.history, this.SetLogoVisible);
 
