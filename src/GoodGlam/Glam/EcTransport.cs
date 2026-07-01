@@ -158,7 +158,7 @@ internal sealed class ManagedHttpTransport : IEcTransport
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, $"in-process request to {req.RequestUri} failed after {sw.ElapsedMilliseconds}ms.");
+            this.log.Warning($"in-process request to {req.RequestUri} failed after {sw.ElapsedMilliseconds}ms.", ex);
             return null;
         }
     }
@@ -252,7 +252,7 @@ internal sealed class CurlTransport : IEcTransport
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, "unable to launch curl.exe; relying on the in-process transport.");
+            this.log.Warning("unable to launch curl.exe; relying on the in-process transport.", ex);
             return null;
         }
 
@@ -268,6 +268,13 @@ internal sealed class CurlTransport : IEcTransport
         catch (OperationCanceledException)
         {
             TryKill(proc);
+
+            // We're bailing out before the normal await of the drain tasks below. Killing the
+            // process (and disposing its streams on scope exit) can fault those reads, so observe
+            // them here — otherwise a faulted read becomes an unobserved-task exception later. Their
+            // output is irrelevant on the cancellation path.
+            await ObserveAsync(stdoutTask).ConfigureAwait(false);
+            await ObserveAsync(stderrTask).ConfigureAwait(false);
             throw;
         }
 
@@ -283,6 +290,23 @@ internal sealed class CurlTransport : IEcTransport
 
         this.log.Verbose($"curl.exe succeeded — {stdout.Length} chars in {sw.ElapsedMilliseconds}ms.");
         return stdout;
+    }
+
+    /// <summary>
+    /// Awaits a drain task purely to observe its outcome so a fault on the cancellation path can't
+    /// surface later as an unobserved-task exception. Both the result and any exception are discarded
+    /// — the read was racing a kill/cancellation and its outcome is irrelevant here.
+    /// </summary>
+    private static async Task ObserveAsync(Task task)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best effort: intentionally swallowed.
+        }
     }
 
     private static void TryKill(Process proc)

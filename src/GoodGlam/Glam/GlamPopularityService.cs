@@ -75,7 +75,7 @@ public sealed class GlamPopularityService
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, $"failed to check popularity for {drop.Name} ({drop.ItemId}).");
+            this.log.Warning($"failed to check popularity for {drop.Name} ({drop.ItemId}).", ex);
             return new GlamPopularity(0, null);
         }
     }

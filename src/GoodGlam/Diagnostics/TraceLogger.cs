@@ -28,9 +28,9 @@ public sealed class TraceLogger<T> : ITraceLogger<T>
 
     public void Warning(string message) => Services.Log.Warning(this.Format(message));
 
-    public void Warning(Exception exception, string message) => Services.Log.Warning(exception, this.Format(message));
+    public void Warning(string message, Exception exception) => Services.Log.Warning(exception, this.Format(message));
 
     public void Error(string message) => Services.Log.Error(this.Format(message));
 
-    public void Error(Exception exception, string message) => Services.Log.Error(exception, this.Format(message));
+    public void Error(string message, Exception exception) => Services.Log.Error(exception, this.Format(message));
 }

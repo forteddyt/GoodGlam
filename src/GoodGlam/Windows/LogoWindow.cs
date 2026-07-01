@@ -274,7 +274,7 @@ public sealed class LogoWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, "failed to bake the notification glow sprite; the logo won't glow.");
+            this.log.Warning("failed to bake the notification glow sprite; the logo won't glow.", ex);
         }
     }
 

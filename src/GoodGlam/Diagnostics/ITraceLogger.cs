@@ -26,11 +26,11 @@ public interface ITraceLogger<T>
     void Warning(string message);
 
     /// <summary>A recoverable problem, with the exception that caused it.</summary>
-    void Warning(Exception exception, string message);
+    void Warning(string message, Exception exception);
 
     /// <summary>A failure worth surfacing.</summary>
     void Error(string message);
 
     /// <summary>A failure, with the exception that caused it.</summary>
-    void Error(Exception exception, string message);
+    void Error(string message, Exception exception);
 }

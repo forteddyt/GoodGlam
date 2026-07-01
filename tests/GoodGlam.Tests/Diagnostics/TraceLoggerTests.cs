@@ -37,9 +37,9 @@ public class TraceLoggerTests
             logger.Debug("d");
             logger.Information("i");
             logger.Warning("w");
-            logger.Warning(new InvalidOperationException(), "w");
+            logger.Warning("w", new InvalidOperationException());
             logger.Error("e");
-            logger.Error(new InvalidOperationException(), "e");
+            logger.Error("e", new InvalidOperationException());
         };
 
         act.Should().NotThrow();

@@ -61,7 +61,7 @@ public sealed class LootWatcher : IDisposable
         }
         catch (Exception ex)
         {
-            this.log.Error(ex, "failed to scan the loot roll window.");
+            this.log.Error("failed to scan the loot roll window.", ex);
         }
     }
 

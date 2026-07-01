@@ -51,7 +51,7 @@ public sealed class ConfigurationStore
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, $"failed to load character config from '{this.filePath}'; using defaults.");
+            this.log.Warning($"failed to load character config from '{this.filePath}'; using defaults.", ex);
             return new Configuration();
         }
     }
@@ -69,7 +69,7 @@ public sealed class ConfigurationStore
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, $"failed to save character config to '{this.filePath}'.");
+            this.log.Warning($"failed to save character config to '{this.filePath}'.", ex);
         }
     }
 }

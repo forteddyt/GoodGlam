@@ -150,7 +150,7 @@ public sealed class NotificationHistoryStore
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, "failed to load notification history; starting empty.");
+            this.log.Warning("failed to load notification history; starting empty.", ex);
             return [];
         }
     }
@@ -178,7 +178,7 @@ public sealed class NotificationHistoryStore
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, "failed to append a late drop to its character's history.");
+            this.log.Warning("failed to append a late drop to its character's history.", ex);
         }
     }
 
@@ -198,7 +198,7 @@ public sealed class NotificationHistoryStore
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, "failed to save notification history.");
+            this.log.Warning("failed to save notification history.", ex);
         }
     }
 }

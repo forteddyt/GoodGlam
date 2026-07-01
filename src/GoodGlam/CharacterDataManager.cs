@@ -120,7 +120,7 @@ public sealed class CharacterDataManager
         }
         catch (Exception ex)
         {
-            this.log.Warning(ex, "failed to write character meta.json.");
+            this.log.Warning("failed to write character meta.json.", ex);
         }
     }
 
