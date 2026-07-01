@@ -150,6 +150,20 @@ public class EorzeaCollectionClientTests
     }
 
     [Fact]
+    public async Task GetTopPopularity_encodes_each_race_as_array_param()
+    {
+        // Exercises BuildListingUrl's array-parameter escaping branch (name ending in "[]"), which
+        // produces EC's filter[race][] query form — the only place that branch is covered.
+        var transport = new FakeTransport { GetResult = "" };
+        var filters = new PopularityFilters { Races = ["miqote", "aura"] };
+
+        await new EorzeaCollectionClient(transport).GetTopPopularityAsync(GlamSlot.Body, 1, filters, CancellationToken.None);
+
+        transport.GetUrls.Single().Should()
+            .Contain("filter%5Brace%5D%5B%5D=miqote").And.Contain("filter%5Brace%5D%5B%5D=aura");
+    }
+
+    [Fact]
     public void Parameterless_ctor_wires_the_default_transport_stack()
     {
         // Exercises the production constructor (EcTransportFactory.Create()); no network is touched.
