@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 using GoodGlam.History;
 
@@ -17,6 +18,7 @@ public sealed class MainWindow : Window
 {
     private readonly HistoryTab historyTab;
     private readonly SettingsTab settingsTab;
+    private readonly ITraceLogger<MainWindow> log = new TraceLogger<MainWindow>();
 
     /// <summary>
     /// Drives force-selecting the History tab on each open (see <see cref="HistoryTabFocus"/>).
@@ -37,7 +39,11 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>Land on the History tab every time the window opens (see <see cref="HistoryTabFocus"/>).</summary>
-    public override void OnOpen() => this.historyFocus.OnOpen();
+    public override void OnOpen()
+    {
+        this.log.Debug("window opened; forcing the History tab.");
+        this.historyFocus.OnOpen();
+    }
 
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; requires a live ImGui context that can't run in CI.")]
     public override void Draw()

@@ -1,6 +1,7 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using System.Diagnostics.CodeAnalysis;
+using GoodGlam.Diagnostics;
 using GoodGlam.History;
 
 namespace GoodGlam.Windows;
@@ -19,6 +20,7 @@ namespace GoodGlam.Windows;
 internal sealed class HistoryTab
 {
     private readonly NotificationHistoryStore store;
+    private readonly ITraceLogger<HistoryTab> log = new TraceLogger<HistoryTab>();
     private readonly HistoryActions actions;
 
     internal HistoryTab(NotificationHistoryStore store)
@@ -39,7 +41,10 @@ internal sealed class HistoryTab
         ImGui.TextDisabled($"{records.Count} qualifying drop(s) logged.");
         ImGui.SameLine();
         if (ImGui.Button("Clear"))
+        {
+            this.log.Debug($"history Clear clicked ({records.Count} entries).");
             this.store.Clear();
+        }
 
         ImGui.Separator();
 
@@ -116,6 +121,9 @@ internal sealed class HistoryTab
         }
 
         if (ImGui.IsItemClicked())
+        {
+            this.log.Debug($"opening Eorzea Collection link {cell.Url}.");
             this.actions.OpenLink(cell.Url);
+        }
     }
 }

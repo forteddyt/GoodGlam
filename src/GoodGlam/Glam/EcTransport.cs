@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using GoodGlam.Diagnostics;
 
 namespace GoodGlam.Glam;
 
@@ -37,9 +38,20 @@ internal static class EcTransportFactory
 /// usable body (a Cloudflare block on native Windows yields a 403 → null). The transport that
 /// last succeeded becomes primary so steady-state traffic uses a single working path.
 /// </summary>
-internal sealed class FallbackEcTransport(IEcTransport managed, IEcTransport curl) : IEcTransport
+internal sealed class FallbackEcTransport : IEcTransport
 {
+    private readonly IEcTransport managed;
+    private readonly IEcTransport curl;
+    private readonly ITraceLogger<FallbackEcTransport> log;
+
     private volatile bool preferCurl;
+
+    public FallbackEcTransport(IEcTransport managed, IEcTransport curl, ITraceLogger<FallbackEcTransport>? log = null)
+    {
+        this.managed = managed;
+        this.curl = curl;
+        this.log = log ?? new TraceLogger<FallbackEcTransport>();
+    }
 
     public Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
         => this.SendAsync((t, c) => t.PostJsonAsync(url, jsonBody, c), ct);
@@ -49,19 +61,28 @@ internal sealed class FallbackEcTransport(IEcTransport managed, IEcTransport cur
 
     private async Task<string?> SendAsync(Func<IEcTransport, CancellationToken, Task<string?>> call, CancellationToken ct)
     {
-        var primary = this.preferCurl ? curl : managed;
-        var secondary = this.preferCurl ? managed : curl;
+        var preferCurlNow = this.preferCurl;
+        var primary = preferCurlNow ? this.curl : this.managed;
+        var secondary = preferCurlNow ? this.managed : this.curl;
+        var primaryName = preferCurlNow ? "curl.exe" : "in-process HTTP";
+        var secondaryName = preferCurlNow ? "in-process HTTP" : "curl.exe";
 
+        this.log.Verbose($"trying primary transport ({primaryName}).");
         var result = await call(primary, ct).ConfigureAwait(false);
         if (result is not null)
             return result;
 
+        this.log.Debug($"primary transport ({primaryName}) returned nothing; falling back to {secondaryName}.");
         result = await call(secondary, ct).ConfigureAwait(false);
         if (result is not null)
         {
             this.preferCurl = !this.preferCurl;
-            Services.Log.Information(
-                $"GoodGlam: switched Eorzea Collection transport to {(this.preferCurl ? "curl.exe" : "in-process HTTP")}.");
+            this.log.Information(
+                $"switched Eorzea Collection transport to {(this.preferCurl ? "curl.exe" : "in-process HTTP")}.");
+        }
+        else
+        {
+            this.log.Debug("both transports returned nothing for this request.");
         }
 
         return result;
@@ -69,14 +90,23 @@ internal sealed class FallbackEcTransport(IEcTransport managed, IEcTransport cur
 }
 
 /// <summary>In-process transport. Works under Wine and on most platforms; native Windows is blocked.</summary>
-internal sealed class ManagedHttpTransport(string userAgent) : IEcTransport
+internal sealed class ManagedHttpTransport : IEcTransport
 {
     private static readonly HttpClient Http = CreateClient();
+
+    private readonly string userAgent;
+    private readonly ITraceLogger<ManagedHttpTransport> log;
+
+    public ManagedHttpTransport(string userAgent, ITraceLogger<ManagedHttpTransport>? log = null)
+    {
+        this.userAgent = userAgent;
+        this.log = log ?? new TraceLogger<ManagedHttpTransport>();
+    }
 
     public async Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
-        req.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+        req.Headers.TryAddWithoutValidation("User-Agent", this.userAgent);
         req.Headers.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
         req.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
         req.Headers.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
@@ -84,18 +114,18 @@ internal sealed class ManagedHttpTransport(string userAgent) : IEcTransport
         req.Headers.TryAddWithoutValidation("Referer", "https://ffxiv.eorzeacollection.com/glamours");
         req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-        return await SendAsync(req, ct).ConfigureAwait(false);
+        return await this.SendAsync(req, ct).ConfigureAwait(false);
     }
 
     public async Task<string?> GetAsync(string url, CancellationToken ct)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+        req.Headers.TryAddWithoutValidation("User-Agent", this.userAgent);
         req.Headers.TryAddWithoutValidation(
             "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         req.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
 
-        return await SendAsync(req, ct).ConfigureAwait(false);
+        return await this.SendAsync(req, ct).ConfigureAwait(false);
     }
 
     private static HttpClient CreateClient()
@@ -104,18 +134,23 @@ internal sealed class ManagedHttpTransport(string userAgent) : IEcTransport
         return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
     }
 
-    private static async Task<string?> SendAsync(HttpRequestMessage req, CancellationToken ct)
+    private async Task<string?> SendAsync(HttpRequestMessage req, CancellationToken ct)
     {
+        var sw = Stopwatch.StartNew();
         try
         {
             using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
             {
-                Services.Log.Debug($"GoodGlam: Eorzea Collection request to {req.RequestUri} returned HTTP {(int)resp.StatusCode}.");
+                this.log.Debug(
+                    $"in-process {req.Method} {req.RequestUri} returned HTTP {(int)resp.StatusCode} in {sw.ElapsedMilliseconds}ms.");
                 return null;
             }
 
-            return await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            var content = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            this.log.Verbose(
+                $"in-process {req.Method} {req.RequestUri} -> HTTP {(int)resp.StatusCode}, {content.Length} chars in {sw.ElapsedMilliseconds}ms.");
+            return content;
         }
         catch (OperationCanceledException)
         {
@@ -123,7 +158,7 @@ internal sealed class ManagedHttpTransport(string userAgent) : IEcTransport
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, $"GoodGlam: Eorzea Collection request to {req.RequestUri} failed.");
+            this.log.Warning($"in-process request to {req.RequestUri} failed after {sw.ElapsedMilliseconds}ms.", ex);
             return null;
         }
     }
@@ -139,9 +174,18 @@ internal sealed class ManagedHttpTransport(string userAgent) : IEcTransport
 /// the <c>curl.exe</c> subprocess can't be driven deterministically from either CI runner, so the
 /// report should honestly show this path as uncovered rather than hiding it.
 /// </remarks>
-internal sealed class CurlTransport(string userAgent) : IEcTransport
+internal sealed class CurlTransport : IEcTransport
 {
     private static readonly string CurlPath = ResolveCurlPath();
+
+    private readonly string userAgent;
+    private readonly ITraceLogger<CurlTransport> log;
+
+    public CurlTransport(string userAgent, ITraceLogger<CurlTransport>? log = null)
+    {
+        this.userAgent = userAgent;
+        this.log = log ?? new TraceLogger<CurlTransport>();
+    }
 
     public Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
     {
@@ -149,7 +193,7 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
         {
             "-s", "--compressed", "--max-time", "20",
             "-X", "POST", url,
-            "-H", $"User-Agent: {userAgent}",
+            "-H", $"User-Agent: {this.userAgent}",
             "-H", "Accept: application/json, text/plain, */*",
             "-H", "Accept-Language: en-US,en;q=0.9",
             "-H", "Content-Type: application/json",
@@ -159,7 +203,7 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
             "--data", jsonBody,
         };
 
-        return RunCurlAsync(args, ct);
+        return this.RunCurlAsync(args, ct);
     }
 
     public Task<string?> GetAsync(string url, CancellationToken ct)
@@ -168,12 +212,12 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
         {
             "-s", "--compressed", "--max-time", "20",
             url,
-            "-H", $"User-Agent: {userAgent}",
+            "-H", $"User-Agent: {this.userAgent}",
             "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "-H", "Accept-Language: en-US,en;q=0.9",
         };
 
-        return RunCurlAsync(args, ct);
+        return this.RunCurlAsync(args, ct);
     }
 
     private static string ResolveCurlPath()
@@ -182,8 +226,9 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
         return File.Exists(system) ? system : "curl.exe";
     }
 
-    private static async Task<string?> RunCurlAsync(IReadOnlyList<string> args, CancellationToken ct)
+    private async Task<string?> RunCurlAsync(IReadOnlyList<string> args, CancellationToken ct)
     {
+        var sw = Stopwatch.StartNew();
         var psi = new ProcessStartInfo(CurlPath)
         {
             RedirectStandardOutput = true,
@@ -200,11 +245,14 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
         try
         {
             if (!proc.Start())
+            {
+                this.log.Debug("curl.exe failed to start (Process.Start returned false).");
                 return null;
+            }
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, "GoodGlam: unable to launch curl.exe; relying on the in-process transport.");
+            this.log.Warning("unable to launch curl.exe; relying on the in-process transport.", ex);
             return null;
         }
 
@@ -220,6 +268,13 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
         catch (OperationCanceledException)
         {
             TryKill(proc);
+
+            // We're bailing out before the normal await of the drain tasks below. Killing the
+            // process (and disposing its streams on scope exit) can fault those reads, so observe
+            // them here — otherwise a faulted read becomes an unobserved-task exception later. Their
+            // output is irrelevant on the cancellation path.
+            await ObserveAsync(stdoutTask).ConfigureAwait(false);
+            await ObserveAsync(stderrTask).ConfigureAwait(false);
             throw;
         }
 
@@ -229,11 +284,29 @@ internal sealed class CurlTransport(string userAgent) : IEcTransport
         if (proc.ExitCode != 0)
         {
             var detail = string.IsNullOrWhiteSpace(stderr) ? string.Empty : $" {stderr.Trim()}";
-            Services.Log.Debug($"GoodGlam: curl.exe exited with code {proc.ExitCode}.{detail}");
+            this.log.Debug($"curl.exe exited with code {proc.ExitCode} after {sw.ElapsedMilliseconds}ms.{detail}");
             return null;
         }
 
+        this.log.Verbose($"curl.exe succeeded — {stdout.Length} chars in {sw.ElapsedMilliseconds}ms.");
         return stdout;
+    }
+
+    /// <summary>
+    /// Awaits a drain task purely to observe its outcome so a fault on the cancellation path can't
+    /// surface later as an unobserved-task exception. Both the result and any exception are discarded
+    /// — the read was racing a kill/cancellation and its outcome is irrelevant here.
+    /// </summary>
+    private static async Task ObserveAsync(Task task)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best effort: intentionally swallowed.
+        }
     }
 
     private static void TryKill(Process proc)

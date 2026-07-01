@@ -7,6 +7,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using GoodGlam.Diagnostics;
 using GoodGlam.History;
 
 namespace GoodGlam.Windows;
@@ -35,6 +36,7 @@ public sealed class LogoWindow : Window, IDisposable
     private readonly Configuration config;
     private readonly Action openMain;
     private readonly NotificationState notificationState;
+    private readonly ITraceLogger<LogoWindow> log = new TraceLogger<LogoWindow>();
 
     /// <summary>Pure pointer-interaction logic (drag/lock/click decisions); see LogoInteraction.</summary>
     private readonly LogoInteraction interaction = new();
@@ -135,12 +137,18 @@ public sealed class LogoWindow : Window, IDisposable
             ImGui.SetTooltip("GoodGlam — open window (right-click for more)");
 
         if (outcome.OpenWindow)
+        {
+            this.log.Debug("logo clicked; opening the GoodGlam window.");
             this.openMain();
+        }
 
         if (ImGui.BeginPopupContextItem("##GoodGlamLogoContext"))
         {
             if (ImGui.MenuItem("Open GoodGlam"))
+            {
+                this.log.Debug("logo context menu: 'Open GoodGlam' selected.");
                 this.openMain();
+            }
 
             ImGui.Separator();
 
@@ -231,6 +239,7 @@ public sealed class LogoWindow : Window, IDisposable
     {
         try
         {
+            this.log.Debug("baking the notification glow sprite from the logo art.");
             await using var stream = OwnAssembly.GetManifestResourceStream(LogoResourceName)
                 ?? throw new InvalidOperationException($"Embedded logo resource '{LogoResourceName}' is missing.");
 
@@ -260,10 +269,12 @@ public sealed class LogoWindow : Window, IDisposable
 
             if (!published)
                 baked.Dispose();
+            else
+                this.log.Verbose($"notification glow sprite baked ({spec.Width}x{spec.Height}).");
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, "GoodGlam: failed to bake the notification glow sprite; the logo won't glow.");
+            this.log.Warning("failed to bake the notification glow sprite; the logo won't glow.", ex);
         }
     }
 
@@ -271,12 +282,14 @@ public sealed class LogoWindow : Window, IDisposable
     internal void ToggleLock()
     {
         this.config.LockLogo = !this.config.LockLogo;
+        this.log.Debug($"logo position {(this.config.LockLogo ? "locked" : "unlocked")}.");
         this.config.Save();
     }
 
     /// <summary>Hides the floating button and remembers the choice (re-enable from settings).</summary>
     internal void Hide()
     {
+        this.log.Debug("logo hidden via its context menu.");
         this.config.ShowLogo = false;
         this.config.Save();
         this.IsOpen = false;

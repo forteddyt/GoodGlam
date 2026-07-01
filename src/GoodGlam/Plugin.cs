@@ -1,6 +1,7 @@
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
+using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 using GoodGlam.History;
 using GoodGlam.Loot;
@@ -12,6 +13,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/goodglam";
 
+    private readonly ITraceLogger<Plugin> log = new TraceLogger<Plugin>();
     private readonly Configuration config;
     private readonly WindowSystem windowSystem = new("GoodGlam");
     private readonly MainWindow mainWindow;
@@ -70,7 +72,7 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Open the GoodGlam window (History + Settings tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow.",
         });
 
-        Services.Log.Information("GoodGlam loaded.");
+        this.log.Information("GoodGlam loaded.");
     }
 
     /// <summary>
@@ -83,6 +85,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Services.PlayerState.ContentId == 0)
         {
             // Dedupe in case login somehow fires again while we're still waiting.
+            this.log.Debug("login received but ContentId not ready yet; awaiting it on the framework tick.");
             Services.Framework.Update -= this.AwaitContentId;
             Services.Framework.Update += this.AwaitContentId;
             return;
@@ -96,6 +99,7 @@ public sealed class Plugin : IDalamudPlugin
         // Stop waiting if the player logged back out before the id resolved.
         if (!Services.ClientState.IsLoggedIn)
         {
+            this.log.Debug("stopped awaiting ContentId — player logged out before it resolved.");
             Services.Framework.Update -= this.AwaitContentId;
             return;
         }
@@ -110,6 +114,8 @@ public sealed class Plugin : IDalamudPlugin
     private void ActivateCurrentCharacter()
     {
         var contentId = Services.PlayerState.ContentId;
+        this.log.Information(
+            $"activating character {Services.PlayerState.CharacterName ?? "(unknown)"} (contentId={contentId:x16}).");
         this.characterData.Activate(contentId, Services.PlayerState.CharacterName, ResolveHomeWorldName());
 
         // Each character has its own logo show/hide preference; reflect it now.
@@ -118,6 +124,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogout(int type, int code)
     {
+        this.log.Information($"logout (type={type}, code={code}); deactivating character data.");
         Services.Framework.Update -= this.AwaitContentId;
 
         // Deactivate resets the live per-character state — including clearing the unseen-drop glow
@@ -148,6 +155,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         var parts = trimmed.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        this.log.Debug($"command '/goodglam {trimmed}' -> subcommand '{parts[0].ToLowerInvariant()}'.");
         switch (parts[0].ToLowerInvariant())
         {
             case "config":
@@ -164,14 +172,14 @@ public sealed class Plugin : IDalamudPlugin
                 if (parts.Length > 1 && uint.TryParse(parts[1].Trim(), out var itemId))
                     this.lootWatcher.SimulateDrop(itemId);
                 else
-                    Services.Log.Information("GoodGlam: usage is /goodglam check <itemId> (a numeric game item ID).");
+                    this.log.Information("usage is /goodglam check <itemId> (a numeric game item ID).");
                 break;
 
             case "glow":
                 // Debug: light the logo glow directly, bypassing the EC lookup, so the
                 // notification animation can be verified without a qualifying drop.
                 this.notificationState.Raise();
-                Services.Log.Information("GoodGlam[glow]: notification glow raised — open the window (or click the logo) to clear it.");
+                this.log.Information("glow: notification glow raised — open the window (or click the logo) to clear it.");
                 break;
 
             default:
@@ -184,12 +192,17 @@ public sealed class Plugin : IDalamudPlugin
     {
         // Opening the window lands on the History tab, which acknowledges any pending popular drop,
         // so clear the logo glow.
+        var opening = !this.mainWindow.IsOpen;
+        this.log.Debug(opening
+            ? "opening the GoodGlam window (History tab) and clearing the logo glow."
+            : "closing the GoodGlam window.");
         this.notificationState.Clear();
         this.mainWindow.Toggle();
     }
 
     private void SetLogoVisible(bool visible)
     {
+        this.log.Debug($"floating logo {(visible ? "shown" : "hidden")} via settings.");
         this.config.ShowLogo = visible;
         this.config.Save();
         this.logoWindow.IsOpen = visible;

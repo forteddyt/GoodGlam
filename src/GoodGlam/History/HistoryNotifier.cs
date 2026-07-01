@@ -1,3 +1,4 @@
+using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 
 namespace GoodGlam.History;
@@ -12,15 +13,30 @@ namespace GoodGlam.History;
 /// that completes after a character switch is recorded against the character that actually saw the
 /// drop — and the glow is only raised when that character is still the active one.
 /// </summary>
-public sealed class HistoryNotifier(NotificationHistoryStore store, NotificationState notificationState) : INotifier
+public sealed class HistoryNotifier : INotifier
 {
+    private readonly NotificationHistoryStore store;
+    private readonly NotificationState notificationState;
+    private readonly ITraceLogger<HistoryNotifier> log;
+
+    public HistoryNotifier(
+        NotificationHistoryStore store,
+        NotificationState notificationState,
+        ITraceLogger<HistoryNotifier>? log = null)
+    {
+        this.store = store;
+        this.notificationState = notificationState;
+        this.log = log ?? new TraceLogger<HistoryNotifier>();
+    }
+
     public INotificationTarget CaptureTarget()
-        => new CapturedTarget(store, store.CaptureBinding(), notificationState);
+        => new CapturedTarget(this.store, this.store.CaptureBinding(), this.notificationState, this.log);
 
     private sealed class CapturedTarget(
         NotificationHistoryStore store,
         NotificationHistoryStore.Binding binding,
-        NotificationState notificationState) : INotificationTarget
+        NotificationState notificationState,
+        ITraceLogger<HistoryNotifier> log) : INotificationTarget
     {
         public void NotifyPopular(DropItem drop, GlamPopularity popularity)
         {
@@ -37,7 +53,16 @@ public sealed class HistoryNotifier(NotificationHistoryStore store, Notification
             // Only light the active character's logo; a drop recorded for a since-switched character
             // must not glow on whoever is logged in now.
             if (landedOnActiveCharacter)
+            {
+                log.Information(
+                    $"recorded popular {drop.Name} ({popularity.TopLoves} loves) for the active character; raising logo glow.");
                 notificationState.Raise();
+            }
+            else
+            {
+                log.Debug(
+                    $"recorded popular {drop.Name} against a since-switched (or detached) character; glow not raised.");
+            }
         }
     }
 }

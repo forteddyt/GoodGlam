@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using GoodGlam.Diagnostics;
 
 namespace GoodGlam.Glam;
 
@@ -40,22 +41,32 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
     private const string BaseUrl = "https://ffxiv.eorzeacollection.com";
 
     private readonly IEcTransport transport;
+    private readonly ITraceLogger<EorzeaCollectionClient> log;
 
-    public EorzeaCollectionClient()
-        : this(EcTransportFactory.Create())
+    public EorzeaCollectionClient(ITraceLogger<EorzeaCollectionClient>? log = null)
+        : this(EcTransportFactory.Create(), log)
     {
     }
 
-    internal EorzeaCollectionClient(IEcTransport transport) => this.transport = transport;
+    internal EorzeaCollectionClient(IEcTransport transport, ITraceLogger<EorzeaCollectionClient>? log = null)
+    {
+        this.transport = transport;
+        this.log = log ?? new TraceLogger<EorzeaCollectionClient>();
+    }
 
     public async Task<EcItem?> ResolveEcItemAsync(GlamSlot slot, string itemName, uint gameItemId, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(new SearchRequest(itemName));
 
+        this.log.Debug($"searching /gear/{slot.Key}/search for '{itemName}' (gameItemId={gameItemId}).");
+
         var output = await this.transport.PostJsonAsync($"{BaseUrl}/gear/{slot.Key}/search", body, ct)
             .ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(output))
+        {
+            this.log.Debug($"search for '{itemName}' returned an empty/blocked response.");
             return null;
+        }
 
         List<EcGearDto>? records;
         try
@@ -65,19 +76,27 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         catch (JsonException)
         {
             // A non-JSON body usually means Cloudflare served a block/challenge page.
-            Services.Log.Warning("GoodGlam: Eorzea Collection search returned an unexpected (non-JSON) response.");
+            this.log.Warning("Eorzea Collection search returned an unexpected (non-JSON) response.");
             return null;
         }
 
         if (records is null)
+        {
+            this.log.Debug($"search for '{itemName}' deserialized to no records.");
             return null;
+        }
 
+        this.log.Verbose($"search for '{itemName}' returned {records.Count} record(s); matching on XIVApiId={gameItemId}.");
         foreach (var r in records)
         {
             if (r.XivApiId == gameItemId)
+            {
+                this.log.Debug($"resolved '{itemName}' (gameItemId={gameItemId}) -> EC id {r.Id}.");
                 return new EcItem(r.Id, r.Name ?? itemName, r.XivApiId);
+            }
         }
 
+        this.log.Debug($"no EC record matched gameItemId={gameItemId} among {records.Count} result(s) for '{itemName}'.");
         return null;
     }
 
@@ -85,9 +104,16 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
     {
         var url = BuildListingUrl(slot, ecId, filters);
 
+        this.log.Verbose($"fetching glamour listing {url}.");
+
         var html = await this.transport.GetAsync(url, ct).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(html))
+        {
+            this.log.Debug($"glamour listing for EC id {ecId} returned an empty/blocked response.");
             return new GlamPopularity(0, null, null, url);
+        }
+
+        this.log.Verbose($"listing for EC id {ecId} returned {html.Length} chars of HTML.");
 
         // Each glamour card exposes its loves count as:
         //   <span id="js-glamour-likes-<glamId>" ...>1,234</span>
@@ -108,9 +134,13 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         }
 
         if (bestId is null)
+        {
+            this.log.Debug($"no glamour cards found in the listing for EC id {ecId}.");
             return new GlamPopularity(0, null, null, url);
+        }
 
         var name = ExtractGlamName(html, bestId);
+        this.log.Debug($"top glamour for EC id {ecId} is {bestId} '{name ?? "(name not found)"}' with {bestLoves} loves.");
         return new GlamPopularity(bestLoves, $"{BaseUrl}/glamour/{bestId}", name, url);
     }
 

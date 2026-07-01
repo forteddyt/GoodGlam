@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GoodGlam.Diagnostics;
 
 namespace GoodGlam;
 
@@ -14,8 +15,13 @@ public sealed class ConfigurationStore
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     private readonly string filePath;
+    private readonly ITraceLogger<ConfigurationStore> log;
 
-    public ConfigurationStore(string filePath) => this.filePath = filePath;
+    public ConfigurationStore(string filePath, ITraceLogger<ConfigurationStore>? log = null)
+    {
+        this.filePath = filePath;
+        this.log = log ?? new TraceLogger<ConfigurationStore>();
+    }
 
     /// <summary>The JSON file this store reads from and writes to.</summary>
     public string FilePath => this.filePath;
@@ -45,7 +51,7 @@ public sealed class ConfigurationStore
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, $"GoodGlam: failed to load character config from '{this.filePath}'; using defaults.");
+            this.log.Warning($"failed to load character config from '{this.filePath}'; using defaults.", ex);
             return new Configuration();
         }
     }
@@ -63,7 +69,7 @@ public sealed class ConfigurationStore
         }
         catch (Exception ex)
         {
-            Services.Log.Warning(ex, $"GoodGlam: failed to save character config to '{this.filePath}'.");
+            this.log.Warning($"failed to save character config to '{this.filePath}'.", ex);
         }
     }
 }

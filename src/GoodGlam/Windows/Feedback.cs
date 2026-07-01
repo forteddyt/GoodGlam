@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using System.Diagnostics.CodeAnalysis;
+using GoodGlam.Diagnostics;
 
 namespace GoodGlam.Windows;
 
@@ -15,8 +16,14 @@ namespace GoodGlam.Windows;
 /// so they can be unit-tested without a running ImGui context, mirroring the pure-logic split used by
 /// <see cref="LogoInteraction"/> and <see cref="HistoryTabFocus"/>.
 /// </remarks>
-internal static class Feedback
+internal sealed class Feedback
 {
+    private static readonly ITraceLogger<Feedback> Log = new TraceLogger<Feedback>();
+
+    private Feedback()
+    {
+    }
+
     /// <summary>
     /// GitHub new-issue URL with the bug-report issue form pre-selected. The
     /// <c>?template=bug_report.yml</c> query points at
@@ -36,7 +43,10 @@ internal static class Feedback
     internal static void DrawReportBugButton(ILinkOpener linkOpener)
     {
         if (ImGui.Button("Report Bug"))
+        {
+            Log.Debug("Report Bug clicked; opening the GitHub issue form.");
             OpenBugReport(linkOpener);
+        }
 
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Opens GitHub's new-issue page with the bug-report form pre-selected.");
