@@ -38,8 +38,12 @@ public class LootWatcherTests
         A.CallTo(() => this.resolver.Resolve(A<uint>._)).Returns((DropItem?)null);
     }
 
-    private static LootEntry Entry(uint itemId, RollState state = RollState.UpToNeed) =>
-        new(itemId, 1, 0, state, RollResult.UnAwarded, 0, false, 0f, 0f, 0, 0, LootMode.Normal);
+    private static LootEntry Entry(
+        uint itemId,
+        RollState state = RollState.UpToNeed,
+        uint chestObjectId = 0,
+        uint chestItemIndex = 0) =>
+        new(itemId, 1, 0, state, RollResult.UnAwarded, 0, false, 0f, 0f, chestObjectId, chestItemIndex, LootMode.Normal);
 
     private static LootSnapshot Snapshot(params LootEntry[] items) => new(0, items);
 
@@ -128,16 +132,109 @@ public class LootWatcherTests
     }
 
     [Fact]
-    public void Closing_the_window_clears_the_seen_set_so_the_next_window_dispatches_again()
+    public void Reopening_the_window_with_unchanged_loot_does_not_redispatch()
     {
+        // Regression for #6: closing and reopening the roll window while the same loot is still
+        // available must not re-log the drop (nor relight the glow). The drop is identified by its
+        // chest slot, which is unchanged across the reopen, so it stays deduplicated past close.
         A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
-        this.New(new StubLootReader(Snapshot(Entry(3610))));
+        this.New(new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100))));
 
         this.Fire(AddonEvent.PostSetup);
         this.Fire(AddonEvent.PreFinalize); // window closed
-        this.Fire(AddonEvent.PostSetup);   // a fresh window
+        this.Fire(AddonEvent.PostSetup);   // reopened with the SAME loot still available
+
+        this.notifier.CaptureCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void Consecutive_same_item_drops_from_different_chests_each_dispatch()
+    {
+        // Two separate drops of the same item come from different coffers (distinct ChestObjectId),
+        // so each is a genuinely new drop and must be dispatched — the flip side of the #6 fix.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+
+        this.Fire(AddonEvent.PostSetup);   // first coffer
+        this.Fire(AddonEvent.PreFinalize);
+        reader.Snapshot = Snapshot(Entry(3610, chestObjectId: 200)); // a second coffer drops the same item
+        this.Fire(AddonEvent.PostSetup);
 
         this.notifier.CaptureCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void Same_item_in_two_chest_slots_dispatches_each()
+    {
+        // The same item occupying two slots of one chest (same ChestObjectId, distinct index) is two
+        // real drops, so both must dispatch rather than collapsing to a single item-id entry.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        this.New(new StubLootReader(Snapshot(
+            Entry(3610, chestObjectId: 100, chestItemIndex: 0),
+            Entry(3610, chestObjectId: 100, chestItemIndex: 1))));
+
+        this.Fire(AddonEvent.PostSetup);
+
+        this.notifier.CaptureCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void A_transiently_empty_refresh_does_not_redispatch()
+    {
+        // Reconciliation happens only on window open, so a PostRefresh that momentarily reports a
+        // partial/empty loot view must NOT evict the dedup state and re-log the drop on the next
+        // refresh — the intra-window guard against a milder recurrence of #6.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+
+        this.Fire(AddonEvent.PostSetup);                            // dispatch #1
+        reader.Snapshot = Snapshot();                              // a refresh transiently sees nothing
+        this.Fire(AddonEvent.PostRefresh);                         // must not prune
+        reader.Snapshot = Snapshot(Entry(3610, chestObjectId: 100)); // the same drop is back
+        this.Fire(AddonEvent.PostRefresh);                         // still deduplicated
+
+        this.notifier.CaptureCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void A_new_item_appearing_on_refresh_is_dispatched()
+    {
+        // Looting a second coffer while the window is still open surfaces new items via PostRefresh;
+        // they must dispatch even though no fresh PostSetup fired.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        A.CallTo(() => this.resolver.Resolve(3611u)).Returns(new DropItem(3611, "Cavalry Cuisses", GlamSlot.Legs));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+
+        this.Fire(AddonEvent.PostSetup);                           // dispatch 3610
+        reader.Snapshot = Snapshot(
+            Entry(3610, chestObjectId: 100),
+            Entry(3611, chestObjectId: 200));                      // second coffer's item appears
+        this.Fire(AddonEvent.PostRefresh);                         // dispatch 3611
+
+        this.notifier.CaptureCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void A_stale_drop_is_pruned_on_reopen_so_a_reused_identity_redispatches()
+    {
+        // On window open, an identity no longer present is forgotten (keeping the set bounded), so a
+        // later window that reuses the same chest identity for a genuinely new drop is not suppressed.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+
+        this.Fire(AddonEvent.PostSetup);                            // dispatch #1 (chest 100)
+        this.Fire(AddonEvent.PreFinalize);
+        reader.Snapshot = Snapshot(Entry(3610, chestObjectId: 200)); // a different coffer this window
+        this.Fire(AddonEvent.PostSetup);                            // prunes chest 100, dispatch #2 (chest 200)
+        this.Fire(AddonEvent.PreFinalize);
+        reader.Snapshot = Snapshot(Entry(3610, chestObjectId: 100)); // chest 100 identity reused later
+        this.Fire(AddonEvent.PostSetup);                            // chest 100 was pruned → dispatch #3
+
+        this.notifier.CaptureCalls.Should().Be(3);
     }
 
     [Fact]
