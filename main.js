@@ -291,8 +291,8 @@ var assemblies = [
     "name": "GoodGlam",
     "classes": [
       { "name": "GoodGlam.CharacterDataManager", "rp": "GoodGlam_CharacterDataManager.html", "cl": 50, "ucl": 0, "cal": 50, "tl": 129, "cb": 11, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Configuration", "rp": "GoodGlam_Configuration.html", "cl": 16, "ucl": 0, "cal": 16, "tl": 66, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.ConfigurationStore", "rp": "GoodGlam_ConfigurationStore.html", "cl": 28, "ucl": 0, "cal": 28, "tl": 75, "cb": 9, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Configuration", "rp": "GoodGlam_Configuration.html", "cl": 26, "ucl": 0, "cal": 26, "tl": 107, "cb": 14, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.ConfigurationStore", "rp": "GoodGlam_ConfigurationStore.html", "cl": 29, "ucl": 0, "cal": 29, "tl": 76, "cb": 11, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Diagnostics.TraceLogger\u003CT\u003E", "rp": "GoodGlam_TraceLogger_1.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 36, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.CurlTransport", "rp": "GoodGlam_CurlTransport.html", "cl": 4, "ucl": 74, "cal": 78, "tl": 324, "cb": 2, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.DropItem", "rp": "GoodGlam_DropItem.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 80, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -303,18 +303,19 @@ var assemblies = [
       { "name": "GoodGlam.Glam.EorzeaCollectionClient", "rp": "GoodGlam_EorzeaCollectionClient.html", "cl": 70, "ucl": 0, "cal": 70, "tl": 204, "cb": 31, "tb": 32, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.FallbackEcTransport", "rp": "GoodGlam_FallbackEcTransport.html", "cl": 25, "ucl": 0, "cal": 25, "tl": 324, "cb": 15, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.GlamPopularity", "rp": "GoodGlam_GlamPopularity.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 204, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.GlamPopularityService", "rp": "GoodGlam_GlamPopularityService.html", "cl": 45, "ucl": 0, "cal": 45, "tl": 123, "cb": 14, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.GlamSlot", "rp": "GoodGlam_GlamSlot.html", "cl": 25, "ucl": 0, "cal": 25, "tl": 61, "cb": 24, "tb": 24, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.GlamPopularityService", "rp": "GoodGlam_GlamPopularityService.html", "cl": 46, "ucl": 0, "cal": 46, "tl": 124, "cb": 14, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.GlamSlot", "rp": "GoodGlam_GlamSlot.html", "cl": 51, "ucl": 1, "cal": 52, "tl": 115, "cb": 57, "tb": 73, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.ItemResolver", "rp": "GoodGlam_ItemResolver.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 80, "cb": 6, "tb": 6, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.ManagedHttpTransport", "rp": "GoodGlam_ManagedHttpTransport.html", "cl": 40, "ucl": 0, "cal": 40, "tl": 324, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.PopularityFilters", "rp": "GoodGlam_PopularityFilters.html", "cl": 39, "ucl": 0, "cal": 39, "tl": 90, "cb": 32, "tb": 32, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.SlotSetting", "rp": "GoodGlam_SlotSetting.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 25, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.HistoryNotifier", "rp": "GoodGlam_HistoryNotifier.html", "cl": 27, "ucl": 3, "cal": 30, "tl": 68, "cb": 3, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.NotificationHistoryStore", "rp": "GoodGlam_NotificationHistoryStore.html", "cl": 82, "ucl": 0, "cal": 82, "tl": 204, "cb": 29, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.NotificationState", "rp": "GoodGlam_NotificationState.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 204, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootEntry", "rp": "GoodGlam_LootEntry.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 74, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootSnapshot", "rp": "GoodGlam_LootSnapshot.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 74, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 107, "ucl": 1, "cal": 108, "tl": 244, "cb": 39, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 116, "ucl": 1, "cal": 117, "tl": 263, "cb": 43, "tb": 44, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 108, "ucl": 0, "cal": 108, "tl": 233, "cb": 49, "tb": 52, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 10, "ucl": 0, "cal": 10, "tl": 23, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.AboutInfo", "rp": "GoodGlam_AboutInfo.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 22, "cb": 2, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -328,7 +329,7 @@ var assemblies = [
       { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 31, "ucl": 1, "cal": 32, "tl": 313, "cb": 3, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.MainWindow", "rp": "GoodGlam_MainWindow.html", "cl": 15, "ucl": 0, "cal": 15, "tl": 109, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.NotificationGlow", "rp": "GoodGlam_NotificationGlow.html", "cl": 33, "ucl": 0, "cal": 33, "tl": 140, "cb": 16, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.SettingsActions", "rp": "GoodGlam_SettingsActions.html", "cl": 67, "ucl": 0, "cal": 67, "tl": 147, "cb": 18, "tb": 18, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.SettingsActions", "rp": "GoodGlam_SettingsActions.html", "cl": 85, "ucl": 0, "cal": 85, "tl": 203, "cb": 24, "tb": 24, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
 ];
 
@@ -349,6 +350,12 @@ var riskHotspots = [
       { "value": 8, "exceeded": false },
     ]},
   {
+    "assembly": "GoodGlam", "class": "GoodGlam.Glam.GlamSlot", "reportPath": "GoodGlam_GlamSlot.html", "methodName": "get_Label()", "methodShortName": "get_Label()", "fileIndex": 0, "line": 66,
+    "metrics": [
+      { "value": 48, "exceeded": true },
+      { "value": 47, "exceeded": true },
+    ]},
+  {
     "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 150,
     "metrics": [
       { "value": 36, "exceeded": true },
@@ -361,10 +368,16 @@ var riskHotspots = [
       { "value": 32, "exceeded": true },
     ]},
   {
-    "assembly": "GoodGlam", "class": "GoodGlam.Glam.GlamSlot", "reportPath": "GoodGlam_GlamSlot.html", "methodName": "FromSlotFlags(System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte)", "methodShortName": "FromSlotFlags(...)", "fileIndex": 0, "line": 48,
+    "assembly": "GoodGlam", "class": "GoodGlam.Glam.GlamSlot", "reportPath": "GoodGlam_GlamSlot.html", "methodName": "FromSlotFlags(System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte,System.SByte)", "methodShortName": "FromSlotFlags(...)", "fileIndex": 0, "line": 102,
     "metrics": [
       { "value": 24, "exceeded": false },
       { "value": 24, "exceeded": true },
+    ]},
+  {
+    "assembly": "GoodGlam", "class": "GoodGlam.Loot.LootWatcher", "reportPath": "GoodGlam_LootWatcher.html", "methodName": "ScanLoot(Dalamud.Game.Addon.Lifecycle.AddonEvent)", "methodShortName": "ScanLoot(...)", "fileIndex": 0, "line": 87,
+    "metrics": [
+      { "value": 16, "exceeded": false },
+      { "value": 16, "exceeded": true },
     ]},
 ];
 
