@@ -93,6 +93,32 @@ public class NotificationHistoryStoreTests : IDisposable
     }
 
     [Fact]
+    public void Legacy_entry_without_glam_image_url_loads_with_null()
+    {
+        // A record persisted before GlamImageUrl existed (older history, incl. entries that already
+        // carried a ListingUrl): the field is simply absent and must deserialize to null.
+        File.WriteAllText(
+            this.path,
+            """[{"ItemId":7,"ItemName":"Old","Slot":"body","Loves":150,"GlamName":"G","GlamUrl":"u","Timestamp":"2020-01-01T00:00:00+00:00","ListingUrl":"https://x/glamours?filter=1"}]""");
+
+        var record = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
+        record.ItemId.Should().Be(7);
+        record.ListingUrl.Should().Be("https://x/glamours?filter=1");
+        record.GlamImageUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public void Persists_and_reloads_the_glam_image_url()
+    {
+        new NotificationHistoryStore(this.path).Add(new PopularDropRecord(
+            5, "Item 5", "body", 200, "Glam", "https://x/glamour/1", DateTimeOffset.UnixEpoch,
+            "https://x/glamours?filter=1", "https://glamours.x/1/cover-0-9.png"));
+
+        var reloaded = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
+        reloaded.GlamImageUrl.Should().Be("https://glamours.x/1/cover-0-9.png");
+    }
+
+    [Fact]
     public void Rebind_swaps_file_and_reloads_records()
     {
         var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");

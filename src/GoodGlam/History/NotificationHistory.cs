@@ -8,6 +8,8 @@ namespace GoodGlam.History;
 /// row can be rendered (and its glamour reopened) long after the drop, across game sessions.
 /// <see cref="ListingUrl"/> is the EC glamours listing for the item with the filters that were
 /// active when the drop was logged, frozen so the row keeps linking to that same filtered view.
+/// <see cref="GlamImageUrl"/> is the top glamour's cover-image URL (its first image), used to show a
+/// hover preview in the history table; optional so older entries saved before it existed still load.
 /// </summary>
 public sealed record PopularDropRecord(
     uint ItemId,
@@ -17,7 +19,8 @@ public sealed record PopularDropRecord(
     string? GlamName,
     string? GlamUrl,
     DateTimeOffset Timestamp,
-    string? ListingUrl = null);
+    string? ListingUrl = null,
+    string? GlamImageUrl = null);
 
 /// <summary>
 /// Persists qualifying drops to a JSON file in the plugin config directory so history survives

@@ -227,6 +227,7 @@ public sealed class Plugin : IDalamudPlugin
         Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleMain;
         this.windowSystem.RemoveAllWindows();
 
+        this.mainWindow.Dispose();
         this.logoWindow.Dispose();
         this.lootWatcher.Dispose();
     }

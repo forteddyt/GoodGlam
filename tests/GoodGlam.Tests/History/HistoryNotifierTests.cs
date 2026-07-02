@@ -31,7 +31,9 @@ public class HistoryNotifierTests : IDisposable
     [Fact]
     public void Maps_every_field_onto_the_record()
     {
-        var popularity = new GlamPopularity(250, "https://ec/glamour/200", "Nirvana", "https://ec/glamours?filter=1");
+        var popularity = new GlamPopularity(
+            250, "https://ec/glamour/200", "Nirvana", "https://ec/glamours?filter=1",
+            "https://glamours.ec/200/cover-0-9.png");
 
         this.Notifier().NotifyPopular(Drop(), popularity);
 
@@ -43,6 +45,7 @@ public class HistoryNotifierTests : IDisposable
         record.GlamName.Should().Be("Nirvana");
         record.GlamUrl.Should().Be("https://ec/glamour/200");
         record.ListingUrl.Should().Be("https://ec/glamours?filter=1");
+        record.GlamImageUrl.Should().Be("https://glamours.ec/200/cover-0-9.png");
         record.Timestamp.Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(1));
     }
 
@@ -55,6 +58,7 @@ public class HistoryNotifierTests : IDisposable
         record.GlamName.Should().BeNull();
         record.GlamUrl.Should().BeNull();
         record.ListingUrl.Should().BeNull();
+        record.GlamImageUrl.Should().BeNull();
     }
 
     [Fact]

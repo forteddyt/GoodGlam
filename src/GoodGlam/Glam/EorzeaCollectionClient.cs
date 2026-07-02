@@ -12,7 +12,7 @@ namespace GoodGlam.Glam;
 public sealed record EcItem(int EcId, string Name, long XivApiId);
 
 /// <summary>The most-loved glamour found for a given item, used to judge popularity.</summary>
-public sealed record GlamPopularity(int TopLoves, string? TopGlamUrl, string? TopGlamName = null, string? ListingUrl = null);
+public sealed record GlamPopularity(int TopLoves, string? TopGlamUrl, string? TopGlamName = null, string? ListingUrl = null, string? TopGlamImageUrl = null);
 
 /// <summary>
 /// Abstraction over the glamour data source so the live scraper can be swapped for a
@@ -140,8 +140,9 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         }
 
         var name = ExtractGlamName(html, bestId);
+        var imageUrl = ExtractGlamImage(html, bestId);
         this.log.Debug($"top glamour for EC id {ecId} is {bestId} '{name ?? "(name not found)"}' with {bestLoves} loves.");
-        return new GlamPopularity(bestLoves, $"{BaseUrl}/glamour/{bestId}", name, url);
+        return new GlamPopularity(bestLoves, $"{BaseUrl}/glamour/{bestId}", name, url, imageUrl);
     }
 
     /// <summary>
@@ -154,6 +155,24 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         {
             if (m.Groups[1].Value == glamId)
                 return WebUtility.HtmlDecode(m.Groups[2].Value).Trim();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Pulls the cover-image URL for a specific id out of the listing HTML. The card's cover
+    /// <c>&lt;img&gt;</c> is the glamour's first image, so this avoids a second page fetch. Matches
+    /// the cover <c>&lt;img&gt;</c> (whose <c>src</c> path embeds the glam id) and skips the secondary
+    /// hover image (a <c>&lt;div&gt;</c> with a <c>background-image</c>, which has no <c>src</c>).
+    /// Returns <c>null</c> when the winner has no locatable card image (the URL/name are still useful).
+    /// </summary>
+    private static string? ExtractGlamImage(string html, string glamId)
+    {
+        foreach (Match m in ImageRegex().Matches(html))
+        {
+            if (m.Groups[2].Value == glamId)
+                return m.Groups[1].Value;
         }
 
         return null;
@@ -190,6 +209,9 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
 
     [GeneratedRegex("href=\"/glamour/(\\d+)/[^\"]*\"[\\s\\S]{0,200}?content-title[^>]*>([^<]+)<", RegexOptions.IgnoreCase)]
     private static partial Regex NameRegex();
+
+    [GeneratedRegex("class=\"c-glamour-grid-item-image[^\"]*\"[^>]*?src=\"(https://glamours\\.eorzeacollection\\.com/(\\d+)/[^\"]+)\"", RegexOptions.IgnoreCase)]
+    private static partial Regex ImageRegex();
 
     private sealed record SearchRequest([property: JsonPropertyName("search")] string Search);
 

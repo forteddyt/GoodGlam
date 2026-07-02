@@ -20,7 +20,7 @@ namespace GoodGlam.Windows;
 /// put above it. History is the exception — its table already owns a <c>ScrollY</c> region with a
 /// frozen header, so it needs no extra child (see <see cref="TabScrollRegions"/>).
 /// </remarks>
-public sealed class MainWindow : Window
+public sealed class MainWindow : Window, IDisposable
 {
     /// <summary>
     /// The tab labels in display order. History is first (and force-selected on open); the rest —
@@ -75,6 +75,9 @@ public sealed class MainWindow : Window
         this.log.Debug("window opened; forcing the History tab.");
         this.historyFocus.OnOpen();
     }
+
+    /// <summary>Releases the History tab's owned image textures when the plugin unloads.</summary>
+    public void Dispose() => this.historyTab.Dispose();
 
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; requires a live ImGui context that can't run in CI.")]
     public override void Draw()
