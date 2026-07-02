@@ -15,6 +15,11 @@ namespace GoodGlam.Tests.Windows;
 /// </summary>
 public class MainWindowTests
 {
+    // Seed the no-op log so OnOpen's debug line never dereferences a null Services.Log, matching the
+    // sibling window-test classes. The assembly-wide TestBootstrap module initializer already
+    // guarantees this, but keeping it here keeps the window tests uniform and self-documenting.
+    public MainWindowTests() => TestServices.EnsureLog();
+
     private static MainWindow NewWindow()
         => new(
             new Configuration { Filters = new() },
