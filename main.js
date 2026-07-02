@@ -327,7 +327,7 @@ var assemblies = [
       { "name": "GoodGlam.Windows.HistoryTabFocus", "rp": "GoodGlam_HistoryTabFocus.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 33, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.LogoInteraction", "rp": "GoodGlam_LogoInteraction.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 54, "cb": 10, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.LogoWindow", "rp": "GoodGlam_LogoWindow.html", "cl": 31, "ucl": 1, "cal": 32, "tl": 313, "cb": 3, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.MainWindow", "rp": "GoodGlam_MainWindow.html", "cl": 15, "ucl": 0, "cal": 15, "tl": 109, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.MainWindow", "rp": "GoodGlam_MainWindow.html", "cl": 17, "ucl": 0, "cal": 17, "tl": 149, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.NotificationGlow", "rp": "GoodGlam_NotificationGlow.html", "cl": 33, "ucl": 0, "cal": 33, "tl": 140, "cb": 16, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.SettingsActions", "rp": "GoodGlam_SettingsActions.html", "cl": 85, "ucl": 0, "cal": 85, "tl": 203, "cb": 24, "tb": 24, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
