@@ -73,11 +73,11 @@ public sealed class EcPipelineTests
 
     /// <summary>
     /// The popularity scrape end-to-end: the listing for a known EC piece yields a top glamour with
-    /// loves, a glamour URL, and a parsed title — exercising the live HTML scraping (loves + name
-    /// regexes) the unit tests can only cover against canned markup.
+    /// loves, a glamour URL, a parsed title, and its cover-image URL — exercising the live HTML
+    /// scraping (loves + name + image regexes) the unit tests can only cover against canned markup.
     /// </summary>
     [Fact]
-    public async Task Top_popularity_scrapes_loves_url_and_name_for_known_piece()
+    public async Task Top_popularity_scrapes_loves_url_name_and_image_for_known_piece()
     {
         var item = EcFixtures.ScionJacket;
         var client = new EorzeaCollectionClient();
@@ -89,6 +89,8 @@ public sealed class EcPipelineTests
         popularity.TopLoves.Should().BeGreaterThan(0);
         popularity.TopGlamUrl.Should().StartWith("https://ffxiv.eorzeacollection.com/glamour/");
         popularity.TopGlamName.Should().NotBeNullOrWhiteSpace();
+        popularity.TopGlamImageUrl.Should().StartWith("https://glamours.eorzeacollection.com/",
+            "the winning card's cover image is scraped from the listing so the History tab can preview it");
         popularity.ListingUrl.Should().Contain($"{item.Slot.FilterParam}%5D={item.EcId}");
     }
 }

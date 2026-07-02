@@ -100,6 +100,42 @@ public class EorzeaCollectionClientTests
     }
 
     [Fact]
+    public async Task GetTopPopularity_captures_cover_image_of_winning_glamour()
+    {
+        // The winner (id 200) has a cover <img> plus a secondary hover-toggle <div> whose
+        // background-image points at the same glam. We must capture the cover <img> src, not the
+        // hover image (and not the loser's image at id 100).
+        const string html =
+            "<span id=\"js-glamour-likes-100\">1,234</span>" +
+            "<img class=\"c-glamour-grid-item-image u-inset\" src=\"https://glamours.eorzeacollection.com/100/cover-0-111.png\" loading=\"lazy\">" +
+            "<span id=\"js-glamour-likes-200\">5,678</span>" +
+            "<img class=\"c-glamour-grid-item-image u-inset\" src=\"https://glamours.eorzeacollection.com/200/cover-0-222.png\" loading=\"lazy\">" +
+            "<div class=\"c-glamour-grid-item-image u-inset u-toggle-hover\" style=\"background-image: url('https://glamours.eorzeacollection.com/200/second-0-333.png')\"></div>";
+        var result = await new EorzeaCollectionClient(new FakeTransport { GetResult = html })
+            .GetTopPopularityAsync(GlamSlot.Body, 1, new PopularityFilters(), CancellationToken.None);
+
+        result.TopLoves.Should().Be(5678);
+        result.TopGlamUrl.Should().Be("https://ffxiv.eorzeacollection.com/glamour/200");
+        result.TopGlamImageUrl.Should().Be("https://glamours.eorzeacollection.com/200/cover-0-222.png");
+    }
+
+    [Fact]
+    public async Task GetTopPopularity_image_null_when_winner_has_no_card_image()
+    {
+        // The winning glamour (id 200) has a loves span but no cover image on the page; a different
+        // card does. The image should be null while loves + url stay populated.
+        const string html =
+            "<span id=\"js-glamour-likes-200\">5,678</span>" +
+            "<img class=\"c-glamour-grid-item-image u-inset\" src=\"https://glamours.eorzeacollection.com/100/cover-0-111.png\" loading=\"lazy\">";
+        var result = await new EorzeaCollectionClient(new FakeTransport { GetResult = html })
+            .GetTopPopularityAsync(GlamSlot.Body, 1, new PopularityFilters(), CancellationToken.None);
+
+        result.TopLoves.Should().Be(5678);
+        result.TopGlamUrl.Should().Be("https://ffxiv.eorzeacollection.com/glamour/200");
+        result.TopGlamImageUrl.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetTopPopularity_returns_empty_when_no_cards()
     {
         var transport = new FakeTransport { GetResult = "<html></html>" };
@@ -109,6 +145,7 @@ public class EorzeaCollectionClientTests
         result.TopLoves.Should().Be(0);
         result.TopGlamUrl.Should().BeNull();
         result.TopGlamName.Should().BeNull();
+        result.TopGlamImageUrl.Should().BeNull();
         result.ListingUrl.Should().Be(transport.GetUrls.Single());
     }
 
