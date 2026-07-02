@@ -45,6 +45,32 @@ public class MainWindowTests
     }
 
     [Fact]
+    public void Scroll_regions_are_declared_for_every_tab()
+    {
+        // The scroll-region map is index-aligned to TabOrder: each tab either owns a child scroll
+        // region (its non-null id) or is a deliberate exception (null). Keeping the lengths in lock
+        // step guards against adding a tab without deciding how it scrolls.
+        MainWindow.TabScrollRegions.Should().HaveSameCount(MainWindow.TabOrder);
+    }
+
+    [Fact]
+    public void History_is_not_wrapped_in_its_own_scroll_region()
+    {
+        // History draws a ScrollY table with a frozen header, so it already scrolls beneath the fixed
+        // tab bar; wrapping it again would add a redundant double scrollbar. null marks that exception.
+        MainWindow.TabScrollRegions[0].Should().BeNull();
+    }
+
+    [Fact]
+    public void Filters_settings_and_about_each_get_a_distinct_scroll_region()
+    {
+        var wrapped = MainWindow.TabScrollRegions.Skip(1).ToArray();
+
+        wrapped.Should().OnlyContain(id => !string.IsNullOrWhiteSpace(id));
+        wrapped.Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
     public void OnOpen_arms_history_focus_each_time_without_throwing()
     {
         var window = NewWindow();
