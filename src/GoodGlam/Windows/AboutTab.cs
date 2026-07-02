@@ -10,14 +10,15 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// The About tab of the unified <see cref="MainWindow"/>: the plugin <b>version</b>, the GoodGlam
-/// <b>logo</b>, a clickable link to the <b>GitHub repository</b>, and the <b>Report Bug</b> feedback
-/// button. Version and repository URL are sourced from the Dalamud plugin manifest
-/// (<see cref="Dalamud.Plugin.IDalamudPluginInterface.Manifest"/>), the single source of truth for
-/// both (the packaged <c>GoodGlam.json</c>), so nothing here has to be kept in sync by hand.
+/// <b>logo</b>, a clickable link to the <b>GitHub repository</b>, and the <b>Report Bug</b> /
+/// <b>Suggest Feature</b> feedback buttons. Version and repository URL are sourced from the Dalamud
+/// plugin manifest (<see cref="Dalamud.Plugin.IDalamudPluginInterface.Manifest"/>), the single source
+/// of truth for both (the packaged <c>GoodGlam.json</c>), so nothing here has to be kept in sync by
+/// hand.
 /// </summary>
 /// <remarks>
 /// Rendering only. The version string and the "open repo" effect live in the pure, unit-tested
-/// <see cref="AboutInfo"/>, and the bug-report URL/effect in <see cref="Feedback"/>; this class is
+/// <see cref="AboutInfo"/>, and the feedback URLs/effects in <see cref="Feedback"/>; this class is
 /// thin wiring over those, so it is excluded from coverage while the logic behind it is tested.
 /// </remarks>
 internal sealed class AboutTab
@@ -68,6 +69,8 @@ internal sealed class AboutTab
         ImGui.Spacing();
         ImGui.TextDisabled("Feedback");
         Feedback.DrawReportBugButton(this.linkOpener);
+        ImGui.SameLine();
+        Feedback.DrawSuggestFeatureButton(this.linkOpener);
     }
 
     /// <summary>
