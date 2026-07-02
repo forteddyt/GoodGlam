@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an idea or enhancement for GoodGlam
+labels: [enhancement]
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement to GoodGlam! Please describe the idea below, the more
+        context you provide, the easier it is to evaluate.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What gap or pain prompts this request? Describe the problem you're trying to solve.
+      placeholder: e.g. I can't tell at a glance which of two drops is the more popular glamour.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: The behavior you'd like to see.
+      placeholder: e.g. Show the loves count of each item directly in the Need/Greed/Pass window.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions or workarounds you've thought about.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context / scope notes
+      description: Anything else that helps — mockups, related issues, or notes on how big the change might be.
+    validations:
+      required: false
