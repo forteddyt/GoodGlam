@@ -3,17 +3,17 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/2/2026 - 2:58:03 PM |
-| Coverage date: | 7/2/2026 - 2:57:50 PM - 7/2/2026 - 2:57:59 PM |
+| Generated on: | 7/2/2026 - 4:02:33 PM |
+| Coverage date: | 7/2/2026 - 4:02:19 PM - 7/2/2026 - 4:02:28 PM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
 | Classes: | 39 |
 | Files: | 29 |
-| **Line coverage:** | 91.8% (941 of 1024) |
-| Covered lines: | 941 |
+| **Line coverage:** | 91.9% (942 of 1025) |
+| Covered lines: | 942 |
 | Uncovered lines: | 83 |
-| Coverable lines: | 1024 |
-| Total lines: | 3194 |
+| Coverable lines: | 1025 |
+| Total lines: | 3227 |
 | **Branch coverage:** | 92.9% (331 of 356) |
 | Covered branches: | 331 |
 | Total branches: | 356 |
@@ -22,11 +22,11 @@
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 91.8%</summary>
+<details><summary>GoodGlam - 91.9%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**91.8%**|**92.9%**|
+|**GoodGlam**|**91.9%**|**92.9%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|90%|
@@ -56,7 +56,7 @@
 |GoodGlam.Services|100%||
 |GoodGlam.Windows.AboutInfo|100%|100%|
 |GoodGlam.Windows.AboutTab|85.7%||
-|GoodGlam.Windows.Feedback|25%||
+|GoodGlam.Windows.Feedback|40%||
 |GoodGlam.Windows.GlowStamp|100%||
 |GoodGlam.Windows.HistoryActions|100%|100%|
 |GoodGlam.Windows.HistoryLinkCell|100%|100%|
