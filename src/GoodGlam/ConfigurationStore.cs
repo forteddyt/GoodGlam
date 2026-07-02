@@ -47,6 +47,7 @@ public sealed class ConfigurationStore
                 return new Configuration();
 
             config.Filters ??= new();
+            config.Slots ??= new();
             return config;
         }
         catch (Exception ex)

@@ -23,6 +23,20 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public int LovesThreshold { get; set; } = 100;
 
+    /// <summary>
+    /// When true, each gear slot uses its own loves threshold (see <see cref="Slots"/>) and the
+    /// single master <see cref="LovesThreshold"/> is ignored. Default off, so a fresh or older
+    /// config keeps the single-threshold behavior.
+    /// </summary>
+    public bool PerSlotThresholds { get; set; }
+
+    /// <summary>
+    /// Per-slot analysis settings keyed by <see cref="Glam.GlamSlot.Key"/>. A slot with no entry is
+    /// enabled and uses the master <see cref="LovesThreshold"/>, so a defaulted-empty map is
+    /// back-compatible with an older <c>config.json</c> (every slot analysed, exactly like today).
+    /// </summary>
+    public Dictionary<string, SlotSetting> Slots { get; set; } = new();
+
     /// <summary>How long (hours) a popularity lookup is cached before being refreshed.</summary>
     public int CacheTtlHours { get; set; } = 12;
 
@@ -40,6 +54,31 @@ public sealed class Configuration : IPluginConfiguration
     /// members) picks it up when reading/writing the config file.
     /// </summary>
     internal Action<Configuration>? SaveSink;
+
+    /// <summary>
+    /// Whether drops in <paramref name="slot"/> should be analysed. A slot with no explicit entry
+    /// defaults to enabled, so an unconfigured plugin analyses every slot exactly like before.
+    /// </summary>
+    public bool IsSlotEnabled(GlamSlot slot)
+        => !this.Slots.TryGetValue(slot.Key, out var setting) || setting.Enabled;
+
+    /// <summary>
+    /// The loves threshold to apply to a drop in <paramref name="slot"/>: the slot's own override
+    /// when <see cref="PerSlotThresholds"/> is on and one has been set, otherwise the master
+    /// <see cref="LovesThreshold"/>. An unedited slot therefore tracks the master value, so flipping
+    /// the advanced toggle on changes nothing until a per-slot value is chosen.
+    /// </summary>
+    public int EffectiveThreshold(GlamSlot slot)
+    {
+        if (this.PerSlotThresholds &&
+            this.Slots.TryGetValue(slot.Key, out var setting) &&
+            setting.LovesThreshold is { } threshold)
+        {
+            return threshold;
+        }
+
+        return this.LovesThreshold;
+    }
 
     /// <summary>
     /// Persists the current settings for the active character. A no-op while no character is
@@ -60,6 +99,8 @@ public sealed class Configuration : IPluginConfiguration
         this.ShowLogo = other.ShowLogo;
         this.LockLogo = other.LockLogo;
         this.LovesThreshold = other.LovesThreshold;
+        this.PerSlotThresholds = other.PerSlotThresholds;
+        this.Slots = other.Slots ?? new();
         this.CacheTtlHours = other.CacheTtlHours;
         this.Filters = other.Filters ?? new PopularityFilters();
     }

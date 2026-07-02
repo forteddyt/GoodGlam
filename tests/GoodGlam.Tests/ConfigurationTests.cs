@@ -17,6 +17,57 @@ public class ConfigurationTests
     }
 
     [Fact]
+    public void Slot_settings_default_to_ignore_nothing()
+    {
+        var config = new Configuration();
+
+        config.PerSlotThresholds.Should().BeFalse();
+        config.Slots.Should().BeEmpty();
+        // With nothing configured, every slot is analysed exactly like before.
+        GlamSlot.All.Should().OnlyContain(slot => config.IsSlotEnabled(slot));
+    }
+
+    [Fact]
+    public void IsSlotEnabled_reflects_the_stored_setting()
+    {
+        var config = new Configuration();
+        config.Slots[GlamSlot.Weapon.Key] = new SlotSetting { Enabled = false };
+
+        config.IsSlotEnabled(GlamSlot.Weapon).Should().BeFalse();
+        config.IsSlotEnabled(GlamSlot.Head).Should().BeTrue(); // unconfigured slot stays enabled
+    }
+
+    [Fact]
+    public void EffectiveThreshold_uses_master_when_per_slot_is_off()
+    {
+        var config = new Configuration { LovesThreshold = 120, PerSlotThresholds = false };
+        config.Slots[GlamSlot.Head.Key] = new SlotSetting { LovesThreshold = 5 };
+
+        // The per-slot override is ignored while the advanced toggle is off.
+        config.EffectiveThreshold(GlamSlot.Head).Should().Be(120);
+    }
+
+    [Fact]
+    public void EffectiveThreshold_uses_the_override_when_per_slot_is_on()
+    {
+        var config = new Configuration { LovesThreshold = 120, PerSlotThresholds = true };
+        config.Slots[GlamSlot.Head.Key] = new SlotSetting { LovesThreshold = 5 };
+
+        config.EffectiveThreshold(GlamSlot.Head).Should().Be(5);
+    }
+
+    [Fact]
+    public void EffectiveThreshold_falls_back_to_master_when_override_unset()
+    {
+        // Advanced on, but the slot has no explicit threshold (or none at all): it tracks the master.
+        var config = new Configuration { LovesThreshold = 120, PerSlotThresholds = true };
+        config.Slots[GlamSlot.Head.Key] = new SlotSetting { Enabled = false }; // no LovesThreshold
+
+        config.EffectiveThreshold(GlamSlot.Head).Should().Be(120);
+        config.EffectiveThreshold(GlamSlot.Body).Should().Be(120); // no entry at all
+    }
+
+    [Fact]
     public void CopyFrom_adopts_every_persisted_field()
     {
         var live = new Configuration();
@@ -27,6 +78,8 @@ public class ConfigurationTests
             ShowLogo = false,
             LockLogo = true,
             LovesThreshold = 321,
+            PerSlotThresholds = true,
+            Slots = { [GlamSlot.Ring.Key] = new SlotSetting { Enabled = false, LovesThreshold = 42 } },
             CacheTtlHours = 7,
             Filters = new PopularityFilters { Job = "healer", ExcludeMogstation = true },
         };
@@ -38,9 +91,24 @@ public class ConfigurationTests
         live.ShowLogo.Should().BeFalse();
         live.LockLogo.Should().BeTrue();
         live.LovesThreshold.Should().Be(321);
+        live.PerSlotThresholds.Should().BeTrue();
+        live.Slots.Should().ContainKey(GlamSlot.Ring.Key);
+        live.Slots[GlamSlot.Ring.Key].Enabled.Should().BeFalse();
+        live.Slots[GlamSlot.Ring.Key].LovesThreshold.Should().Be(42);
         live.CacheTtlHours.Should().Be(7);
         live.Filters.Job.Should().Be("healer");
         live.Filters.ExcludeMogstation.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CopyFrom_substitutes_empty_slots_when_source_is_null()
+    {
+        var live = new Configuration();
+        var other = new Configuration { Slots = null! };
+
+        live.CopyFrom(other);
+
+        live.Slots.Should().NotBeNull().And.BeEmpty();
     }
 
     [Fact]

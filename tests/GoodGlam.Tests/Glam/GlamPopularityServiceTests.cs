@@ -47,6 +47,49 @@ public class GlamPopularityServiceTests
     }
 
     [Fact]
+    public async Task Uses_the_per_slot_threshold_when_advanced_mode_is_on()
+    {
+        // Master would block this drop (1000), but the drop's slot has a low override (50), so with
+        // per-slot thresholds on it notifies.
+        var notifier = new FakeNotifier();
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var config = new Configuration { LovesThreshold = 1000, PerSlotThresholds = true };
+        config.Slots[GlamSlot.Hands.Key] = new SlotSetting { LovesThreshold = 50 };
+
+        await new GlamPopularityService(config, source, notifier).ProcessAsync(Drop());
+
+        notifier.Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task A_high_per_slot_threshold_suppresses_a_drop_the_master_would_pass()
+    {
+        var notifier = new FakeNotifier();
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var config = new Configuration { LovesThreshold = 10, PerSlotThresholds = true };
+        config.Slots[GlamSlot.Hands.Key] = new SlotSetting { LovesThreshold = 200 };
+
+        await new GlamPopularityService(config, source, notifier).ProcessAsync(Drop());
+
+        notifier.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Ignores_the_per_slot_override_while_advanced_mode_is_off()
+    {
+        // Advanced off: the low slot override must be ignored and the master (200) applied, so a
+        // 150-loves drop stays below threshold.
+        var notifier = new FakeNotifier();
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var config = new Configuration { LovesThreshold = 200, PerSlotThresholds = false };
+        config.Slots[GlamSlot.Hands.Key] = new SlotSetting { LovesThreshold = 5 };
+
+        await new GlamPopularityService(config, source, notifier).ProcessAsync(Drop());
+
+        notifier.Count.Should().Be(0);
+    }
+
+    [Fact]
     public async Task Returns_empty_and_silent_on_error()
     {
         var notifier = new FakeNotifier();
