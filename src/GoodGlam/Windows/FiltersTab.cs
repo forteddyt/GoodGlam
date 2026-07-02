@@ -9,8 +9,10 @@ namespace GoodGlam.Windows;
 /// <summary>
 /// The Filters tab of the unified <see cref="MainWindow"/>: the full Eorzea Collection filter set
 /// (Gender, Race, Intended for, Date submitted, Min/Max level, Classification, Style, Theme, Color,
-/// Exclude Mog Station, Exclude seasonal) plus <b>Reset filters</b>. Split out of
-/// <see cref="SettingsTab"/> so plugin config and the large EC filter set are each single-purpose.
+/// Exclude Mog Station, Exclude seasonal) at the top, then a dedicated <b>Popularity thresholds</b>
+/// subsection below it (the master loves threshold and the per-slot <b>Gear slots</b> grid), and a
+/// tab-wide <b>Reset filters</b> at the bottom. Split out of <see cref="SettingsTab"/> so plugin
+/// config and the large EC filter set are each single-purpose.
 /// </summary>
 /// <remarks>
 /// Rendering only. Every control's effect (filter mutation, clamping, reset) lives in the pure,
@@ -35,19 +37,7 @@ internal sealed class FiltersTab
 
     internal void Draw()
     {
-        ImGui.TextWrapped(
-            "Notify when a dropped item is used in a glamour with at least this many loves on Eorzea Collection:");
-
-        var threshold = this.config.LovesThreshold;
-        if (ImGui.InputInt("Loves threshold", ref threshold, 10, 100, default))
-        {
-            this.actions.SetLovesThreshold(threshold);
-            this.log.Debug($"filter changed: LovesThreshold = {this.config.LovesThreshold}.");
-        }
-
-        Help("Minimum 'loves' a glamour must have for a drop to count as popular. Higher = pickier.");
-
-        ImGui.Separator();
+        // Eorzea Collection filters come first: they narrow which glamours are considered.
         ImGui.TextWrapped(
             "Filters mirror Eorzea Collection and apply to every popularity check. With everything " +
             "left at its default, lookups behave exactly as if unfiltered.");
@@ -90,14 +80,101 @@ internal sealed class FiltersTab
 
         Help("Ignore glamours that use limited seasonal event gear.");
 
+        // Dedicated subsection below the filters: what counts as popular — the loves threshold and
+        // the per-slot gear controls.
+        ImGui.Separator();
+        ImGui.TextUnformatted("Popularity thresholds");
+        Help("How many 'loves' a glamour needs for a drop to count as popular, and which gear slots " +
+            "are analysed.");
+        this.DrawThreshold();
+        this.DrawGearSlots();
+
+        // Tab-wide reset lives at the very bottom; it clears every Filters-tab control (EC filters,
+        // the loves threshold, and the gear-slot settings) but leaves the Settings-tab toggle alone.
+        ImGui.Separator();
         ImGui.Spacing();
         if (ImGui.Button("Reset filters"))
         {
-            this.log.Debug("Reset filters clicked; clearing all filter selections.");
+            this.log.Debug("Reset filters clicked; clearing filters, loves threshold, and slot settings.");
             this.actions.ResetFilters();
         }
 
-        Help("Clears only the Eorzea Collection filters; keeps the loves threshold, notifications, and cache settings.");
+        Help("Resets the Filters to their default values.");
+    }
+
+    /// <summary>
+    /// The master loves threshold control. Renders nothing when per-slot thresholds is on (toggled on
+    /// the Settings tab), since each slot's threshold is set inline in the Gear slots grid instead.
+    /// </summary>
+    private void DrawThreshold()
+    {
+        if (this.config.PerSlotThresholds)
+            return;
+
+        ImGui.TextWrapped(
+            "Notify when a dropped item is used in a glamour with at least this many loves on Eorzea Collection:");
+
+        var threshold = this.config.LovesThreshold;
+        if (ImGui.InputInt("Loves", ref threshold, 10, 100, default))
+        {
+            this.actions.SetLovesThreshold(threshold);
+            this.log.Debug($"filter changed: LovesThreshold = {this.config.LovesThreshold}.");
+        }
+
+        Help("Minimum 'loves' a glamour must have for a drop to count as popular. Higher = pickier.");
+    }
+
+    /// <summary>
+    /// The distinct "Gear slots" section, laid out as a two-column grid mirroring FFXIV's equipment
+    /// window (left: Main Hand, Head, Body, Hands, Legs, Feet; right: Off Hand, Ears, Neck, Wrists,
+    /// Rings). Each cell is an enable/disable checkbox plus — when per-slot thresholds is on (toggled
+    /// on the Settings tab) and the slot is enabled — its own loves threshold to its right. Part of
+    /// the "Popularity thresholds" subsection below the Eorzea Collection filters.
+    /// </summary>
+    private void DrawGearSlots()
+    {
+        ImGui.TextUnformatted("Gear slots");
+        Help("Which gear slots to check glamours for. Uncheck a slot to ignore any associated dropped items.");
+
+        if (!ImGui.BeginTable("##gearslots", 2, ImGuiTableFlags.SizingStretchSame))
+            return;
+
+        foreach (var row in GlamSlot.Grid)
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            this.DrawSlotCell(row.Left);
+            ImGui.TableNextColumn();
+            if (row.Right is { } right)
+                this.DrawSlotCell(right);
+        }
+
+        ImGui.EndTable();
+    }
+
+    /// <summary>Draws one grid cell: the slot's enable checkbox and, in per-slot mode, its threshold.</summary>
+    private void DrawSlotCell(GlamSlot slot)
+    {
+        var enabled = this.actions.IsSlotEnabled(slot);
+        if (ImGui.Checkbox($"{slot.Label}##slot-{slot.Key}", ref enabled))
+        {
+            this.log.Debug($"filter changed: slot '{slot.Key}' enabled = {enabled}.");
+            this.actions.SetSlotEnabled(slot, enabled);
+        }
+
+        // The per-slot threshold sits to the right of an enabled slot while advanced mode is on.
+        // Matches the global control's +/- step buttons (10 / 100); the width leaves room for them.
+        if (this.config.PerSlotThresholds && enabled)
+        {
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(150f);
+            var slotThreshold = this.actions.GetSlotThreshold(slot);
+            if (ImGui.InputInt($"Loves##threshold-{slot.Key}", ref slotThreshold, 10, 100, default))
+            {
+                this.actions.SetSlotThreshold(slot, slotThreshold);
+                this.log.Debug($"filter changed: slot '{slot.Key}' threshold = {this.actions.GetSlotThreshold(slot)}.");
+            }
+        }
     }
 
     /// <summary>Draws Dalamud's standard info "(?)" icon on the same line, with a hover tooltip.</summary>

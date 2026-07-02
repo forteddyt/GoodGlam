@@ -24,6 +24,8 @@ public class ConfigurationStoreTests : IDisposable
             LockLogo = true,
             LovesThreshold = 250,
             CacheTtlHours = 5,
+            PerSlotThresholds = true,
+            Slots = { [GlamSlot.Weapon.Key] = new SlotSetting { Enabled = false, LovesThreshold = 42 } },
             Filters = new PopularityFilters { Job = "tank", ExcludeSeasonal = true, Races = { "race-1" } },
         };
 
@@ -35,9 +37,36 @@ public class ConfigurationStoreTests : IDisposable
         loaded.LockLogo.Should().BeTrue();
         loaded.LovesThreshold.Should().Be(250);
         loaded.CacheTtlHours.Should().Be(5);
+        loaded.PerSlotThresholds.Should().BeTrue();
+        loaded.Slots.Should().ContainKey(GlamSlot.Weapon.Key);
+        loaded.Slots[GlamSlot.Weapon.Key].Enabled.Should().BeFalse();
+        loaded.Slots[GlamSlot.Weapon.Key].LovesThreshold.Should().Be(42);
         loaded.Filters.Job.Should().Be("tank");
         loaded.Filters.ExcludeSeasonal.Should().BeTrue();
         loaded.Filters.Races.Should().ContainSingle().Which.Should().Be("race-1");
+    }
+
+    [Fact]
+    public void Older_config_without_slot_fields_loads_as_ignore_nothing()
+    {
+        // A pre-feature config.json has no PerSlotThresholds/Slots fields; it must load as the
+        // back-compatible "every slot enabled, single master threshold" behaviour.
+        File.WriteAllText(this.path, """{ "Version": 3, "Enabled": true, "LovesThreshold": 150 }""");
+
+        var loaded = new ConfigurationStore(this.path).Load();
+
+        loaded.LovesThreshold.Should().Be(150);
+        loaded.PerSlotThresholds.Should().BeFalse();
+        loaded.Slots.Should().NotBeNull().And.BeEmpty();
+        GlamSlot.All.Should().OnlyContain(slot => loaded.IsSlotEnabled(slot));
+    }
+
+    [Fact]
+    public void Null_slots_field_loads_as_empty()
+    {
+        File.WriteAllText(this.path, """{ "Version": 3, "Slots": null }""");
+
+        new ConfigurationStore(this.path).Load().Slots.Should().NotBeNull().And.BeEmpty();
     }
 
     [Fact]

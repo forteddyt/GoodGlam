@@ -52,4 +52,62 @@ public class GlamSlotTests
     [Fact]
     public void FromSlotFlags_treats_either_finger_as_ring()
         => GlamSlot.FromSlotFlags(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).Should().Be(GlamSlot.Ring);
+
+    [Fact]
+    public void All_lists_the_eleven_slots_in_grid_reading_order()
+    {
+        // Reading order of the equipment grid: each row's left cell then its right cell.
+        GlamSlot.All.Should().Equal(
+            GlamSlot.Weapon, GlamSlot.Head, GlamSlot.Offhand, GlamSlot.Body, GlamSlot.Earrings,
+            GlamSlot.Hands, GlamSlot.Necklace, GlamSlot.Legs, GlamSlot.Bracelets, GlamSlot.Feet,
+            GlamSlot.Ring);
+    }
+
+    [Fact]
+    public void Grid_mirrors_the_in_game_equipment_layout()
+    {
+        GlamSlot.Grid.Should().Equal(
+            new GlamSlot.GridRow(GlamSlot.Weapon, null),
+            new GlamSlot.GridRow(GlamSlot.Head, GlamSlot.Offhand),
+            new GlamSlot.GridRow(GlamSlot.Body, GlamSlot.Earrings),
+            new GlamSlot.GridRow(GlamSlot.Hands, GlamSlot.Necklace),
+            new GlamSlot.GridRow(GlamSlot.Legs, GlamSlot.Bracelets),
+            new GlamSlot.GridRow(GlamSlot.Feet, GlamSlot.Ring));
+    }
+
+    [Fact]
+    public void All_is_derived_from_the_grid_with_no_duplicates_or_gaps()
+    {
+        // Every grid cell (both columns, skipping the empty Main Hand partner) appears exactly once.
+        var fromGrid = GlamSlot.Grid
+            .SelectMany(row => row.Right is null ? new[] { row.Left } : [row.Left, row.Right])
+            .ToList();
+
+        GlamSlot.All.Should().BeEquivalentTo(fromGrid);
+        GlamSlot.All.Should().OnlyHaveUniqueItems();
+        GlamSlot.All.Should().HaveCount(11);
+    }
+
+    [Theory]
+    [InlineData("weapon", "Main Hand")]
+    [InlineData("offhand", "Off Hand")]
+    [InlineData("head", "Head")]
+    [InlineData("body", "Body")]
+    [InlineData("hands", "Hands")]
+    [InlineData("legs", "Legs")]
+    [InlineData("feet", "Feet")]
+    [InlineData("earrings", "Ears")]
+    [InlineData("necklace", "Neck")]
+    [InlineData("bracelets", "Wrists")]
+    [InlineData("ring", "Rings")]
+    public void Label_maps_each_key_to_its_human_name(string key, string expected)
+        => new GlamSlot(key).Label.Should().Be(expected);
+
+    [Fact]
+    public void Label_stays_out_of_value_equality()
+    {
+        // Label is computed, so two slots are equal iff their Key matches — a freshly-constructed
+        // slot must equal the corresponding static even though Label is derived.
+        new GlamSlot("head").Should().Be(GlamSlot.Head);
+    }
 }

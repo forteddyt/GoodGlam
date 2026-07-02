@@ -119,6 +119,55 @@ public class LootWatcherTests
     }
 
     [Fact]
+    public void Skips_drops_in_a_disabled_slot_but_still_dispatches_enabled_ones()
+    {
+        // #43 core: a drop whose slot is disabled is skipped before any EC lookup (nothing captured),
+        // while a drop in an enabled slot is still dispatched.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        A.CallTo(() => this.resolver.Resolve(3611u)).Returns(new DropItem(3611, "Cavalry Cuisses", GlamSlot.Legs));
+        this.config.Slots[GlamSlot.Hands.Key] = new SlotSetting { Enabled = false };
+        this.source.Popularity = new GlamPopularity(150, "u"); // above the default 100 threshold, so it notifies
+        this.New(new StubLootReader(Snapshot(Entry(3610), Entry(3611, chestItemIndex: 1))));
+
+        this.Fire(AddonEvent.PostSetup);
+
+        // Only the Legs drop is dispatched and notified; the disabled Hands drop is skipped.
+        this.notifier.CaptureCalls.Should().Be(1);
+        this.notifier.LastDrop!.Slot.Should().Be(GlamSlot.Legs);
+    }
+
+    [Fact]
+    public void Re_enabling_a_slot_mid_session_dispatches_on_the_next_scan()
+    {
+        // A disabled-slot drop is never recorded as dispatched, so enabling the slot mid-session lets
+        // the still-open loot dispatch on the next refresh.
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        this.config.Slots[GlamSlot.Hands.Key] = new SlotSetting { Enabled = false };
+        this.New(new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100))));
+
+        this.Fire(AddonEvent.PostSetup); // slot disabled -> skipped
+        this.notifier.CaptureCalls.Should().Be(0);
+
+        this.config.Slots[GlamSlot.Hands.Key].Enabled = true;
+        this.Fire(AddonEvent.PostRefresh); // now enabled -> dispatched
+
+        this.notifier.CaptureCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void SimulateDrop_skips_a_disabled_slot()
+    {
+        // /goodglam check on an ignored-slot item must not run the pipeline (logs nothing).
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        this.config.Slots[GlamSlot.Hands.Key] = new SlotSetting { Enabled = false };
+        var watcher = this.New(new StubLootReader());
+
+        watcher.SimulateDrop(3610);
+
+        this.notifier.CaptureCalls.Should().Be(0);
+    }
+
+    [Fact]
     public void Deduplicates_the_same_item_within_one_window()
     {
         A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));

@@ -60,14 +60,15 @@ public sealed class GlamPopularityService
         // any await hands control to a thread-pool continuation. This pins the drop to the character
         // that's logged in right now, even if they switch before the lookup finishes.
         var target = this.notifier.CaptureTarget();
+        var threshold = this.config.EffectiveThreshold(drop.Slot);
         this.log.Debug(
-            $"checking {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] against threshold {this.config.LovesThreshold}.");
+            $"checking {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] against threshold {threshold}.");
         try
         {
             var popularity = await this.GetPopularityAsync(drop).ConfigureAwait(false);
-            var qualifies = popularity.TopLoves >= this.config.LovesThreshold;
+            var qualifies = popularity.TopLoves >= threshold;
             this.log.Debug(
-                $"{drop.Name} -> topLoves={popularity.TopLoves} vs threshold={this.config.LovesThreshold} => " +
+                $"{drop.Name} -> topLoves={popularity.TopLoves} vs threshold={threshold} => " +
                 $"{(qualifies ? "POPULAR (notifying)" : "below threshold")}.");
             if (qualifies)
                 target.NotifyPopular(drop, popularity);

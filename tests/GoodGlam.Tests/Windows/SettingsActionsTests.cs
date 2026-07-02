@@ -58,6 +58,70 @@ public class SettingsActionsTests
         this.saves.Should().Be(1);
     }
 
+    [Fact]
+    public void SetPerSlotThresholds_writes_and_saves()
+    {
+        this.New().SetPerSlotThresholds(true);
+
+        this.config.PerSlotThresholds.Should().BeTrue();
+        this.saves.Should().Be(1);
+    }
+
+    [Fact]
+    public void SetSlotEnabled_upserts_and_round_trips_via_IsSlotEnabled()
+    {
+        var actions = this.New();
+
+        actions.IsSlotEnabled(GlamSlot.Weapon).Should().BeTrue(); // default before any edit
+
+        actions.SetSlotEnabled(GlamSlot.Weapon, false);
+        actions.IsSlotEnabled(GlamSlot.Weapon).Should().BeFalse();
+        this.config.Slots[GlamSlot.Weapon.Key].Enabled.Should().BeFalse();
+
+        actions.SetSlotEnabled(GlamSlot.Weapon, true);
+        actions.IsSlotEnabled(GlamSlot.Weapon).Should().BeTrue();
+        this.saves.Should().Be(2);
+    }
+
+    [Fact]
+    public void SetSlotEnabled_preserves_an_existing_slot_threshold()
+    {
+        var actions = this.New();
+        actions.SetSlotThreshold(GlamSlot.Head, 175);
+
+        actions.SetSlotEnabled(GlamSlot.Head, false);
+
+        // Toggling enablement must not wipe the slot's own threshold override.
+        this.config.Slots[GlamSlot.Head.Key].LovesThreshold.Should().Be(175);
+        this.config.Slots[GlamSlot.Head.Key].Enabled.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(175, 175)]
+    [InlineData(0, 0)]
+    [InlineData(-9, 0)]
+    public void SetSlotThreshold_floors_at_zero_and_round_trips(int input, int expected)
+    {
+        var actions = this.New();
+
+        actions.SetSlotThreshold(GlamSlot.Head, input);
+
+        actions.GetSlotThreshold(GlamSlot.Head).Should().Be(expected);
+        this.config.Slots[GlamSlot.Head.Key].LovesThreshold.Should().Be(expected);
+        this.saves.Should().Be(1);
+    }
+
+    [Fact]
+    public void GetSlotThreshold_falls_back_to_the_master_value_until_edited()
+    {
+        this.config.LovesThreshold = 130;
+        var actions = this.New();
+
+        actions.GetSlotThreshold(GlamSlot.Body).Should().Be(130); // no override yet -> master
+        actions.SetSlotThreshold(GlamSlot.Body, 42);
+        actions.GetSlotThreshold(GlamSlot.Body).Should().Be(42);
+    }
+
     [Theory]
     [InlineData(12, 12)]
     [InlineData(0, 1)]
@@ -195,27 +259,39 @@ public class SettingsActionsTests
     }
 
     [Fact]
-    public void RestoreDefaults_resets_settings_and_filters_and_saves()
+    public void ResetSettings_resets_only_the_settings_tab_controls_and_leaves_filters_alone()
     {
+        // Settings-tab controls, set away from their defaults.
         this.config.Enabled = false;
-        this.config.LovesThreshold = 999;
         this.config.CacheTtlHours = 70;
+        this.config.PerSlotThresholds = true;
+        // Filters-tab state that must be preserved (Reset filters owns these, not Reset Settings).
+        this.config.LovesThreshold = 999;
+        this.config.Slots[GlamSlot.Ring.Key] = new SlotSetting { Enabled = false, LovesThreshold = 3 };
         this.config.Filters.Job = "tanks";
 
-        this.New().RestoreDefaults();
+        bool? logoReset = null;
+        this.New(v => logoReset = v).ResetSettings();
 
         var defaults = new Configuration();
+        // Settings-tab controls are back to defaults; the logo goes through the callback.
+        logoReset.Should().Be(defaults.ShowLogo);
         this.config.Enabled.Should().Be(defaults.Enabled);
-        this.config.LovesThreshold.Should().Be(defaults.LovesThreshold);
         this.config.CacheTtlHours.Should().Be(defaults.CacheTtlHours);
-        this.config.Filters.Job.Should().Be(new PopularityFilters().Job);
+        this.config.PerSlotThresholds.Should().Be(defaults.PerSlotThresholds);
+        // Filters-tab state is untouched.
+        this.config.LovesThreshold.Should().Be(999);
+        this.config.Slots.Should().ContainKey(GlamSlot.Ring.Key);
+        this.config.Filters.Job.Should().Be("tanks");
         this.saves.Should().Be(1);
     }
 
     [Fact]
-    public void ResetFilters_clears_filters_but_keeps_other_settings()
+    public void ResetFilters_clears_filters_slots_and_the_loves_threshold_but_keeps_the_per_slot_toggle()
     {
         this.config.LovesThreshold = 250;
+        this.config.PerSlotThresholds = true;
+        this.config.Slots[GlamSlot.Feet.Key] = new SlotSetting { Enabled = false, LovesThreshold = 9 };
         this.config.Filters.Job = "tanks";
         this.config.Filters.Races.Add("miqote");
 
@@ -223,8 +299,11 @@ public class SettingsActionsTests
 
         this.config.Filters.Job.Should().Be(new PopularityFilters().Job);
         this.config.Filters.Races.Should().BeEmpty();
-        // Non-filter settings are untouched.
-        this.config.LovesThreshold.Should().Be(250);
+        // The loves threshold and the gear-slot settings live on the Filters tab, so they reset too.
+        this.config.Slots.Should().BeEmpty();
+        this.config.LovesThreshold.Should().Be(new Configuration().LovesThreshold);
+        // The Per-slot loves thresholds toggle lives on the Settings tab, so it's left untouched.
+        this.config.PerSlotThresholds.Should().BeTrue();
         this.saves.Should().Be(1);
     }
 }
