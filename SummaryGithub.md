@@ -3,20 +3,20 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/2/2026 - 12:14:56 AM |
-| Coverage date: | 7/2/2026 - 12:14:42 AM - 7/2/2026 - 12:14:50 AM |
+| Generated on: | 7/2/2026 - 2:58:03 PM |
+| Coverage date: | 7/2/2026 - 2:57:50 PM - 7/2/2026 - 2:57:59 PM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 37 |
-| Files: | 27 |
-| **Line coverage:** | 91.8% (929 of 1011) |
-| Covered lines: | 929 |
-| Uncovered lines: | 82 |
-| Coverable lines: | 1011 |
-| Total lines: | 3043 |
-| **Branch coverage:** | 92.9% (329 of 354) |
-| Covered branches: | 329 |
-| Total branches: | 354 |
+| Classes: | 39 |
+| Files: | 29 |
+| **Line coverage:** | 91.8% (941 of 1024) |
+| Covered lines: | 941 |
+| Uncovered lines: | 83 |
+| Coverable lines: | 1024 |
+| Total lines: | 3194 |
+| **Branch coverage:** | 92.9% (331 of 356) |
+| Covered branches: | 331 |
+| Total branches: | 356 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
@@ -54,6 +54,8 @@
 |GoodGlam.Loot.LootWatcher|99%|97.5%|
 |GoodGlam.Plugin|100%|94.2%|
 |GoodGlam.Services|100%||
+|GoodGlam.Windows.AboutInfo|100%|100%|
+|GoodGlam.Windows.AboutTab|85.7%||
 |GoodGlam.Windows.Feedback|25%||
 |GoodGlam.Windows.GlowStamp|100%||
 |GoodGlam.Windows.HistoryActions|100%|100%|
