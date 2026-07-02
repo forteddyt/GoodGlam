@@ -6,26 +6,27 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// Covers the pure logic behind the About tab (<see cref="AboutInfo"/>): formatting the plugin
-/// version as <c>vMAJOR.MINOR.PATCH</c> (the assembly's 4-part <see cref="Version"/> drops its
-/// build/revision component) and the "open the repo" effect. The tab's ImGui rendering can't run in
-/// CI, so these guard the parts that decide what the user sees and where the link goes.
+/// version as <c>v</c> followed by the full version (every component the assembly version defines,
+/// e.g. <c>v0.1.0.0</c>) and the "open the repo" effect. The tab's ImGui rendering can't run in CI,
+/// so these guard the parts that decide what the user sees and where the link goes.
 /// </summary>
 public class AboutInfoTests
 {
     [Theory]
-    [InlineData(0, 1, 0, 0, "v0.1.0")]
-    [InlineData(1, 2, 3, 4, "v1.2.3")]
-    [InlineData(10, 0, 0, 0, "v10.0.0")]
-    public void FormatVersion_renders_major_minor_patch(int major, int minor, int build, int revision, string expected)
+    [InlineData(0, 1, 0, 0, "v0.1.0.0")]
+    [InlineData(1, 2, 3, 4, "v1.2.3.4")]
+    [InlineData(10, 0, 0, 0, "v10.0.0.0")]
+    public void FormatVersion_keeps_every_component(int major, int minor, int build, int revision, string expected)
     {
         AboutInfo.FormatVersion(new Version(major, minor, build, revision)).Should().Be(expected);
     }
 
     [Fact]
-    public void FormatVersion_treats_missing_components_as_zero()
+    public void FormatVersion_renders_only_the_components_that_are_defined()
     {
-        // A two-part Version reports -1 for the absent build; it must still render a clean patch of 0.
-        AboutInfo.FormatVersion(new Version(2, 5)).Should().Be("v2.5.0");
+        // A version constructed with just major/minor has no build/revision to show — nothing is
+        // padded and nothing is dropped.
+        AboutInfo.FormatVersion(new Version(2, 5)).Should().Be("v2.5");
     }
 
     [Fact]
