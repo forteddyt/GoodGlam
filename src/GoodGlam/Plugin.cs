@@ -69,7 +69,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open the GoodGlam window (History + Settings tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow, /goodglam reset.",
+            HelpMessage = "Open the GoodGlam window (History, Filters, Settings, About tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow, /goodglam reset.",
         });
 
         this.log.Information("GoodGlam loaded.");

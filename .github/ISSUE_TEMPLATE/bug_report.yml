@@ -37,8 +37,8 @@ body:
     id: goodglam-version
     attributes:
       label: GoodGlam version
-      description: The GoodGlam plugin version you are running.
-      placeholder: e.g. 1.2.0
+      description: The GoodGlam plugin version you are running (shown on the About tab).
+      placeholder: e.g. v1.2.0.0
     validations:
       required: true
   - type: dropdown
