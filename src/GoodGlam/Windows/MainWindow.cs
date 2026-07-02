@@ -14,6 +14,12 @@ namespace GoodGlam.Windows;
 /// entry point (the floating logo, the Dalamud config gear, and the slash command) opens this window
 /// on the History tab; the other tabs are reached via the tab bar.
 /// </summary>
+/// <remarks>
+/// The tab bar is pinned as a fixed header: each tab body (except History) draws into its own
+/// border-less scroll child, so long content scrolls <em>inside</em> the tab while the tab bar stays
+/// put above it. History is the exception — its table already owns a <c>ScrollY</c> region with a
+/// frozen header, so it needs no extra child (see <see cref="TabScrollRegions"/>).
+/// </remarks>
 public sealed class MainWindow : Window
 {
     /// <summary>
@@ -22,6 +28,17 @@ public sealed class MainWindow : Window
     /// live ImGui context, and used to label the tab items in <see cref="Draw"/>.
     /// </summary>
     internal static readonly string[] TabOrder = ["History", "Filters", "Settings", "About"];
+
+    /// <summary>
+    /// The ImGui child-region IDs that give each tab its own scroll region beneath the fixed tab bar,
+    /// index-aligned to <see cref="TabOrder"/>. History (index 0) is <see langword="null"/>: its table
+    /// already draws with <see cref="ImGuiTableFlags.ScrollY"/> and a frozen header, so it owns a
+    /// scroll region already — wrapping it in another child would add a redundant double scrollbar.
+    /// The other three render plain control stacks, so each scrolls as a whole inside its own child.
+    /// Exposed so the scroll-region contract is unit-testable without a live ImGui context.
+    /// </summary>
+    internal static readonly string?[] TabScrollRegions =
+        [null, "##filtersBody", "##settingsBody", "##aboutBody"];
 
     private readonly HistoryTab historyTab;
     private readonly FiltersTab filtersTab;
@@ -82,28 +99,51 @@ public sealed class MainWindow : Window
 
         if (ImGui.BeginTabItem(TabOrder[0], historyFlags))
         {
-            this.historyTab.Draw();
+            DrawTabBody(0, this.historyTab.Draw);
             ImGui.EndTabItem();
         }
 
         if (ImGui.BeginTabItem(TabOrder[1]))
         {
-            this.filtersTab.Draw();
+            DrawTabBody(1, this.filtersTab.Draw);
             ImGui.EndTabItem();
         }
 
         if (ImGui.BeginTabItem(TabOrder[2]))
         {
-            this.settingsTab.Draw();
+            DrawTabBody(2, this.settingsTab.Draw);
             ImGui.EndTabItem();
         }
 
         if (ImGui.BeginTabItem(TabOrder[3]))
         {
-            this.aboutTab.Draw();
+            DrawTabBody(3, this.aboutTab.Draw);
             ImGui.EndTabItem();
         }
 
         ImGui.EndTabBar();
+    }
+
+    /// <summary>
+    /// Renders one tab's body beneath the fixed tab bar. Tabs with a <see cref="TabScrollRegions"/>
+    /// entry draw into a border-less child sized to the leftover content region, so their content
+    /// scrolls inside the tab body instead of scrolling the whole window (which would drag the tab bar
+    /// out of view). A <see langword="null"/> entry (History) draws straight into the window body,
+    /// since its table already owns a scroll region — see <see cref="TabScrollRegions"/>. The child is
+    /// border-less, so ImGui zeroes its window padding and the layout matches the un-wrapped body.
+    /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Pure ImGui layout; the scroll-region map (TabScrollRegions) is tested and a live ImGui context can't run in CI.")]
+    private static void DrawTabBody(int tabIndex, Action drawBody)
+    {
+        var scrollRegionId = TabScrollRegions[tabIndex];
+        if (scrollRegionId is null)
+        {
+            drawBody();
+            return;
+        }
+
+        if (ImGui.BeginChild(scrollRegionId))
+            drawBody();
+        ImGui.EndChild();
     }
 }
