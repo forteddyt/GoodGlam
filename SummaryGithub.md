@@ -3,20 +3,20 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/1/2026 - 9:10:01 PM |
-| Coverage date: | 7/1/2026 - 9:09:51 PM - 7/1/2026 - 9:09:57 PM |
+| Generated on: | 7/2/2026 - 12:14:56 AM |
+| Coverage date: | 7/2/2026 - 12:14:42 AM - 7/2/2026 - 12:14:50 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
 | Classes: | 37 |
 | Files: | 27 |
-| **Line coverage:** | 91.8% (911 of 992) |
-| Covered lines: | 911 |
-| Uncovered lines: | 81 |
-| Coverable lines: | 992 |
-| Total lines: | 2980 |
-| **Branch coverage:** | 92.3% (303 of 328) |
-| Covered branches: | 303 |
-| Total branches: | 328 |
+| **Line coverage:** | 91.8% (929 of 1011) |
+| Covered lines: | 929 |
+| Uncovered lines: | 82 |
+| Coverable lines: | 1011 |
+| Total lines: | 3043 |
+| **Branch coverage:** | 92.9% (329 of 354) |
+| Covered branches: | 329 |
+| Total branches: | 354 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
@@ -26,7 +26,7 @@
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**91.8%**|**92.3%**|
+|**GoodGlam**|**91.8%**|**92.9%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|90%|
@@ -51,8 +51,8 @@
 |GoodGlam.History.PopularDropRecord|100%||
 |GoodGlam.Loot.LootEntry|100%||
 |GoodGlam.Loot.LootSnapshot|100%||
-|GoodGlam.Loot.LootWatcher|100%|96.8%|
-|GoodGlam.Plugin|100%|91.1%|
+|GoodGlam.Loot.LootWatcher|99%|97.5%|
+|GoodGlam.Plugin|100%|94.2%|
 |GoodGlam.Services|100%||
 |GoodGlam.Windows.Feedback|25%||
 |GoodGlam.Windows.GlowStamp|100%||

@@ -314,8 +314,8 @@ var assemblies = [
       { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 204, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootEntry", "rp": "GoodGlam_LootEntry.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 74, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootSnapshot", "rp": "GoodGlam_LootSnapshot.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 74, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 91, "ucl": 0, "cal": 91, "tl": 187, "cb": 31, "tb": 32, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 106, "ucl": 0, "cal": 106, "tl": 227, "cb": 31, "tb": 34, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 107, "ucl": 1, "cal": 108, "tl": 244, "cb": 39, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 108, "ucl": 0, "cal": 108, "tl": 233, "cb": 49, "tb": 52, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 10, "ucl": 0, "cal": 10, "tl": 23, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.Feedback", "rp": "GoodGlam_Feedback.html", "cl": 1, "ucl": 3, "cal": 4, "tl": 54, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.GlowStamp", "rp": "GoodGlam_GlowStamp.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 140, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -347,6 +347,12 @@ var riskHotspots = [
       { "value": 8, "exceeded": false },
     ]},
   {
+    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 150,
+    "metrics": [
+      { "value": 36, "exceeded": true },
+      { "value": 36, "exceeded": true },
+    ]},
+  {
     "assembly": "GoodGlam", "class": "GoodGlam.Glam.PopularityFilters", "reportPath": "GoodGlam_PopularityFilters.html", "methodName": "ActiveParams()", "methodShortName": "ActiveParams()", "fileIndex": 0, "line": 44,
     "metrics": [
       { "value": 32, "exceeded": true },
@@ -357,12 +363,6 @@ var riskHotspots = [
     "metrics": [
       { "value": 24, "exceeded": false },
       { "value": 24, "exceeded": true },
-    ]},
-  {
-    "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 150,
-    "metrics": [
-      { "value": 18, "exceeded": false },
-      { "value": 18, "exceeded": true },
     ]},
 ];
 
