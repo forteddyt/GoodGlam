@@ -8,8 +8,10 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// The unified <see cref="MainWindow"/> is almost entirely ImGui (excluded from coverage), but its
-/// constructor and <see cref="MainWindow.OnOpen"/> are framework-free: OnOpen arms the History-tab
-/// force-select via the pure <see cref="HistoryTabFocus"/>. These cover that non-UI surface.
+/// constructor, <see cref="MainWindow.OnOpen"/>, and the declared <see cref="MainWindow.TabOrder"/>
+/// are framework-free: OnOpen arms the History-tab force-select via the pure
+/// <see cref="HistoryTabFocus"/>, and TabOrder pins the four tabs (History first). These cover that
+/// non-UI surface.
 /// </summary>
 public class MainWindowTests
 {
@@ -23,6 +25,19 @@ public class MainWindowTests
     [Fact]
     public void Constructs_without_a_framework()
         => NewWindow().Should().NotBeNull();
+
+    [Fact]
+    public void Tab_order_is_history_filters_settings_about()
+    {
+        MainWindow.TabOrder.Should().Equal("History", "Filters", "Settings", "About");
+    }
+
+    [Fact]
+    public void History_is_the_first_tab()
+    {
+        MainWindow.TabOrder.Should().NotBeEmpty();
+        MainWindow.TabOrder[0].Should().Be("History");
+    }
 
     [Fact]
     public void OnOpen_arms_history_focus_each_time_without_throwing()
