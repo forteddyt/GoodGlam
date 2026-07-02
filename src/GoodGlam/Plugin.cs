@@ -69,7 +69,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open the GoodGlam window (History + Settings tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow.",
+            HelpMessage = "Open the GoodGlam window (History + Settings tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow, /goodglam reset.",
         });
 
         this.log.Information("GoodGlam loaded.");
@@ -166,6 +166,12 @@ public sealed class Plugin : IDalamudPlugin
 
             case "dump":
                 this.lootWatcher.DumpCurrentLoot();
+                break;
+
+            case "reset":
+                // Debug: clear the seen-loot dedup set so the same open loot re-dispatches on the next
+                // scan (re-open the roll window or use /goodglam check), for repeat testing.
+                this.lootWatcher.ResetDispatchedDrops();
                 break;
 
             case "check":

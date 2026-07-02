@@ -38,6 +38,7 @@ Honor these interfaces when adding data sources or transports. The component ove
 
 ## Testing
 
+- **Always prefer test-driven development, especially for bug fixes.** Write the failing (red) test that reproduces the bug or captures the new behavior *first*, confirm it fails for the right reason, then implement the fix and confirm the test goes green. Do not write the fix before the test.
 - xUnit + FluentAssertions + FakeItEasy in `tests/GoodGlam.Tests` (mirrors `src/`); internals are exposed via `InternalsVisibleTo`.
 - `tests/GoodGlam.IntegrationTests` holds **live** end-to-end tests that drive the real Eorzea Collection client (the `/goodglam check` pipeline below the Lumina resolve step). They are blocking and require EC reachability; both suites feed the merged coverage report. See the wiki **Development** page.
 - Add/update tests for behavior you change. The `NeedGreed` in-game hook path and Lumina item resolution can't run in CI; verify those manually (e.g. `/goodglam check <itemId>` in-game) and note it in the PR.

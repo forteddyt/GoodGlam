@@ -21,8 +21,17 @@ public sealed class LootWatcher : IDisposable
     private readonly ILootReader lootReader;
     private readonly ITraceLogger<LootWatcher> log;
 
-    // Avoids dispatching the same item twice while a single roll window is open.
-    private readonly HashSet<uint> seenThisWindow = [];
+    // Identity of a single rollable drop, taken from the game's own bookkeeping: which coffer it came
+    // from (ChestObjectId) and its slot within that coffer (ChestItemIndex), plus the raw item id as a
+    // cheap tiebreaker. This is what lets us dedup across a window close/reopen (same identity → same
+    // drop) while still treating a genuinely new drop of the same item (different coffer/slot) as new.
+    private readonly record struct DropKey(uint ChestObjectId, uint ChestItemIndex, uint ItemId);
+
+    // Drops already dispatched for popularity this loot session. Keyed by DropKey (not item id) and
+    // persisted across window close so reopening unchanged loot doesn't re-dispatch. Reconciled when
+    // the window (re)opens (PostSetup) against the live loot so departed drops are forgotten (bounding
+    // memory and letting a reused chest identity count as new); never pruned on an in-window refresh.
+    private readonly HashSet<DropKey> dispatchedDrops = [];
 
     public LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config)
         : this(resolver, popularity, config, new GameLootReader())
@@ -67,8 +76,10 @@ public sealed class LootWatcher : IDisposable
 
     private void OnAddonClosed(AddonEvent type, AddonArgs args)
     {
-        this.log.Verbose($"{AddonName} closed — clearing {this.seenThisWindow.Count} seen item(s).");
-        this.seenThisWindow.Clear();
+        // Deliberately does NOT clear the dispatched set: wiping it here is what caused #6, where
+        // reopening the window re-logged unchanged loot. Stale entries are instead reconciled the next
+        // time the window opens (PruneDeparted on PostSetup), so the set can safely outlive a window.
+        this.log.Verbose($"{AddonName} closed — keeping {this.dispatchedDrops.Count} dispatched drop(s) for reopen dedup.");
     }
 
     private void ScanLoot(AddonEvent type)
@@ -78,6 +89,14 @@ public sealed class LootWatcher : IDisposable
             this.log.Verbose($"{AddonName} {type} but no active loot session; nothing to scan.");
             return;
         }
+
+        // Reconcile only when the window (re)opens (PostSetup), never on an in-window refresh. Pruning
+        // on a PostRefresh would let a transiently partial loot read evict a still-valid dispatched drop
+        // and then re-dispatch it on the next refresh — a milder recurrence of #6. On open we forget any
+        // previously-dispatched drop no longer present, so memory stays bounded and a reused chest
+        // identity counts as new; within a window we only ever add newly-appeared drops.
+        if (type == AddonEvent.PostSetup)
+            this.PruneDeparted(loot);
 
         var dispatched = 0;
         var skipped = 0;
@@ -100,9 +119,11 @@ public sealed class LootWatcher : IDisposable
                 continue;
             }
 
-            if (!this.seenThisWindow.Add(drop.ItemId))
+            // Dedup on the drop's chest identity, not its item id, so two consecutive drops of the same
+            // item (different coffer/slot) are both counted while a reopened window is not.
+            if (!this.dispatchedDrops.Add(KeyOf(lootItem)))
             {
-                this.log.Verbose($"{drop.Name} ({drop.ItemId}) already dispatched this window; skipping.");
+                this.log.Verbose($"{drop.Name} ({drop.ItemId}) already dispatched this session; skipping.");
                 skipped++;
                 continue;
             }
@@ -114,6 +135,29 @@ public sealed class LootWatcher : IDisposable
 
         this.log.Debug($"scan complete — {dispatched} dispatched, {skipped} skipped of {loot.Items.Count} slot(s).");
     }
+
+    // Forgets any previously-dispatched drop that is no longer present in the live loot. Called only
+    // when the window (re)opens so an in-window refresh reporting a partial view can never evict a
+    // still-valid drop. Keeps the dispatched set a subset of the current window's slots.
+    private void PruneDeparted(LootSnapshot loot)
+    {
+        var present = new HashSet<DropKey>();
+        for (var i = 0; i < loot.Items.Count; i++)
+        {
+            var entry = loot.Items[i];
+            if (entry.ItemId != 0)
+                present.Add(KeyOf(entry));
+        }
+
+        var pruned = this.dispatchedDrops.RemoveWhere(key => !present.Contains(key));
+        if (pruned > 0)
+            this.log.Verbose($"pruned {pruned} dispatched drop(s) no longer present since the window last opened.");
+    }
+
+    // Builds a drop's identity from the raw loot entry (raw item id, before HQ normalization) so it
+    // stays byte-stable across a window reopen.
+    private static DropKey KeyOf(in LootEntry entry) =>
+        new(entry.ChestObjectId, entry.ChestItemIndex, entry.ItemId);
 
     /// <summary>
     /// Debug helper (<c>/goodglam dump</c>): logs every populated entry of the live
@@ -177,6 +221,19 @@ public sealed class LootWatcher : IDisposable
             $"check: {drop.Name} -> topLoves={popularity.TopLoves}, " +
             $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
             $"{(passed ? "POPULAR — logged to history (logo glow raised)" : "below threshold — not logged")}");
+    }
+
+    /// <summary>
+    /// Debug helper (<c>/goodglam reset</c>): clears the set of already-dispatched drops so the same,
+    /// still-open loot is re-dispatched through the pipeline on the next scan. Intended for testing the
+    /// detection/notify path repeatedly without needing a fresh coffer.
+    /// </summary>
+    public void ResetDispatchedDrops()
+    {
+        var count = this.dispatchedDrops.Count;
+        this.dispatchedDrops.Clear();
+        this.log.Information(
+            $"reset: cleared {count} dispatched drop(s); the next loot scan will re-dispatch all rollable items.");
     }
 
     public void Dispose()

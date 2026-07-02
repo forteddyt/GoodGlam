@@ -178,6 +178,7 @@ public class PluginTests : IDisposable
     [InlineData("history")]
     [InlineData("glow")]
     [InlineData("dump")]
+    [InlineData("reset")]
     [InlineData("check")]
     [InlineData("check not-a-number")]
     [InlineData("check 3610")]
