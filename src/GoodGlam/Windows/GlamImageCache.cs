@@ -58,9 +58,12 @@ internal sealed class GlamImageCache : IDisposable
         return entry.Value.Snapshot();
     }
 
-    /// <summary>Disposes every owned texture, cancelling any in-flight loads first.</summary>
+    /// <summary>Disposes every owned texture, cancelling any in-flight loads first. Safe to call more than once.</summary>
     public void Dispose()
     {
+        if (this.disposed)
+            return;
+
         this.disposed = true;
         this.cts.Cancel();
 

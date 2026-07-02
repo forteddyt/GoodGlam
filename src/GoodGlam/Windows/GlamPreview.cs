@@ -45,13 +45,20 @@ internal static class GlamPreviewLayout
         var padding = new Vector2(Padding, Padding) * scale;
         var boxSize = contentSize + (padding * 2f);
 
-        // Prefer the icon's right side; flip to the left when the box would run off the display edge.
+        // Prefer the icon's right side; flip to the left when the box would run off the right edge.
         var x = iconMax.X + gap;
         if (x + boxSize.X > displaySize.X)
             x = iconMin.X - gap - boxSize.X;
 
-        var min = new Vector2(x, iconMin.Y);
+        // Keep the box fully on-screen on both axes: the flip can still leave a negative x near the
+        // left edge, and y is anchored to the row so a tall preview on a bottom row would overflow the
+        // bottom. Clamp to [0, display - box]; when the box is larger than the display, pin to 0.
+        var min = new Vector2(
+            Clamp(x, displaySize.X - boxSize.X),
+            Clamp(iconMin.Y, displaySize.Y - boxSize.Y));
         return new GlamPreviewBox(min, min + boxSize, min + padding, contentSize);
+
+        static float Clamp(float value, float max) => Math.Max(0f, Math.Min(value, max));
     }
 }
 

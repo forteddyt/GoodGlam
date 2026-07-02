@@ -188,4 +188,19 @@ public class GlamImageCacheTests
             }
         });
     }
+
+    [Fact]
+    public void Dispose_is_idempotent()
+    {
+        var wrap = A.Fake<IDalamudTextureWrap>();
+        var cache = new GlamImageCache((_, _) => Task.FromResult<IDalamudTextureWrap?>(wrap));
+        cache.Get(Url);
+
+        cache.Dispose();
+
+        // A second Dispose must be a no-op, not throw (the CTS was already disposed) or re-dispose the
+        // texture. Standard IDisposable contract: safe to call multiple times.
+        cache.Invoking(c => c.Dispose()).Should().NotThrow();
+        A.CallTo(() => wrap.Dispose()).MustHaveHappenedOnceExactly();
+    }
 }

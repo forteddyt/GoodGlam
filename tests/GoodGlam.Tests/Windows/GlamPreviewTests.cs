@@ -87,6 +87,48 @@ public class GlamPreviewTests
         box.Max.Should().Be(box.Min + new Vector2(100 + 24, 100 + 24));
     }
 
+    [Fact]
+    public void Layout_clamps_vertically_so_a_bottom_row_preview_stays_on_screen()
+    {
+        var box = GlamPreviewLayout.Compute(
+            iconMin: new Vector2(100, 1000), // near the bottom of a 1080-tall display
+            iconMax: new Vector2(120, 1020),
+            contentSize: new Vector2(300, 300), // box 312 tall -> 1000+312 = 1312 overflows 1080
+            displaySize: new Vector2(1920, 1080),
+            scale: 1f);
+
+        box.Max.Y.Should().BeLessThanOrEqualTo(1080);
+        box.Min.Y.Should().Be(1080 - 312); // pinned so the bottom edge sits on the display edge
+    }
+
+    [Fact]
+    public void Layout_clamps_the_flipped_x_to_the_left_edge()
+    {
+        // Icon hugs the left edge and the display is too narrow to fit the box on either side, so the
+        // right-side placement overflows and the flip would go negative; both must pin to x = 0.
+        var box = GlamPreviewLayout.Compute(
+            iconMin: new Vector2(10, 100),
+            iconMax: new Vector2(30, 120),
+            contentSize: new Vector2(300, 300),
+            displaySize: new Vector2(320, 1080),
+            scale: 1f);
+
+        box.Min.X.Should().Be(0);
+    }
+
+    [Fact]
+    public void Layout_pins_to_origin_when_the_box_is_larger_than_the_display()
+    {
+        var box = GlamPreviewLayout.Compute(
+            iconMin: new Vector2(50, 50),
+            iconMax: new Vector2(70, 70),
+            contentSize: new Vector2(500, 500),
+            displaySize: new Vector2(200, 200), // box far exceeds the display on both axes
+            scale: 1f);
+
+        box.Min.Should().Be(Vector2.Zero);
+    }
+
     // ---- Render flow (background always; image when ready, else note) ----
 
     [Fact]
