@@ -28,9 +28,9 @@ public sealed class LootWatcher : IDisposable
     private readonly record struct DropKey(uint ChestObjectId, uint ChestItemIndex, uint ItemId);
 
     // Drops already dispatched for popularity this loot session. Keyed by DropKey (not item id) and
-    // persisted across window close so reopening unchanged loot doesn't re-dispatch. Reconciled on
-    // every scan against the live loot so departed drops are forgotten (bounding memory and letting a
-    // reused chest identity count as new).
+    // persisted across window close so reopening unchanged loot doesn't re-dispatch. Reconciled when
+    // the window (re)opens (PostSetup) against the live loot so departed drops are forgotten (bounding
+    // memory and letting a reused chest identity count as new); never pruned on an in-window refresh.
     private readonly HashSet<DropKey> dispatchedDrops = [];
 
     public LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config)
@@ -77,8 +77,8 @@ public sealed class LootWatcher : IDisposable
     private void OnAddonClosed(AddonEvent type, AddonArgs args)
     {
         // Deliberately does NOT clear the dispatched set: wiping it here is what caused #6, where
-        // reopening the window re-logged unchanged loot. The set self-heals via per-scan reconciliation
-        // (departed drops are pruned in ScanLoot), so it can safely outlive a single window.
+        // reopening the window re-logged unchanged loot. Stale entries are instead reconciled the next
+        // time the window opens (PruneDeparted on PostSetup), so the set can safely outlive a window.
         this.log.Verbose($"{AddonName} closed — keeping {this.dispatchedDrops.Count} dispatched drop(s) for reopen dedup.");
     }
 
