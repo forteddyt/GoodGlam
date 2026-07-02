@@ -7,10 +7,11 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// The Settings tab of the unified <see cref="MainWindow"/>: plugin configuration only — the
-/// floating-logo toggle, the drop-notification master switch, the loves threshold, the cache
-/// lifetime, and <b>Restore Defaults</b>. The Eorzea Collection filter set now lives in its own
-/// <see cref="FiltersTab"/>, and the version/logo/links/feedback in the <see cref="AboutTab"/>, so
-/// this tab is single-purpose plugin config.
+/// floating-logo toggle, the drop-notification master switch, the <b>Per-slot loves thresholds</b>
+/// advanced toggle, the cache lifetime, and <b>Reset Settings</b> (which reverts just these
+/// Settings-tab controls). The Eorzea Collection filter set and the per-slot values themselves live
+/// in the <see cref="FiltersTab"/>, and the version/logo/links/feedback in the
+/// <see cref="AboutTab"/>, so this tab is single-purpose plugin config.
 /// </summary>
 /// <remarks>
 /// Rendering only. Every control's effect (config mutation, clamping, restore) lives in the pure,
@@ -51,6 +52,18 @@ internal sealed class SettingsTab
 
         ImGui.Separator();
 
+        var perSlot = this.config.PerSlotThresholds;
+        if (ImGui.Checkbox("Per-slot loves thresholds", ref perSlot))
+        {
+            this.log.Debug($"setting changed: PerSlotThresholds = {perSlot}.");
+            this.actions.SetPerSlotThresholds(perSlot);
+        }
+
+        Help("Give each gear slot its own loves threshold instead of one shared value. " +
+            "When on, the single Loves threshold is replaced by a per-slot threshold.");
+
+        ImGui.Separator();
+
         var ttl = this.config.CacheTtlHours;
         if (ImGui.InputInt("Cache lifetime (hours)", ref ttl, 1, 6, default))
         {
@@ -63,13 +76,13 @@ internal sealed class SettingsTab
 
         ImGui.Separator();
         ImGui.Spacing();
-        if (ImGui.Button("Restore Defaults"))
+        if (ImGui.Button("Reset Settings"))
         {
-            this.log.Debug("Restore Defaults clicked; resetting all settings and filters.");
-            this.actions.RestoreDefaults();
+            this.log.Debug("Reset Settings clicked; resetting the Settings-tab controls.");
+            this.actions.ResetSettings();
         }
 
-        Help("Reverts every GoodGlam setting (notifications, threshold, cache, and all filters) to defaults.");
+        Help("Resets the Settings to their default values.");
     }
 
     /// <summary>Draws Dalamud's standard info "(?)" icon on the same line, with a hover tooltip.</summary>

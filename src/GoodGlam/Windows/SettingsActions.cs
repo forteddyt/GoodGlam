@@ -48,6 +48,48 @@ internal sealed class SettingsActions
         this.config.Save();
     }
 
+    /// <summary>Toggles the advanced "per-slot thresholds" mode and persists it.</summary>
+    internal void SetPerSlotThresholds(bool enabled)
+    {
+        this.config.PerSlotThresholds = enabled;
+        this.config.Save();
+    }
+
+    /// <summary>Whether a slot is currently analysed (defaults to enabled when unconfigured).</summary>
+    internal bool IsSlotEnabled(GlamSlot slot) => this.config.IsSlotEnabled(slot);
+
+    /// <summary>
+    /// The threshold to show for a slot in the per-slot UI: its own override when set, otherwise the
+    /// master value it falls back to. Mirrors <see cref="Configuration.EffectiveThreshold"/>'s
+    /// fallback but independent of the advanced toggle, so the field previews the master value.
+    /// </summary>
+    internal int GetSlotThreshold(GlamSlot slot)
+        => this.config.Slots.TryGetValue(slot.Key, out var setting) && setting.LovesThreshold is { } t
+            ? t
+            : this.config.LovesThreshold;
+
+    /// <summary>Enables/disables a slot, upserting its <see cref="SlotSetting"/>, and persists.</summary>
+    internal void SetSlotEnabled(GlamSlot slot, bool enabled)
+    {
+        this.Slot(slot).Enabled = enabled;
+        this.config.Save();
+    }
+
+    /// <summary>Sets a slot's own loves threshold (floored at 0), upserting it, and persists.</summary>
+    internal void SetSlotThreshold(GlamSlot slot, int threshold)
+    {
+        this.Slot(slot).LovesThreshold = Math.Max(0, threshold);
+        this.config.Save();
+    }
+
+    /// <summary>Fetches (creating if absent) the mutable per-slot setting for <paramref name="slot"/>.</summary>
+    private SlotSetting Slot(GlamSlot slot)
+    {
+        if (!this.config.Slots.TryGetValue(slot.Key, out var setting))
+            this.config.Slots[slot.Key] = setting = new SlotSetting();
+        return setting;
+    }
+
     /// <summary>Cache lifetime is clamped to 1-72 hours (a non-positive TTL would hammer the network).</summary>
     internal void SetCacheTtlHours(int hours)
     {
@@ -127,21 +169,35 @@ internal sealed class SettingsActions
         this.config.Save();
     }
 
-    /// <summary>Reverts notifications, threshold, cache, and all filters to defaults (keeps the logo prefs).</summary>
-    internal void RestoreDefaults()
+    /// <summary>
+    /// Resets every control on the Settings tab to defaults: the floating-logo visibility, the
+    /// drop-notification master switch, the Per-slot loves thresholds mode, and the cache lifetime.
+    /// The Filters-tab controls (EC filters, the loves threshold, and the gear-slot settings) are
+    /// left untouched — use <see cref="ResetFilters"/> for those — so each tab's reset stays within
+    /// its own controls.
+    /// </summary>
+    internal void ResetSettings()
     {
         var defaults = new Configuration();
+        // Route the logo through the callback so the live logo window updates (it owns persistence).
+        this.setLogoVisible(defaults.ShowLogo);
         this.config.Enabled = defaults.Enabled;
-        this.config.LovesThreshold = defaults.LovesThreshold;
+        this.config.PerSlotThresholds = defaults.PerSlotThresholds;
         this.config.CacheTtlHours = defaults.CacheTtlHours;
-        this.config.Filters = defaults.Filters;
         this.config.Save();
     }
 
-    /// <summary>Clears only the EC filters, keeping notifications/threshold/cache untouched.</summary>
+    /// <summary>
+    /// Resets everything that lives on the Filters tab: the EC filters, the master loves threshold,
+    /// and the gear-slot settings (enable/disable + per-slot thresholds). Leaves the Settings-tab
+    /// controls — notifications, cache, the logo prefs, and the Per-slot loves thresholds toggle —
+    /// untouched, so each tab's reset stays within its own controls.
+    /// </summary>
     internal void ResetFilters()
     {
         this.config.Filters = new PopularityFilters();
+        this.config.Slots = new Dictionary<string, SlotSetting>();
+        this.config.LovesThreshold = new Configuration().LovesThreshold;
         this.config.Save();
     }
 }

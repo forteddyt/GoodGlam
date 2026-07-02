@@ -119,6 +119,16 @@ public sealed class LootWatcher : IDisposable
                 continue;
             }
 
+            // Slot-level opt-out (#43): a disabled slot is skipped before the dedup add and before any
+            // EC lookup, so nothing is logged and re-enabling the slot mid-session takes effect on the
+            // next scan (the drop was never recorded as dispatched).
+            if (!this.config.IsSlotEnabled(drop.Slot))
+            {
+                this.log.Verbose($"{drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] slot disabled; skipping.");
+                skipped++;
+                continue;
+            }
+
             // Dedup on the drop's chest identity, not its item id, so two consecutive drops of the same
             // item (different coffer/slot) are both counted while a reopened window is not.
             if (!this.dispatchedDrops.Add(KeyOf(lootItem)))
@@ -210,16 +220,25 @@ public sealed class LootWatcher : IDisposable
         }
 
         this.log.Information($"check: simulating drop of {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}].");
+
+        if (!this.config.IsSlotEnabled(drop.Slot))
+        {
+            this.log.Information(
+                $"check: {drop.Name} slot '{drop.Slot.Key}' is disabled in settings; skipping — nothing logged.");
+            return;
+        }
+
         _ = this.ReportSimulatedDropAsync(drop);
     }
 
     private async Task ReportSimulatedDropAsync(DropItem drop)
     {
         var popularity = await this.popularity.ProcessAsync(drop).ConfigureAwait(false);
-        var passed = popularity.TopLoves >= this.config.LovesThreshold;
+        var threshold = this.config.EffectiveThreshold(drop.Slot);
+        var passed = popularity.TopLoves >= threshold;
         this.log.Information(
             $"check: {drop.Name} -> topLoves={popularity.TopLoves}, " +
-            $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={this.config.LovesThreshold} => " +
+            $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={threshold} => " +
             $"{(passed ? "POPULAR — logged to history (logo glow raised)" : "below threshold — not logged")}");
     }
 

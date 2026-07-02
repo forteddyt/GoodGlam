@@ -22,8 +22,62 @@ public sealed record GlamSlot(string Key)
     public static readonly GlamSlot Bracelets = new("bracelets");
     public static readonly GlamSlot Ring = new("ring");
 
+    /// <summary>
+    /// One row of the Gear slots grid: a left-column slot beside an optional right-column slot,
+    /// mirroring FFXIV's equipment window. See <see cref="Grid"/>.
+    /// </summary>
+    public readonly record struct GridRow(GlamSlot Left, GlamSlot? Right);
+
+    /// <summary>
+    /// The slots laid out as the in-game equipment grid: a left "gear" column (Main Hand, Head,
+    /// Body, Hands, Legs, Feet) beside a right "accessory" column (Off Hand, Ears, Neck, Wrists,
+    /// Rings). Main Hand sits alone on the first row, so that row's right cell is <c>null</c>.
+    /// Ring 1 / Ring 2 are bundled into the single <see cref="Ring"/> slot, and there is no
+    /// facewear slot (it isn't a glamour category on Eorzea Collection).
+    /// </summary>
+    public static readonly IReadOnlyList<GridRow> Grid =
+    [
+        new(Weapon, null),
+        new(Head, Offhand),
+        new(Body, Earrings),
+        new(Hands, Necklace),
+        new(Legs, Bracelets),
+        new(Feet, Ring),
+    ];
+
+    /// <summary>
+    /// Every glamour slot, in the reading order of the equipment <see cref="Grid"/> (each row's
+    /// left cell then its right cell): Main Hand, Head, Off Hand, Body, Ears, Hands, Neck, Legs,
+    /// Wrists, Feet, Rings. Derived from <see cref="Grid"/> so the two never drift apart; used
+    /// wherever code needs to iterate every slot.
+    /// </summary>
+    public static readonly IReadOnlyList<GlamSlot> All =
+        Grid.SelectMany(row => row.Right is null ? new[] { row.Left } : [row.Left, row.Right]).ToArray();
+
     /// <summary>The query-string parameter name used on the glamour listing filter.</summary>
     public string FilterParam => $"{Key}Piece";
+
+    /// <summary>
+    /// Human-friendly slot name for the UI. Six slots read differently from their EC
+    /// <see cref="Key"/> (Main Hand, Off Hand, Ears, Neck, Wrists, Rings); the rest are the
+    /// title-cased key. Expression-bodied on purpose so it stays out of the record's value
+    /// equality — two slots are still equal iff their <see cref="Key"/> matches.
+    /// </summary>
+    public string Label => this.Key switch
+    {
+        "weapon" => "Main Hand",
+        "offhand" => "Off Hand",
+        "head" => "Head",
+        "body" => "Body",
+        "hands" => "Hands",
+        "legs" => "Legs",
+        "feet" => "Feet",
+        "earrings" => "Ears",
+        "necklace" => "Neck",
+        "bracelets" => "Wrists",
+        "ring" => "Rings",
+        _ => this.Key,
+    };
 
     /// <summary>
     /// Resolves a game item's <see cref="EquipSlotCategory"/> to the matching Eorzea
