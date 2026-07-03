@@ -21,6 +21,16 @@ A [Dalamud](https://github.com/goatcorp/Dalamud) plugin for **FINAL FANTASY XIV*
 
 So an unassuming dungeon/trial/raid drop never slips by unnoticed when it is actually glam-worthy. Results are cached to stay polite to Eorzea Collection, and the threshold, filters, and notifications are all configurable.
 
+## Install
+
+GoodGlam is distributed through a **Dalamud custom plugin repository**. In-game, open `/xlsettings` -> **Experimental** -> **Custom Plugin Repositories**, add the URL below, then install **GoodGlam** from `/xlplugins`:
+
+```
+https://forteddyt.github.io/GoodGlam/repo.json
+```
+
+Enable **Get plugin testing builds** in the same Experimental settings to opt into the rolling dev channel. Full steps (and building from source instead) are in the **[Installation guide](https://github.com/forteddyt/GoodGlam/wiki/Installation)**.
+
 See the **[project wiki](https://github.com/forteddyt/GoodGlam/wiki)** for installation, usage, configuration, and developer documentation.
 
 > ℹ️ This plugin was developed with AI assistance.

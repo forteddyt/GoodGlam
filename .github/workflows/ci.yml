@@ -14,64 +14,21 @@ jobs:
       contents: write
       pull-requests: write
 
-    env:
-      # The Dalamud.NET.Sdk resolves the dev libraries from DALAMUD_HOME (falling back to the
-      # XIVLauncher dev-hooks path, which doesn't exist on CI). Point it at the restored .dalamud/.
-      DALAMUD_HOME: ${{ github.workspace }}\.dalamud
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Restore Dalamud dev libraries
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path .dalamud | Out-Null
-          curl.exe -L -o .dalamud/latest.zip https://goatcorp.github.io/dalamud-distrib/latest.zip
-          Expand-Archive -Path .dalamud/latest.zip -DestinationPath .dalamud -Force
-
-      - name: Restore
-        run: dotnet restore GoodGlam.slnx
-
-      - name: Build
-        run: dotnet build GoodGlam.slnx -c Release --no-restore
-
-      - name: Verify plugin package (manifest + latest.zip)
-        # The Release build runs DalamudPackager, which emits the manifest and latest.zip.
-        # Assert both exist and that the zip is clean (no Dalamud/game-provided assemblies).
-        shell: pwsh
-        run: |
-          $manifest = "src/GoodGlam/bin/Release/GoodGlam/GoodGlam.json"
-          $zip      = "src/GoodGlam/bin/Release/GoodGlam/latest.zip"
-          if (-not (Test-Path $manifest)) { throw "Expected manifest not found: $manifest" }
-          if (-not (Test-Path $zip))      { throw "Expected package not found: $zip" }
-
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
-          try { $entries = $archive.Entries.FullName } finally { $archive.Dispose() }
-
-          # Only GoodGlam's own assembly may ship in the zip. Everything Dalamud and the game
-          # provide is referenced with Private=false and must never be bundled, so flag any other
-          # .dll as a leak. This stays correct as the SDK's reference set changes, without tracking
-          # it here.
-          $strayDlls = $entries |
-            Where-Object { $_ -like "*.dll" -and (Split-Path $_ -Leaf) -ne "GoodGlam.dll" }
-          if ($strayDlls) { throw "Package contains unexpected assemblies that should not be bundled: $($strayDlls -join ', ')" }
-
-          Write-Host "Package OK. Manifest present and zip contains: $($entries -join ', ')"
+      - name: Build & package plugin (Release)
+        id: build
+        uses: ./.github/actions/build-plugin
 
       - name: Upload plugin package
         uses: actions/upload-artifact@v4
         with:
           name: goodglam
           path: |
-            src/GoodGlam/bin/Release/GoodGlam/latest.zip
-            src/GoodGlam/bin/Release/GoodGlam/GoodGlam.json
+            ${{ steps.build.outputs.zip-path }}
+            ${{ steps.build.outputs.manifest-path }}
 
       - name: Test (unit)
         run: dotnet test tests/GoodGlam.Tests/GoodGlam.Tests.csproj -c Release --no-build --settings coverlet.runsettings --results-directory TestResults
@@ -111,3 +68,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: CoverageReport
+          # gh-pages also hosts the plugin repository JSON (repo.json), published by release.yml.
+          # keep_files stops this coverage publish from wiping repo.json off the branch.
+          keep_files: true

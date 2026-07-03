@@ -1,0 +1,35 @@
+name: Publish plugin repository JSON
+description: >-
+  Regenerates the Dalamud custom-repository JSON (repo.json) from the current GitHub Release state and
+  publishes it to the gh-pages branch (alongside the coverage report). Shared by the dev and prod
+  release jobs so both channels always emit the same, complete repo.json.
+
+inputs:
+  manifest-path:
+    description: Path to the built plugin manifest (GoodGlam.json) for the static fields.
+    required: true
+  github-token:
+    description: Token used both to query releases (gh) and to push to gh-pages.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Generate repo.json
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        New-Item -ItemType Directory -Force -Path pages | Out-Null
+        ./scripts/build-repo-json.ps1 `
+          -ManifestPath "${{ inputs.manifest-path }}" `
+          -OutputPath   "pages/repo.json"
+
+    - name: Publish repo.json to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ inputs.github-token }}
+        publish_dir: pages
+        # gh-pages also hosts the coverage report (published by ci.yml). keep_files stops this
+        # publish from wiping the coverage report while it adds/updates repo.json at the branch root.
+        keep_files: true
