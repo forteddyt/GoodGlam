@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using GoodGlam.Diagnostics;
@@ -30,6 +31,10 @@ internal sealed class HistoryTab : IDisposable
     private const float PreviewMaxSide = 320f;
 
     private static readonly HttpClient Http = CreateHttpClient();
+
+    /// <summary>Static loader collaborators: the static <see cref="LoadTextureAsync"/> can't use the instance log/decoder.</summary>
+    private static readonly ITraceLogger<HistoryTab> LoaderLog = new TraceLogger<HistoryTab>();
+    private static readonly IGlamImageDecoder Decoder = new ImageSharpDecoder();
 
     private readonly NotificationHistoryStore store;
     private readonly ITraceLogger<HistoryTab> log = new TraceLogger<HistoryTab>();
@@ -211,22 +216,59 @@ internal sealed class HistoryTab : IDisposable
 
     /// <summary>
     /// The production texture loader threaded into <see cref="GlamImageCache"/>: download the image
-    /// bytes with the managed HTTP client and decode them into a GPU texture. Returns <c>null</c> on
-    /// any failure (network, decode, or a Cloudflare block on native Windows), which the cache treats
-    /// as a missing preview — the row still renders, just without an image. No <c>curl.exe</c>/OS
-    /// sniffing here; reaching Eorzea Collection without curl on native Windows is tracked separately.
+    /// bytes with the managed HTTP client, decode them to raw RGBA with the fully-managed
+    /// <see cref="ImageSharpDecoder"/>, and upload via <c>CreateFromRawAsync</c>. Decoding ourselves
+    /// (rather than Dalamud's WIC-based <c>CreateFromImageAsync</c>) is what lets the WebP that
+    /// Cloudflare Polish serves for Eorzea Collection cover images load under Wine — see issue #64.
+    /// Returns <c>null</c> on any failure (network, empty/blocked response, decode, or GPU upload),
+    /// which the cache treats as a missing preview — the row still renders, just without an image.
+    /// Each failure logs its distinct reason so a future report is diagnosable from the xllogs alone,
+    /// instead of the old silent null. No <c>curl.exe</c>/OS sniffing here; reaching Eorzea Collection
+    /// without curl on native Windows is tracked separately.
     /// </summary>
     private static async Task<IDalamudTextureWrap?> LoadTextureAsync(string url, CancellationToken ct)
     {
+        byte[] bytes;
         try
         {
-            var bytes = await Http.GetByteArrayAsync(url, ct).ConfigureAwait(false);
+            bytes = await Http.GetByteArrayAsync(url, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LoaderLog.Warning($"preview image download failed for '{url}'.", ex);
+            return null;
+        }
+
+        if (bytes.Length == 0)
+        {
+            LoaderLog.Warning($"preview image download for '{url}' returned no bytes (empty/blocked response).");
+            return null;
+        }
+
+        DecodedImage decoded;
+        try
+        {
+            decoded = Decoder.Decode(bytes);
+        }
+        catch (Exception ex)
+        {
+            LoaderLog.Warning($"preview image decode failed for '{url}' ({bytes.Length} bytes).", ex);
+            return null;
+        }
+
+        try
+        {
             return await Services.TextureProvider
-                .CreateFromImageAsync(bytes, "GoodGlam.GlamImage", ct)
+                .CreateFromRawAsync(
+                    RawImageSpecification.Rgba32(decoded.Width, decoded.Height),
+                    decoded.Rgba,
+                    "GoodGlam.GlamImage",
+                    ct)
                 .ConfigureAwait(false);
         }
-        catch
+        catch (Exception ex)
         {
+            LoaderLog.Warning($"preview image GPU upload failed for '{url}' ({decoded.Width}x{decoded.Height}).", ex);
             return null;
         }
     }

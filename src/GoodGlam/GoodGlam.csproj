@@ -29,6 +29,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Fully-managed image codec for the History-tab cover preview. Eorzea Collection's images sit
+      behind Cloudflare Polish, which serves WebP for the .png cover URLs; Dalamud's WIC-based
+      CreateFromImageAsync can't decode WebP under Wine (nor reliably on native Windows), so we decode
+      to raw RGBA ourselves and upload via CreateFromRawAsync. ImageSharp is pure-managed (no native
+      binaries), so it behaves identically under Wine/Linux and Windows. DalamudPackager bundles it
+      into latest.zip. Pinned to the 3.1.x line: 4.x enforces a build-time Six Labors license key that
+      the internet-less D17 build can't satisfy, and 3.1.12 is the latest patch with no known
+      vulnerabilities and no transitive dependencies.
+    -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="GoodGlam.Tests" />
     <InternalsVisibleTo Include="GoodGlam.IntegrationTests" />
   </ItemGroup>
