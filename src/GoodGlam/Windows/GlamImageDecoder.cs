@@ -1,4 +1,5 @@
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace GoodGlam.Windows;
@@ -19,9 +20,11 @@ internal interface IGlamImageDecoder
 {
     /// <summary>
     /// Decodes <paramref name="bytes"/> into <see cref="DecodedImage"/>. Throws if the bytes are not a
-    /// supported/valid image so callers can distinguish a decode failure from an empty download.
+    /// supported/valid image, if the image exceeds the preview dimension cap, or if
+    /// <paramref name="ct"/> is cancelled — so callers can distinguish a decode failure from an empty
+    /// download and abandon a load promptly on teardown.
     /// </summary>
-    DecodedImage Decode(ReadOnlySpan<byte> bytes);
+    DecodedImage Decode(ReadOnlySpan<byte> bytes, CancellationToken ct);
 }
 
 /// <summary>
@@ -32,9 +35,33 @@ internal interface IGlamImageDecoder
 /// </summary>
 internal sealed class ImageSharpDecoder : IGlamImageDecoder
 {
-    public DecodedImage Decode(ReadOnlySpan<byte> bytes)
+    /// <summary>
+    /// Upper bound on either dimension of a decoded preview. Cover thumbnails are a few hundred px, so
+    /// this only exists to reject a crafted/oversized image (a decompression bomb) before we allocate
+    /// <c>Width*Height*4</c> bytes — the image bytes come from a scraped, attacker-influenceable EC
+    /// URL. 4096 px/side caps the buffer at ~67 MB.
+    /// </summary>
+    internal const int MaxDimension = 4096;
+
+    // A single frame is all a cover preview needs; this also stops an animated payload from decoding
+    // every frame.
+    private static readonly DecoderOptions Options = new() { MaxFrames = 1 };
+
+    public DecodedImage Decode(ReadOnlySpan<byte> bytes, CancellationToken ct)
     {
-        using var image = Image.Load<Rgba32>(bytes);
+        ct.ThrowIfCancellationRequested();
+
+        // Read the header first so we can reject an oversized image before decoding/allocating it.
+        var info = Image.Identify(Options, bytes);
+        if (info.Width > MaxDimension || info.Height > MaxDimension)
+        {
+            throw new InvalidOperationException(
+                $"image dimensions {info.Width}x{info.Height} exceed the {MaxDimension}px preview cap.");
+        }
+
+        ct.ThrowIfCancellationRequested();
+
+        using var image = Image.Load<Rgba32>(Options, bytes);
         var rgba = new byte[checked(image.Width * image.Height * 4)];
         image.CopyPixelDataTo(rgba);
         return new DecodedImage(image.Width, image.Height, rgba);

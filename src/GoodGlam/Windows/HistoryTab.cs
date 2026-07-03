@@ -20,9 +20,10 @@ namespace GoodGlam.Windows;
 /// </summary>
 /// <remarks>
 /// Rendering only. The link-vs-text decision lives in the tested <see cref="HistoryLinkCell"/>, the
-/// open effect in the tested <see cref="HistoryActions"/>, and the lazy per-URL image loading in the
-/// tested <see cref="GlamImageCache"/>; this class just draws from those, so it is excluded from
-/// coverage while the logic behind it is tested.
+/// open effect in the tested <see cref="HistoryActions"/>, the lazy per-URL image caching in the
+/// tested <see cref="GlamImageCache"/>, and the preview load flow (download/decode/upload + failure
+/// handling) in the tested <see cref="GlamImageLoader"/>; this class just draws from and wires up
+/// those, so it is excluded from coverage while the logic behind it is tested.
 /// </remarks>
 [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the link decision (HistoryLinkCell), open effect (HistoryActions), and image cache (GlamImageCache) are extracted and tested, and a live ImGui context can't run in CI.")]
 internal sealed class HistoryTab : IDisposable
@@ -32,9 +33,26 @@ internal sealed class HistoryTab : IDisposable
 
     private static readonly HttpClient Http = CreateHttpClient();
 
-    /// <summary>Static loader collaborators: the static <see cref="LoadTextureAsync"/> can't use the instance log/decoder.</summary>
-    private static readonly ITraceLogger<HistoryTab> LoaderLog = new TraceLogger<HistoryTab>();
-    private static readonly IGlamImageDecoder Decoder = new ImageSharpDecoder();
+    /// <summary>
+    /// The production preview loader threaded into <see cref="GlamImageCache"/>, wired with the real
+    /// <see cref="Http"/> client, the fully-managed <see cref="ImageSharpDecoder"/>, and Dalamud's
+    /// <c>CreateFromRawAsync</c>. Decoding ourselves (rather than Dalamud's WIC-based
+    /// <c>CreateFromImageAsync</c>) is what lets the WebP that Cloudflare Polish serves for Eorzea
+    /// Collection cover images load under Wine — see issue #64. The load flow and its failure
+    /// handling live in the tested <see cref="GlamImageLoader"/>; only this collaborator wiring (which
+    /// needs a live HTTP client and render device) stays here. No <c>curl.exe</c>/OS sniffing;
+    /// reaching Eorzea Collection without curl on native Windows is tracked separately.
+    /// </summary>
+    private static readonly GlamImageLoader Loader = new(
+        (url, ct) => Http.GetByteArrayAsync(url, ct),
+        new ImageSharpDecoder(),
+        async (image, ct) => await Services.TextureProvider
+            .CreateFromRawAsync(
+                RawImageSpecification.Rgba32(image.Width, image.Height),
+                image.Rgba,
+                "GoodGlam.GlamImage",
+                ct)
+            .ConfigureAwait(false));
 
     private readonly NotificationHistoryStore store;
     private readonly ITraceLogger<HistoryTab> log = new TraceLogger<HistoryTab>();
@@ -214,64 +232,9 @@ internal sealed class HistoryTab : IDisposable
         return native * scale;
     }
 
-    /// <summary>
-    /// The production texture loader threaded into <see cref="GlamImageCache"/>: download the image
-    /// bytes with the managed HTTP client, decode them to raw RGBA with the fully-managed
-    /// <see cref="ImageSharpDecoder"/>, and upload via <c>CreateFromRawAsync</c>. Decoding ourselves
-    /// (rather than Dalamud's WIC-based <c>CreateFromImageAsync</c>) is what lets the WebP that
-    /// Cloudflare Polish serves for Eorzea Collection cover images load under Wine — see issue #64.
-    /// Returns <c>null</c> on any failure (network, empty/blocked response, decode, or GPU upload),
-    /// which the cache treats as a missing preview — the row still renders, just without an image.
-    /// Each failure logs its distinct reason so a future report is diagnosable from the xllogs alone,
-    /// instead of the old silent null. No <c>curl.exe</c>/OS sniffing here; reaching Eorzea Collection
-    /// without curl on native Windows is tracked separately.
-    /// </summary>
-    private static async Task<IDalamudTextureWrap?> LoadTextureAsync(string url, CancellationToken ct)
-    {
-        byte[] bytes;
-        try
-        {
-            bytes = await Http.GetByteArrayAsync(url, ct).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LoaderLog.Warning($"preview image download failed for '{url}'.", ex);
-            return null;
-        }
-
-        if (bytes.Length == 0)
-        {
-            LoaderLog.Warning($"preview image download for '{url}' returned no bytes (empty/blocked response).");
-            return null;
-        }
-
-        DecodedImage decoded;
-        try
-        {
-            decoded = Decoder.Decode(bytes);
-        }
-        catch (Exception ex)
-        {
-            LoaderLog.Warning($"preview image decode failed for '{url}' ({bytes.Length} bytes).", ex);
-            return null;
-        }
-
-        try
-        {
-            return await Services.TextureProvider
-                .CreateFromRawAsync(
-                    RawImageSpecification.Rgba32(decoded.Width, decoded.Height),
-                    decoded.Rgba,
-                    "GoodGlam.GlamImage",
-                    ct)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LoaderLog.Warning($"preview image GPU upload failed for '{url}' ({decoded.Width}x{decoded.Height}).", ex);
-            return null;
-        }
-    }
+    /// <summary>The texture loader threaded into <see cref="GlamImageCache"/>; delegates to the tested <see cref="GlamImageLoader"/>.</summary>
+    private static Task<IDalamudTextureWrap?> LoadTextureAsync(string url, CancellationToken ct)
+        => Loader.LoadAsync(url, ct);
 
     private static HttpClient CreateHttpClient()
     {

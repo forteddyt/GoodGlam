@@ -39,7 +39,7 @@ public class GlamImageDecoderTests
         // WebP is the exact format that was failing in the field (issue #64).
         var bytes = Encode(new WebpEncoder { Quality = 100, FileFormat = WebpFileFormatType.Lossless });
 
-        var decoded = new ImageSharpDecoder().Decode(bytes);
+        var decoded = new ImageSharpDecoder().Decode(bytes, CancellationToken.None);
 
         decoded.Width.Should().Be(2);
         decoded.Height.Should().Be(1);
@@ -61,7 +61,7 @@ public class GlamImageDecoderTests
     {
         var bytes = Encode(new PngEncoder());
 
-        var decoded = new ImageSharpDecoder().Decode(bytes);
+        var decoded = new ImageSharpDecoder().Decode(bytes, CancellationToken.None);
 
         decoded.Width.Should().Be(2);
         decoded.Height.Should().Be(1);
@@ -78,7 +78,7 @@ public class GlamImageDecoderTests
         // JPEG is lossy, so assert the shape and that alpha is opaque rather than exact colours.
         var bytes = Encode(new JpegEncoder { Quality = 100 });
 
-        var decoded = new ImageSharpDecoder().Decode(bytes);
+        var decoded = new ImageSharpDecoder().Decode(bytes, CancellationToken.None);
 
         decoded.Width.Should().Be(2);
         decoded.Height.Should().Be(1);
@@ -91,8 +91,35 @@ public class GlamImageDecoderTests
     {
         var garbage = "not an image"u8.ToArray();
 
-        var decode = () => new ImageSharpDecoder().Decode(garbage);
+        var decode = () => new ImageSharpDecoder().Decode(garbage, CancellationToken.None);
 
         decode.Should().Throw<Exception>("undecodable bytes must surface so the loader can log a decode failure");
+    }
+
+    [Fact]
+    public void Rejects_images_larger_than_the_dimension_cap()
+    {
+        // One px past the cap on the long edge; kept 1px tall so the fixture stays cheap to encode.
+        using var oversized = new Image<Rgba32>(ImageSharpDecoder.MaxDimension + 1, 1);
+        using var ms = new MemoryStream();
+        oversized.Save(ms, new PngEncoder());
+        var bytes = ms.ToArray();
+
+        var decode = () => new ImageSharpDecoder().Decode(bytes, CancellationToken.None);
+
+        decode.Should().Throw<InvalidOperationException>("an oversized image must be rejected before it is decoded/allocated")
+            .WithMessage("*exceed*");
+    }
+
+    [Fact]
+    public void Honours_cancellation()
+    {
+        var bytes = Encode(new PngEncoder());
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var decode = () => new ImageSharpDecoder().Decode(bytes, cts.Token);
+
+        decode.Should().Throw<OperationCanceledException>("a cancelled load (e.g. teardown) must not decode");
     }
 }
