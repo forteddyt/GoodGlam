@@ -8,17 +8,24 @@ GoodGlam is a **.NET 10 / C# Dalamud plugin** for FINAL FANTASY XIV. It watches 
 
 ## Build & test
 
-The Dalamud dev libraries must be available, either restored into `.dalamud/` (gitignored) or via the `DALAMUD_HOME` environment variable. On Linux, `DALAMUD_HOME` is easiest:
+The plugin project uses the **`Dalamud.NET.Sdk`** (see `src/GoodGlam/GoodGlam.csproj`), which supplies
+the target framework, the Dalamud-provided assembly references, and **DalamudPackager**. It resolves
+the Dalamud dev libraries from the XIVLauncher dev-hooks folder for your OS, or from the
+`DALAMUD_HOME` environment variable if set. On Linux, `DALAMUD_HOME` is easiest (and is how CI points
+the SDK at a restored `.dalamud/`):
 
 ```bash
-export DALAMUD_HOME="$HOME/.xlcore/dalamud/Hooks/dev"   # or restore .dalamud/ (see wiki: Development)
+export DALAMUD_HOME="$HOME/.xlcore/dalamud/Hooks/dev"   # or point at a restored .dalamud/ (see wiki: Development)
 
 dotnet restore GoodGlam.slnx
 dotnet build   GoodGlam.slnx -c Release --no-restore
 dotnet test    GoodGlam.slnx -c Release --no-build --settings coverlet.runsettings
 ```
 
-The plugin alone builds via `dotnet build src/GoodGlam/GoodGlam.csproj -c Release`.
+The plugin alone builds via `dotnet build src/GoodGlam/GoodGlam.csproj -c Release`. A **Release** build
+runs DalamudPackager and emits the plugin **manifest** (`GoodGlam.json`) plus **`GoodGlam/latest.zip`**
+under `src/GoodGlam/bin/Release/`; a Debug build emits the manifest only. `src/GoodGlam/packages.lock.json`
+is committed so the no-internet official (Plogon/D17) build can restore.
 
 ## Architecture (high level)
 
