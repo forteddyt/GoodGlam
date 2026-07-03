@@ -26,13 +26,39 @@ public class FeedbackTests
     }
 
     [Fact]
-    public void OpenBugReport_opens_exactly_the_bug_report_url()
+    public void BuildBugReportUrl_appends_the_encoded_version_to_the_base_url()
+    {
+        var url = Feedback.BuildBugReportUrl(new Version(0, 1, 0, 0));
+
+        url.Should().Be($"{Feedback.BugReportUrl}&goodglam-version=v0.1.0.0");
+    }
+
+    [Fact]
+    public void BuildBugReportUrl_uses_the_about_tab_version_format()
+    {
+        var version = new Version(1, 2, 3, 4);
+
+        Feedback.BuildBugReportUrl(version)
+            .Should().EndWith("&goodglam-version=" + Uri.EscapeDataString(AboutInfo.FormatVersion(version)));
+    }
+
+    [Fact]
+    public void BuildBugReportUrl_fills_the_field_even_when_the_version_is_null()
+    {
+        // v(unknown) contains parentheses, so the value must be URL-encoded.
+        Feedback.BuildBugReportUrl(null)
+            .Should().Be($"{Feedback.BugReportUrl}&goodglam-version=v%28unknown%29");
+    }
+
+    [Fact]
+    public void OpenBugReport_opens_exactly_the_built_bug_report_url()
     {
         var opener = new FakeLinkOpener();
+        var version = new Version(0, 1, 0, 0);
 
-        Feedback.OpenBugReport(opener);
+        Feedback.OpenBugReport(opener, version);
 
-        opener.Opened.Should().ContainSingle().Which.Should().Be(Feedback.BugReportUrl);
+        opener.Opened.Should().ContainSingle().Which.Should().Be(Feedback.BuildBugReportUrl(version));
     }
 
     [Fact]
