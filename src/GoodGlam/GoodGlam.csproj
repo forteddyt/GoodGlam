@@ -1,66 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <!--
-    Plain SDK-style project that references the Dalamud dev libraries directly.
-    The libraries are restored into the repo-root `.dalamud` folder (see README),
-    or you can point DALAMUD_HOME at your own XIVLauncher dev hooks folder.
+    Dalamud plugin project. The Dalamud.NET.Sdk supplies the target framework,
+    the Dalamud-provided assembly references (all Private=false, so they are never
+    bundled), and DalamudPackager - which emits the plugin manifest (GoodGlam.json)
+    on every build and GoodGlam/latest.zip on Release.
+
+    The SDK resolves the Dalamud dev libraries from the XIVLauncher dev-hooks folder
+    for your OS, or from the DALAMUD_HOME environment variable if set. See the wiki
+    (Development) for local build and CI details.
   -->
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Platforms>x64</Platforms>
-    <Nullable>enable</Nullable>
+    <!-- Drives the manifest AssemblyVersion (DalamudPackager writes it from the assembly). -->
+    <Version>0.1.0.0</Version>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Deterministic>true</Deterministic>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
-    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <RootNamespace>GoodGlam</RootNamespace>
     <AssemblyName>GoodGlam</AssemblyName>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
-
-  <PropertyGroup>
-    <!-- Default to the repo-local restored libraries. Override with DALAMUD_HOME if you prefer. -->
-    <DalamudLibPath>$(MSBuildProjectDirectory)\..\..\.dalamud\</DalamudLibPath>
-    <DalamudLibPath Condition="'$(DALAMUD_HOME)' != ''">$(DALAMUD_HOME)\</DalamudLibPath>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Reference Include="Dalamud">
-      <HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Dalamud.Bindings.ImGui">
-      <HintPath>$(DalamudLibPath)Dalamud.Bindings.ImGui.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="FFXIVClientStructs">
-      <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="InteropGenerator.Runtime">
-      <HintPath>$(DalamudLibPath)InteropGenerator.Runtime.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Lumina">
-      <HintPath>$(DalamudLibPath)Lumina.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Lumina.Excel">
-      <HintPath>$(DalamudLibPath)Lumina.Excel.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>$(DalamudLibPath)Newtonsoft.Json.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="GoodGlam.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- Brand logo drawn by LogoWindow; loaded at runtime via ITextureProvider.GetFromManifestResource. -->
