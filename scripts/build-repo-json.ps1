@@ -55,6 +55,12 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+# We intentionally inspect $LASTEXITCODE after gh calls to treat "not found" (e.g. no stable release
+# yet) as a normal fallback rather than a failure. On PowerShell 7.4+ runners where
+# $PSNativeCommandUseErrorActionPreference defaults to $true, a non-zero native exit under
+# ErrorActionPreference=Stop becomes a terminating error before that check runs - so opt out here.
+$PSNativeCommandUseErrorActionPreference = $false
+
 if ([string]::IsNullOrWhiteSpace($Repo)) {
     throw "Repository slug not provided. Pass -Repo owner/name or set GITHUB_REPOSITORY."
 }
@@ -134,6 +140,11 @@ $isTestingExclusive = -not $hasStable
 # back to the dev zip so the non-nullable link fields stay valid.
 $stableInstallUrl = if ($hasStable) { $stableZipUrl } else { $devZipUrl }
 
+# The testing link normally points at the rolling dev zip. If a stable release exists but no dev
+# release does yet (a prod release cut before any dev build), fall back to the stable zip so the
+# advertised testing download is always resolvable rather than a 404.
+$testingInstallUrl = if ($hasDev) { $devZipUrl } else { $stableInstallUrl }
+
 # --- assemble the plugin-master entry --------------------------------------
 
 $entry = [ordered]@{
@@ -155,10 +166,13 @@ $entry = [ordered]@{
     LastUpdate            = [int64][Math]::Floor(([DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
     DownloadLinkInstall   = $stableInstallUrl
     DownloadLinkUpdate    = $stableInstallUrl
-    DownloadLinkTesting   = $devZipUrl
+    DownloadLinkTesting   = $testingInstallUrl
 }
 
-$json = ConvertTo-Json @($entry) -Depth 6
+# -AsArray guarantees a JSON array even with a single entry; without it a one-element array is
+# unwrapped to a bare object, which a Dalamud plugin master (an array of manifests) can't parse.
+# Pass the bare object (not @(...)) so -AsArray wraps it exactly once.
+$json = ConvertTo-Json $entry -Depth 6 -AsArray
 
 $outDir = Split-Path -Parent $OutputPath
 if ($outDir -and -not (Test-Path $outDir)) {

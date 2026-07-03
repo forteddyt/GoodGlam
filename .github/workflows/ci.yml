@@ -6,6 +6,13 @@ on:
     tags: ["**"]
   pull_request:
 
+# Serialize gh-pages writes with release.yml (both publish to gh-pages on push->main). The group
+# name and key match release.yml so a main-branch CI run and a release run can't push concurrently;
+# PR runs get a distinct group (their ref) and are unaffected.
+concurrency:
+  group: gh-pages-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-test:
     name: Build & test

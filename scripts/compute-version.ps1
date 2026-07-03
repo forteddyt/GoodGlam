@@ -64,6 +64,13 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+# The guards below rely on inspecting $LASTEXITCODE after gh calls: Get-StableXyz treats a missing
+# "latest" release (404) as "no stable yet", and the collision guard treats a non-zero
+# `gh release view` as "tag is free". On PowerShell 7.4+ runners where
+# $PSNativeCommandUseErrorActionPreference defaults to $true, a non-zero native exit under
+# ErrorActionPreference=Stop would terminate before those checks - so opt out here.
+$PSNativeCommandUseErrorActionPreference = $false
+
 if ([string]::IsNullOrWhiteSpace($Repo)) {
     throw "Repository slug not provided. Pass -Repo owner/name or set GITHUB_REPOSITORY."
 }
