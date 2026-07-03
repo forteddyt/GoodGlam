@@ -3,17 +3,17 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/3/2026 - 4:27:43 AM |
-| Coverage date: | 7/3/2026 - 4:27:30 AM - 7/3/2026 - 4:27:39 AM |
+| Generated on: | 7/3/2026 - 5:22:35 AM |
+| Coverage date: | 7/3/2026 - 5:22:14 AM - 7/3/2026 - 5:22:31 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
 | Classes: | 45 |
 | Files: | 32 |
-| **Line coverage:** | 92.8% (1090 of 1174) |
-| Covered lines: | 1090 |
+| **Line coverage:** | 92.8% (1091 of 1175) |
+| Covered lines: | 1091 |
 | Uncovered lines: | 84 |
-| Coverable lines: | 1174 |
-| Total lines: | 3766 |
+| Coverable lines: | 1175 |
+| Total lines: | 3785 |
 | **Branch coverage:** | 90.8% (417 of 459) |
 | Covered branches: | 417 |
 | Total branches: | 459 |
@@ -57,7 +57,7 @@
 |GoodGlam.Services|100%||
 |GoodGlam.Windows.AboutInfo|100%|100%|
 |GoodGlam.Windows.AboutTab|85.7%||
-|GoodGlam.Windows.Feedback|40%||
+|GoodGlam.Windows.Feedback|50%||
 |GoodGlam.Windows.GlamImage|100%||
 |GoodGlam.Windows.GlamImageCache|100%|95.4%|
 |GoodGlam.Windows.GlamPreviewBox|100%||
