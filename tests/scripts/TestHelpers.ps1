@@ -18,41 +18,59 @@ $ComputeVersionScript = Join-Path $RepoRoot "scripts" "compute-version.ps1"
 $BuildRepoJsonScript  = Join-Path $RepoRoot "scripts" "build-repo-json.ps1"
 $PwshExe         = Join-Path $PSHOME ($IsWindows ? "pwsh.exe" : "pwsh")
 
-# One reusable fake-gh shim; each test points it at a fresh fixture dir via $env:FAKE_GH_DIR.
-$FakeGhBin = Join-Path ([System.IO.Path]::GetTempPath()) "gg-fakegh-bin"
+# One reusable fake gh + a GitHub-Actions-style wrapper, generated once into a temp bin dir. Each
+# test points the fake at a fresh fixture dir via $env:FAKE_GH_DIR.
+$FakeGhBin     = Join-Path ([System.IO.Path]::GetTempPath()) "gg-fakegh-bin"
+$WrapperScript = Join-Path $FakeGhBin "invoke-like-actions.ps1"
+
 function Initialize-FakeGh {
     New-Item -ItemType Directory -Force -Path $FakeGhBin | Out-Null
-    $ghPath = Join-Path $FakeGhBin "gh"
-    $shim = @'
-#!/usr/bin/env bash
-set -u
-cmd="${1:-}"; sub="${2:-}"
-case "$cmd" in
-  api)
-    if [[ -f "$FAKE_GH_DIR/latest_tag" ]]; then cat "$FAKE_GH_DIR/latest_tag"; exit 0; fi
-    echo "release not found" >&2; exit 1 ;;
-  release)
-    case "$sub" in
-      download)
-        tag="${3:-}"; dir=""; prev=""
-        for a in "$@"; do [[ "$prev" == "--dir" ]] && dir="$a"; prev="$a"; done
-        if [[ -n "$dir" && -f "$FAKE_GH_DIR/manifests/$tag.json" ]]; then
-          cp "$FAKE_GH_DIR/manifests/$tag.json" "$dir/GoodGlam.json"; exit 0
-        fi
-        echo "not found" >&2; exit 1 ;;
-      view)
-        tag="${3:-}"
-        [[ -f "$FAKE_GH_DIR/tags/$tag" ]] && exit 0
-        echo "not found" >&2; exit 1 ;;
-      delete|create|upload) exit 0 ;;
-      *) exit 1 ;;
-    esac ;;
-  *) exit 1 ;;
-esac
+
+    # Cross-platform fake gh. PowerShell resolves `gh` to gh.ps1 on both Windows and Linux, and a
+    # `& gh` call to a .ps1 sets $LASTEXITCODE from its `exit` without throwing - matching how the
+    # scripts consume the real (native) gh once they disable native-command error termination. This
+    # keeps the tests runnable on the same OS the scripts ship on (windows-latest in release.yml).
+    $ghPs1 = @'
+$ErrorActionPreference = "Stop"
+$cmd = $args[0]; $sub = $args[1]
+switch ($cmd) {
+  "api" {
+    $lt = Join-Path $env:FAKE_GH_DIR "latest_tag"
+    if (Test-Path $lt) { Get-Content $lt -Raw; exit 0 } else { exit 1 }
+  }
+  "release" {
+    switch ($sub) {
+      "download" {
+        $tag = $args[2]; $dir = $null
+        for ($i = 0; $i -lt $args.Count; $i++) { if ($args[$i] -eq "--dir") { $dir = $args[$i + 1] } }
+        $m = Join-Path $env:FAKE_GH_DIR "manifests/$tag.json"
+        if ($dir -and (Test-Path $m)) { Copy-Item $m (Join-Path $dir "GoodGlam.json"); exit 0 } else { exit 1 }
+      }
+      "view"   { if (Test-Path (Join-Path $env:FAKE_GH_DIR "tags/$($args[2])")) { exit 0 } else { exit 1 } }
+      "delete" { exit 0 }
+      "create" { exit 0 }
+      "upload" { exit 0 }
+      default  { exit 1 }
+    }
+  }
+  default { exit 1 }
+}
 '@
-    # Write with LF endings and a POSIX-executable bit.
-    [System.IO.File]::WriteAllText($ghPath, ($shim -replace "`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
-    if (-not $IsWindows) { & chmod "+x" $ghPath }
+    [System.IO.File]::WriteAllText((Join-Path $FakeGhBin "gh.ps1"), ($ghPs1 -replace "`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+    # Reproduce GitHub Actions' pwsh step exactly: it runs `pwsh -command ". '{0}'"` and exits with
+    # $LASTEXITCODE. A plain `pwsh -File script.ps1` does NOT propagate a stale $LASTEXITCODE left by
+    # a tolerated native failure, so it would mask the very bug these tests guard. We instead invoke
+    # via this wrapper (dot-source the target, then exit $LASTEXITCODE) so the behavior matches a
+    # runner. Using $args (not param()) forwards `-Name value` arguments cleanly.
+    $wrapper = @'
+$target = $args[0]
+$rest = @($args[1..($args.Count - 1)])
+. $target @rest
+if (Test-Path variable:LASTEXITCODE) { exit $LASTEXITCODE }
+'@
+    [System.IO.File]::WriteAllText($WrapperScript, ($wrapper -replace "`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+
     return $FakeGhBin
 }
 
@@ -139,7 +157,10 @@ function Invoke-ScriptUnderTest {
         $env:FAKE_GH_DIR = $FixtureDir
         $env:GITHUB_OUTPUT = $ghOut
 
-        $stdout = & $PwshExe -NoProfile -File $ScriptPath @Arguments 2>&1
+        # Invoke via the GitHub-Actions-style wrapper (see Initialize-FakeGh) so a stale $LASTEXITCODE
+        # from a tolerated gh failure surfaces exactly as it would on a runner - not swallowed as a
+        # plain `pwsh -File` would.
+        $stdout = & $PwshExe -NoProfile -File $WrapperScript $ScriptPath @Arguments 2>&1
         $code = $LASTEXITCODE
 
         $outputs = @{}

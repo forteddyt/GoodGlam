@@ -16,7 +16,13 @@ concurrency:
 jobs:
   script-tests:
     name: Script tests (Pester)
-    runs-on: ubuntu-latest
+    # Run on both OSes: release.yml runs these scripts on windows-latest, and the exit-code behavior
+    # they guard depends on the runner's pwsh - so the tests must cover the production OS too.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
