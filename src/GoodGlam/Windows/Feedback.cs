@@ -80,7 +80,7 @@ internal sealed class Feedback
         }
 
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Opens GitHub's new-issue page with the bug-report form pre-selected and the plugin version filled in.");
+            ImGui.SetTooltip("Opens GitHub's new-issue page with the bug-report form pre-selected.");
     }
 
     /// <summary>
