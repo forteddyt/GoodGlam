@@ -155,3 +155,8 @@ if ($env:GITHUB_OUTPUT) {
         "tag=v$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
     }
 }
+
+# gh calls above may leave a non-zero $LASTEXITCODE from a tolerated "not found" (e.g. no stable
+# release yet, or a free tag in the collision guard). We only reach here on success - real errors
+# throw - so clear it explicitly; GitHub Actions' pwsh wrapper exits the step with $LASTEXITCODE.
+exit 0

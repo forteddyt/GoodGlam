@@ -184,3 +184,8 @@ if ($outDir -and -not (Test-Path $outDir)) {
 Write-Host "Wrote $OutputPath"
 Write-Host "  stable (AssemblyVersion):        $stableVersion  (api $stableApi, testing-exclusive: $isTestingExclusive)"
 Write-Host "  testing (TestingAssemblyVersion): $devVersion  (api $devApi)"
+
+# gh calls above may leave a non-zero $LASTEXITCODE from a tolerated "not found" (e.g. no stable
+# release yet). We only reach here on success - real errors throw - so clear it explicitly; GitHub
+# Actions' pwsh wrapper exits the step with $LASTEXITCODE.
+exit 0

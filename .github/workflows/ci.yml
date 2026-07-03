@@ -14,6 +14,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  script-tests:
+    name: Script tests (Pester)
+    # release.yml runs these scripts on windows-latest, so test them on the same OS - that's where
+    # the guarded exit-code behavior actually matters.
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Pester tests for the release scripts
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Import-Module Pester
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests/scripts'
+          $config.Run.Throw = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
   build-test:
     name: Build & test
     runs-on: windows-latest
