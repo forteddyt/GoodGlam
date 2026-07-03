@@ -74,12 +74,16 @@ runs:
         $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
         try { $entries = $archive.Entries.FullName } finally { $archive.Dispose() }
 
-        # Only GoodGlam's own assembly may ship in the zip. Everything Dalamud and the game
-        # provide is referenced with Private=false and must never be bundled, so flag any other
-        # .dll as a leak. This stays correct as the SDK's reference set changes, without tracking
-        # it here.
+        # Only GoodGlam's own assembly and its intentionally-bundled third-party runtime
+        # dependencies may ship in the zip. Everything Dalamud and the game provide is referenced
+        # with Private=false and must never be bundled, so flag any other .dll as a leak. Keep this
+        # allowlist in sync with the runtime PackageReferences in GoodGlam.csproj.
+        $bundledDlls = @(
+          "GoodGlam.dll",
+          "SixLabors.ImageSharp.dll"  # fully-managed image codec for History-tab cover previews (#64)
+        )
         $strayDlls = $entries |
-          Where-Object { $_ -like "*.dll" -and (Split-Path $_ -Leaf) -ne "GoodGlam.dll" }
+          Where-Object { $_ -like "*.dll" -and (Split-Path $_ -Leaf) -notin $bundledDlls }
         if ($strayDlls) { throw "Package contains unexpected assemblies that should not be bundled: $($strayDlls -join ', ')" }
 
         Write-Host "Package OK. Manifest present and zip contains: $($entries -join ', ')"
