@@ -1,0 +1,89 @@
+name: Build GoodGlam plugin
+description: >-
+  Sets up .NET, restores the Dalamud dev libraries, builds the plugin in Release, and verifies the
+  packaged manifest + latest.zip. Shared by the CI and release workflows so the build/package steps
+  never drift between them.
+
+inputs:
+  version:
+    description: >-
+      Optional plugin version to stamp into the built assembly (and therefore the DalamudPackager
+      manifest AssemblyVersion), e.g. 0.2.0 or 0.1.0.47. When empty, the csproj <Version> is used.
+    required: false
+    default: ""
+
+outputs:
+  package-dir:
+    description: Directory containing the built manifest (GoodGlam.json) and latest.zip.
+    value: ${{ steps.locate.outputs.package-dir }}
+  manifest-path:
+    description: Path to the built plugin manifest (GoodGlam.json).
+    value: ${{ steps.locate.outputs.manifest-path }}
+  zip-path:
+    description: Path to the built latest.zip.
+    value: ${{ steps.locate.outputs.zip-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: Restore Dalamud dev libraries
+      shell: pwsh
+      env:
+        # The Dalamud.NET.Sdk resolves the dev libraries from DALAMUD_HOME (falling back to the
+        # XIVLauncher dev-hooks path, which doesn't exist on CI). Point it at the restored .dalamud/.
+        DALAMUD_HOME: ${{ github.workspace }}\.dalamud
+      run: |
+        New-Item -ItemType Directory -Force -Path .dalamud | Out-Null
+        curl.exe -L -o .dalamud/latest.zip https://goatcorp.github.io/dalamud-distrib/latest.zip
+        Expand-Archive -Path .dalamud/latest.zip -DestinationPath .dalamud -Force
+
+    - name: Restore
+      shell: pwsh
+      run: dotnet restore GoodGlam.slnx
+
+    - name: Build
+      shell: pwsh
+      env:
+        DALAMUD_HOME: ${{ github.workspace }}\.dalamud
+      run: |
+        $buildArgs = @("build", "GoodGlam.slnx", "-c", "Release", "--no-restore")
+        if (-not [string]::IsNullOrWhiteSpace("${{ inputs.version }}")) {
+          # Stamp the assembly Version so DalamudPackager writes it as the manifest AssemblyVersion.
+          $buildArgs += "-p:Version=${{ inputs.version }}"
+        }
+        dotnet @buildArgs
+
+    - name: Verify plugin package (manifest + latest.zip)
+      id: locate
+      # The Release build runs DalamudPackager, which emits the manifest and latest.zip.
+      # Assert both exist and that the zip is clean (no Dalamud/game-provided assemblies).
+      shell: pwsh
+      run: |
+        $packageDir = "src/GoodGlam/bin/Release/GoodGlam"
+        $manifest   = "$packageDir/GoodGlam.json"
+        $zip        = "$packageDir/latest.zip"
+        if (-not (Test-Path $manifest)) { throw "Expected manifest not found: $manifest" }
+        if (-not (Test-Path $zip))      { throw "Expected package not found: $zip" }
+
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
+        try { $entries = $archive.Entries.FullName } finally { $archive.Dispose() }
+
+        # Only GoodGlam's own assembly may ship in the zip. Everything Dalamud and the game
+        # provide is referenced with Private=false and must never be bundled, so flag any other
+        # .dll as a leak. This stays correct as the SDK's reference set changes, without tracking
+        # it here.
+        $strayDlls = $entries |
+          Where-Object { $_ -like "*.dll" -and (Split-Path $_ -Leaf) -ne "GoodGlam.dll" }
+        if ($strayDlls) { throw "Package contains unexpected assemblies that should not be bundled: $($strayDlls -join ', ')" }
+
+        Write-Host "Package OK. Manifest present and zip contains: $($entries -join ', ')"
+
+        "package-dir=$packageDir"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "manifest-path=$manifest"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "zip-path=$zip"            | Out-File -FilePath $env:GITHUB_OUTPUT -Append

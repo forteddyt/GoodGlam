@@ -1,0 +1,132 @@
+name: Release
+
+# Two distribution channels served by one custom-repo URL (repo.json on gh-pages):
+#
+#   * dev  - published automatically on every push to main. Lands in the repo.json TESTING channel,
+#            so it only reaches users who enable "Get plugin testing builds" in Dalamud. Backed by a
+#            single rolling "dev" prerelease.
+#   * prod - cut manually by a maintainer (workflow_dispatch). Lands in the STABLE channel, seen by
+#            everyone. Backed by a permanent vX.Y.Z release marked --latest.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Stable (prod) version bump"
+        required: true
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+# Serialize all writes to the gh-pages branch (this workflow's repo.json publish and ci.yml's
+# coverage publish both push to gh-pages on push->main). Keyed by ref so PR CI isn't affected; the
+# shared group name (matched in ci.yml) also keeps two releases on the same ref from racing.
+concurrency:
+  group: gh-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Dev channel: auto-publish the testing build on every push to main.
+  # ---------------------------------------------------------------------------
+  dev:
+    name: Dev channel (auto)
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute dev version
+        id: ver
+        shell: pwsh
+        run: ./scripts/compute-version.ps1 -Channel dev -RunNumber ${{ github.run_number }}
+
+      - name: Build & package plugin (Release)
+        id: build
+        uses: ./.github/actions/build-plugin
+        with:
+          version: ${{ steps.ver.outputs.version }}
+
+      - name: Update rolling dev prerelease
+        shell: pwsh
+        run: |
+          # Recreate the single "dev" release so its tag tracks the latest main commit and its assets
+          # are the freshly built ones. --cleanup-tag also removes the old git tag. The delete is
+          # wrapped so the first-ever run (no dev release yet) doesn't abort the step - a non-zero gh
+          # exit is a terminating error when the runner enables native-command error handling.
+          try {
+            gh release delete dev --repo "${{ github.repository }}" --yes --cleanup-tag 2>$null
+          } catch {
+            Write-Host "No existing dev release to delete (first run?)."
+          }
+          gh release create dev `
+            "${{ steps.build.outputs.zip-path }}" `
+            "${{ steps.build.outputs.manifest-path }}" `
+            --repo "${{ github.repository }}" `
+            --target "${{ github.sha }}" `
+            --prerelease `
+            --title "Dev channel (rolling)" `
+            --notes "Rolling testing build ${{ steps.ver.outputs.version }} from the latest push to main. Enable 'Get plugin testing builds' in Dalamud to receive it."
+
+      - name: Publish repo.json
+        uses: ./.github/actions/publish-repo-json
+        with:
+          manifest-path: ${{ steps.build.outputs.manifest-path }}
+          github-token: ${{ github.token }}
+
+  # ---------------------------------------------------------------------------
+  # Prod channel: maintainer-triggered stable release.
+  # The "release" environment gates this run (add required reviewers in repo settings for a hard,
+  # owner-only approval on top of the write-access that workflow_dispatch already requires).
+  # ---------------------------------------------------------------------------
+  prod:
+    name: Prod channel (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute stable version
+        id: ver
+        # Auto-computes the next X.Y.Z from the latest stable tag and the chosen bump, with strict
+        # monotonic + SemVer-format + tag-collision guards. Fails the run rather than regressing.
+        shell: pwsh
+        run: ./scripts/compute-version.ps1 -Channel prod -Bump ${{ inputs.bump }}
+
+      - name: Build & package plugin (Release)
+        id: build
+        uses: ./.github/actions/build-plugin
+        with:
+          version: ${{ steps.ver.outputs.version }}
+
+      - name: Create stable release
+        shell: pwsh
+        run: |
+          # Creates the permanent git tag ${{ steps.ver.outputs.tag }} at this commit and marks it the
+          # --latest release (so releases/latest/download/latest.zip resolves to it).
+          gh release create "${{ steps.ver.outputs.tag }}" `
+            "${{ steps.build.outputs.zip-path }}" `
+            "${{ steps.build.outputs.manifest-path }}" `
+            --repo "${{ github.repository }}" `
+            --target "${{ github.sha }}" `
+            --latest `
+            --title "${{ steps.ver.outputs.tag }}" `
+            --generate-notes
+
+      - name: Publish repo.json
+        uses: ./.github/actions/publish-repo-json
+        with:
+          manifest-path: ${{ steps.build.outputs.manifest-path }}
+          github-token: ${{ github.token }}
