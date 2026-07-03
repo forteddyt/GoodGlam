@@ -46,7 +46,7 @@ jobs:
         # Assert both exist and that the zip is clean (no Dalamud/game-provided assemblies).
         shell: pwsh
         run: |
-          $manifest = "src/GoodGlam/bin/Release/GoodGlam.json"
+          $manifest = "src/GoodGlam/bin/Release/GoodGlam/GoodGlam.json"
           $zip      = "src/GoodGlam/bin/Release/GoodGlam/latest.zip"
           if (-not (Test-Path $manifest)) { throw "Expected manifest not found: $manifest" }
           if (-not (Test-Path $zip))      { throw "Expected package not found: $zip" }
