@@ -3,30 +3,30 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/3/2026 - 6:53:57 AM |
-| Coverage date: | 7/3/2026 - 6:53:46 AM - 7/3/2026 - 6:53:53 AM |
+| Generated on: | 7/3/2026 - 7:36:14 AM |
+| Coverage date: | 7/3/2026 - 7:36:01 AM - 7/3/2026 - 7:36:10 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 45 |
-| Files: | 32 |
-| **Line coverage:** | 92.8% (1091 of 1175) |
-| Covered lines: | 1091 |
+| Classes: | 48 |
+| Files: | 34 |
+| **Line coverage:** | 93% (1132 of 1216) |
+| Covered lines: | 1132 |
 | Uncovered lines: | 84 |
-| Coverable lines: | 1175 |
-| Total lines: | 3785 |
-| **Branch coverage:** | 90.8% (417 of 459) |
-| Covered branches: | 417 |
-| Total branches: | 459 |
+| Coverable lines: | 1216 |
+| Total lines: | 3935 |
+| **Branch coverage:** | 90.7% (424 of 467) |
+| Covered branches: | 424 |
+| Total branches: | 467 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 92.8%</summary>
+<details><summary>GoodGlam - 93%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**92.8%**|**90.8%**|
+|**GoodGlam**|**93%**|**90.7%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
@@ -57,9 +57,11 @@
 |GoodGlam.Services|100%||
 |GoodGlam.Windows.AboutInfo|100%|100%|
 |GoodGlam.Windows.AboutTab|85.7%||
+|GoodGlam.Windows.DecodedImage|100%||
 |GoodGlam.Windows.Feedback|50%||
 |GoodGlam.Windows.GlamImage|100%||
 |GoodGlam.Windows.GlamImageCache|100%|95.4%|
+|GoodGlam.Windows.GlamImageLoader|100%|75%|
 |GoodGlam.Windows.GlamPreviewBox|100%||
 |GoodGlam.Windows.GlamPreviewLayout|100%|100%|
 |GoodGlam.Windows.GlamPreviewRenderer|100%|100%|
@@ -67,6 +69,7 @@
 |GoodGlam.Windows.HistoryActions|100%|100%|
 |GoodGlam.Windows.HistoryLinkCell|100%|100%|
 |GoodGlam.Windows.HistoryTabFocus|100%||
+|GoodGlam.Windows.ImageSharpDecoder|100%|100%|
 |GoodGlam.Windows.LogoInteraction|100%|100%|
 |GoodGlam.Windows.LogoWindow|96.8%|75%|
 |GoodGlam.Windows.MainWindow|100%||
