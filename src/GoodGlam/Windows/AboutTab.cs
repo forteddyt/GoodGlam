@@ -68,7 +68,7 @@ internal sealed class AboutTab
 
         ImGui.Spacing();
         ImGui.TextDisabled("Feedback");
-        Feedback.DrawReportBugButton(this.linkOpener);
+        Feedback.DrawReportBugButton(this.linkOpener, manifest.AssemblyVersion);
         ImGui.SameLine();
         Feedback.DrawSuggestFeatureButton(this.linkOpener);
     }
