@@ -44,6 +44,35 @@ Describe "compute-version.ps1" {
 
             $r.Outputs.ContainsKey("tag") | Should -BeFalse
         }
+
+        It "immediately after a fresh stable X.Y.Z yields X.Y.Z.<run> that stays >= the new stable (issue #67)" {
+            # Regression guard for #67: the release workflow now runs the dev publish AFTER a prod
+            # release creates the --latest stable. Computing the dev version at that point must read
+            # the freshly-cut stable base so the testing channel never trails stable.
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "v0.3.0" -AssemblyVersion "0.3.0.0" -Latest
+            $csproj = New-Csproj -Version "0.1.0.0"
+            $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "128", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            $r.ExitCode | Should -Be 0
+            $r.Outputs["version"] | Should -Be "0.3.0.128"
+            # Testing (X.Y.Z.<run>) must be >= the new stable (X.Y.Z) so the "dev >= stable" invariant holds.
+            ([version]$r.Outputs["version"]) | Should -BeGreaterThan ([version]"0.3.0")
+        }
+
+        It "strictly increases across builds as run number advances against the same stable base (monotonic)" {
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "v0.3.0" -AssemblyVersion "0.3.0.0" -Latest
+            $csproj = New-Csproj -Version "0.1.0.0"
+
+            $earlier = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "128", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+            $later = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "129", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            ([version]$later.Outputs["version"]) | Should -BeGreaterThan ([version]$earlier.Outputs["version"])
+        }
     }
 
     Context "prod channel - first release" {

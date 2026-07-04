@@ -4,9 +4,16 @@ name: Release
 #
 #   * dev  - published automatically on every push to main. Lands in the repo.json TESTING channel,
 #            so it only reaches users who enable "Get plugin testing builds" in Dalamud. Backed by a
-#            single rolling "dev" prerelease.
+#            single rolling "dev" prerelease. Also re-published right after a prod release (see below)
+#            so the testing channel never trails stable.
 #   * prod - cut manually by a maintainer (workflow_dispatch). Lands in the STABLE channel, seen by
 #            everyone. Backed by a permanent vX.Y.Z release marked --latest.
+#
+# On a workflow_dispatch (prod) run, the dev job runs AFTER prod (needs: prod) so it recomputes the
+# rolling dev version off the freshly-cut stable base (X.Y.Z.<run>) and republishes the TESTING
+# channel in the same run. This keeps the "dev is always just ahead of stable" invariant: without it,
+# a stable release would leave the testing channel advertising the previous, now-lower dev number
+# until the next push to main.
 on:
   push:
     branches: [main]
@@ -28,11 +35,22 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Dev channel: auto-publish the testing build on every push to main.
+  # Dev channel: publish the rolling testing build.
+  #   * On push to main: runs directly (prod is skipped).
+  #   * On workflow_dispatch: runs AFTER the prod job (needs: prod) so it recomputes the dev version
+  #     off the freshly-cut stable base and republishes the TESTING channel in the same run, keeping
+  #     testing >= stable. Sequencing via needs also serializes this job's repo.json publish after
+  #     prod's, so they don't race the shared gh-pages concurrency group.
   # ---------------------------------------------------------------------------
   dev:
     name: Dev channel (auto)
-    if: github.event_name == 'push'
+    needs: [prod]
+    # !cancelled() lets this run even though prod is skipped on a push. On push the first branch is
+    # true and dev runs immediately (it does not wait on the skipped prod job); on workflow_dispatch
+    # dev runs only if prod succeeded, and strictly after it.
+    if: >-
+      !cancelled() &&
+      (github.event_name == 'push' || needs.prod.result == 'success')
     runs-on: windows-latest
     permissions:
       contents: write
@@ -72,7 +90,7 @@ jobs:
             --target "${{ github.sha }}" `
             --prerelease `
             --title "Dev channel (rolling)" `
-            --notes "Rolling testing build ${{ steps.ver.outputs.version }} from the latest push to main. Enable 'Get plugin testing builds' in Dalamud to receive it."
+            --notes "Rolling testing build ${{ steps.ver.outputs.version }} from the latest main commit. Enable 'Get plugin testing builds' in Dalamud to receive it."
 
       - name: Publish repo.json
         uses: ./.github/actions/publish-repo-json
