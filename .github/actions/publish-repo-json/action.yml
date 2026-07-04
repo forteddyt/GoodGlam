@@ -1,7 +1,7 @@
 name: Publish plugin repository JSON
 description: >-
   Regenerates the Dalamud custom-repository JSON (repo.json) from the current GitHub Release state and
-  publishes it to the gh-pages branch (alongside the coverage report). Shared by the dev and prod
+  publishes it to the gh-pages branch (alongside the coverage report). Shared by the testing and stable
   release jobs so both channels always emit the same, complete repo.json.
 
 inputs:

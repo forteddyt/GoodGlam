@@ -31,7 +31,7 @@ Describe "build-repo-json.ps1" {
     Context "output shape" {
         It "emits a JSON array (not a bare object) even with a single plugin entry" {
             $fx = New-GhFixture
-            Add-FakeRelease -FixtureDir $fx -Tag "dev" -AssemblyVersion "0.1.0.5"
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.5"
             $local = New-LocalManifest -AssemblyVersion "0.1.0.5"
             $r = Invoke-Generator -FixtureDir $fx -ManifestPath $local
 
@@ -46,7 +46,7 @@ Describe "build-repo-json.ps1" {
         It "includes every field a Dalamud plugin master requires, with https download links" {
             $fx = New-GhFixture
             Add-FakeRelease -FixtureDir $fx -Tag "v0.1.0" -AssemblyVersion "0.1.0.0" -Latest
-            Add-FakeRelease -FixtureDir $fx -Tag "dev" -AssemblyVersion "0.1.0.9"
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.9"
             $local = New-LocalManifest -AssemblyVersion "0.1.0.0"
             $e = (Invoke-Generator -FixtureDir $fx -ManifestPath $local).Parsed[0]
 
@@ -61,11 +61,11 @@ Describe "build-repo-json.ps1" {
         }
     }
 
-    Context "full repo (stable + dev)" {
+    Context "full repo (stable + testing)" {
         It "advertises each channel's version from its own uploaded manifest and points links at the right zips" {
             $fx = New-GhFixture
             Add-FakeRelease -FixtureDir $fx -Tag "v0.1.0" -AssemblyVersion "0.1.0.0" -Latest
-            Add-FakeRelease -FixtureDir $fx -Tag "dev" -AssemblyVersion "0.1.0.47"
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.47"
             $local = New-LocalManifest -AssemblyVersion "0.1.0.0"
             $e = (Invoke-Generator -FixtureDir $fx -ManifestPath $local).Parsed[0]
 
@@ -73,25 +73,25 @@ Describe "build-repo-json.ps1" {
             $e.TestingAssemblyVersion | Should -Be "0.1.0.47"
             $e.IsTestingExclusive     | Should -BeFalse
             $e.DownloadLinkInstall    | Should -Be "https://github.com/forteddyt/GoodGlam/releases/latest/download/latest.zip"
-            $e.DownloadLinkTesting    | Should -Be "https://github.com/forteddyt/GoodGlam/releases/download/dev/latest.zip"
+            $e.DownloadLinkTesting    | Should -Be "https://github.com/forteddyt/GoodGlam/releases/download/testing/latest.zip"
         }
     }
 
-    Context "bootstrap (dev only, no stable release yet)" {
-        It "marks the entry testing-exclusive and falls the stable links back to the dev zip" {
+    Context "bootstrap (testing only, no stable release yet)" {
+        It "marks the entry testing-exclusive and falls the stable links back to the testing zip" {
             $fx = New-GhFixture
-            Add-FakeRelease -FixtureDir $fx -Tag "dev" -AssemblyVersion "0.1.0.3"
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.3"
             $local = New-LocalManifest -AssemblyVersion "0.1.0.3"
             $e = (Invoke-Generator -FixtureDir $fx -ManifestPath $local).Parsed[0]
 
             $e.IsTestingExclusive  | Should -BeTrue
             $e.AssemblyVersion     | Should -Be "0.1.0.3"
-            $e.DownloadLinkInstall | Should -Be "https://github.com/forteddyt/GoodGlam/releases/download/dev/latest.zip"
-            $e.DownloadLinkTesting | Should -Be "https://github.com/forteddyt/GoodGlam/releases/download/dev/latest.zip"
+            $e.DownloadLinkInstall | Should -Be "https://github.com/forteddyt/GoodGlam/releases/download/testing/latest.zip"
+            $e.DownloadLinkTesting | Should -Be "https://github.com/forteddyt/GoodGlam/releases/download/testing/latest.zip"
         }
     }
 
-    Context "stable only (no dev release yet)" {
+    Context "stable only (no testing release yet)" {
         It "falls the testing link back to the stable zip so it never advertises a 404" {
             $fx = New-GhFixture
             Add-FakeRelease -FixtureDir $fx -Tag "v0.1.0" -AssemblyVersion "0.1.0.0" -Latest
@@ -105,7 +105,7 @@ Describe "build-repo-json.ps1" {
     }
 
     Context "failure handling" {
-        It "fails when neither a stable nor a dev release exists" {
+        It "fails when neither a stable nor a testing release exists" {
             $fx = New-GhFixture   # nothing registered
             $local = New-LocalManifest -AssemblyVersion "0.1.0.0"
             $r = Invoke-Generator -FixtureDir $fx -ManifestPath $local

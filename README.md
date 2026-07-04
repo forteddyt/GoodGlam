@@ -29,7 +29,7 @@ GoodGlam is distributed through a **Dalamud custom plugin repository**. In-game,
 https://forteddyt.github.io/GoodGlam/repo.json
 ```
 
-Enable **Get plugin testing builds** in the same Experimental settings to opt into the rolling dev channel. Full steps (and building from source instead) are in the **[Installation guide](https://github.com/forteddyt/GoodGlam/wiki/Installation)**.
+Enable **Get plugin testing builds** in the same Experimental settings to opt into the rolling Testing channel. Full steps (including Local/source builds) are in the **[Installation guide](https://github.com/forteddyt/GoodGlam/wiki/Installation)**.
 
 See the **[project wiki](https://github.com/forteddyt/GoodGlam/wiki)** for installation, usage, configuration, and developer documentation.
 

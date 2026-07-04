@@ -83,7 +83,7 @@ function New-GhFixture {
 }
 
 # Register a release: writes its manifest (so `gh release download` returns it) and a tag marker
-# (so `gh release view` finds it). Omit -Latest for prereleases like the rolling "dev" tag.
+# (so `gh release view` finds it). Omit -Latest for prereleases like the rolling "testing" tag.
 function Add-FakeRelease {
     param(
         [Parameter(Mandatory)] [string]$FixtureDir,
