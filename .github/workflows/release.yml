@@ -2,17 +2,18 @@ name: Release
 
 # Two distribution channels served by one custom-repo URL (repo.json on gh-pages):
 #
-#   * dev  - published automatically on every push to main. Lands in the repo.json TESTING channel,
-#            so it only reaches users who enable "Get plugin testing builds" in Dalamud. Backed by a
-#            single rolling "dev" prerelease. Also re-published right after a prod release (see below)
-#            so the testing channel never trails stable.
-#   * prod - cut manually by a maintainer (workflow_dispatch). Lands in the STABLE channel, seen by
+#   * testing - published automatically on every push to main. Lands in the repo.json TESTING channel,
+#               so it only reaches users who enable "Get plugin testing builds" in Dalamud. Backed by
+#               a single rolling "testing" prerelease. Also re-published right after a stable release
+#               (see below) so the testing channel never trails stable.
+#   * stable - cut manually by a maintainer (workflow_dispatch). Lands in the STABLE channel, seen by
 #            everyone. Backed by a permanent vX.Y.Z release marked --latest.
 #
-# On a workflow_dispatch (prod) run, the dev job runs AFTER prod (needs: prod) so it recomputes the
-# rolling dev version off the freshly-cut stable base (X.Y.Z.<run>) and republishes the TESTING
-# channel in the same run. This keeps the "dev is always just ahead of stable" invariant: without it,
-# a stable release would leave the testing channel advertising the previous, now-lower dev number
+# On a workflow_dispatch (stable) run, the testing job runs AFTER stable (needs: stable) so it
+# recomputes the rolling testing version off the freshly-cut stable base (X.Y.Z.<run>) and republishes
+# the TESTING channel in the same run. This keeps the "testing is always just ahead of stable"
+# invariant: without it, a stable release would leave the testing channel advertising the previous,
+# now-lower testing number
 # until the next push to main.
 on:
   push:
@@ -20,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Stable (prod) version bump"
+        description: "Stable version bump"
         required: true
         type: choice
         options: [patch, minor, major]
@@ -35,24 +36,24 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Dev channel: publish the rolling testing build.
-  #   * On push to main: runs directly (prod is skipped).
-  #   * On workflow_dispatch: runs AFTER the prod job (needs: prod) so it recomputes the dev version
+  # Testing channel: publish the rolling testing build.
+  #   * On push to main: runs directly (stable is skipped).
+  #   * On workflow_dispatch: runs AFTER the stable job (needs: stable) so it recomputes the testing version
   #     off the freshly-cut stable base and republishes the TESTING channel in the same run, keeping
   #     testing >= stable. Sequencing via needs also serializes this job's repo.json publish after
-  #     prod's, so they don't race the shared gh-pages concurrency group.
+  #     stable's, so they don't race the shared gh-pages concurrency group.
   # ---------------------------------------------------------------------------
-  dev:
-    name: Dev channel (auto)
-    needs: [prod]
-    # !cancelled() lets this run even though prod is skipped on a push. On push the first branch is
-    # true and dev runs immediately (it does not wait on the skipped prod job). On workflow_dispatch
-    # dev runs whenever prod actually ran (result != 'skipped') - including a prod FAILURE after the
-    # stable release was created: dev's own repo.json publish then regenerates BOTH channels from the
-    # live releases, self-healing a flaky prod publish so testing never trails stable.
+  testing:
+    name: Testing channel (auto)
+    needs: [stable]
+    # !cancelled() lets this run even though stable is skipped on a push. On push the first branch is
+    # true and testing runs immediately (it does not wait on the skipped stable job). On workflow_dispatch
+    # testing runs whenever stable actually ran (result != 'skipped') - including a stable FAILURE after the
+    # stable release was created: testing's own repo.json publish then regenerates BOTH channels from the
+    # live releases, self-healing a flaky stable publish so testing never trails stable.
     if: >-
       !cancelled() &&
-      (github.event_name == 'push' || needs.prod.result != 'skipped')
+      (github.event_name == 'push' || needs.stable.result != 'skipped')
     runs-on: windows-latest
     permissions:
       contents: write
@@ -62,17 +63,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Compute dev version
+      - name: Compute testing version
         id: ver
         shell: pwsh
-        # On a successful workflow_dispatch, prod has just created the --latest stable release; use
-        # its computed X.Y.Z directly (needs.prod.outputs.version) so the dev base doesn't depend on
-        # releases/latest API propagation. On push (prod skipped) or a prod failure, no -StableBase is
+        # On a successful workflow_dispatch, stable has just created the --latest stable release; use
+        # its computed X.Y.Z directly (needs.stable.outputs.version) so the testing base doesn't depend on
+        # releases/latest API propagation. On push (stable skipped) or a stable failure, no -StableBase is
         # passed and the script reads whatever stable release actually exists - never a base that
         # wasn't released.
         run: >-
-          ./scripts/compute-version.ps1 -Channel dev -RunNumber ${{ github.run_number }}
-          ${{ needs.prod.result == 'success' && format('-StableBase {0}', needs.prod.outputs.version) || '' }}
+          ./scripts/compute-version.ps1 -Channel testing -RunNumber ${{ github.run_number }}
+          ${{ needs.stable.result == 'success' && format('-StableBase {0}', needs.stable.outputs.version) || '' }}
 
       - name: Build & package plugin (Release)
         id: build
@@ -80,25 +81,25 @@ jobs:
         with:
           version: ${{ steps.ver.outputs.version }}
 
-      - name: Update rolling dev prerelease
+      - name: Update rolling testing prerelease
         shell: pwsh
         run: |
-          # Recreate the single "dev" release so its tag tracks the latest main commit and its assets
+          # Recreate the single "testing" release so its tag tracks the latest main commit and its assets
           # are the freshly built ones. --cleanup-tag also removes the old git tag. The delete is
-          # wrapped so the first-ever run (no dev release yet) doesn't abort the step - a non-zero gh
+          # wrapped so the first-ever run (no testing release yet) doesn't abort the step - a non-zero gh
           # exit is a terminating error when the runner enables native-command error handling.
           try {
-            gh release delete dev --repo "${{ github.repository }}" --yes --cleanup-tag 2>$null
+            gh release delete testing --repo "${{ github.repository }}" --yes --cleanup-tag 2>$null
           } catch {
-            Write-Host "No existing dev release to delete (first run?)."
+            Write-Host "No existing testing release to delete (first run?)."
           }
-          gh release create dev `
+          gh release create testing `
             "${{ steps.build.outputs.zip-path }}" `
             "${{ steps.build.outputs.manifest-path }}" `
             --repo "${{ github.repository }}" `
             --target "${{ github.sha }}" `
             --prerelease `
-            --title "Dev channel (rolling)" `
+            --title "Testing channel (rolling)" `
             --notes "Rolling testing build ${{ steps.ver.outputs.version }} from the latest main commit. Enable 'Get plugin testing builds' in Dalamud to receive it."
 
       - name: Publish repo.json
@@ -108,18 +109,18 @@ jobs:
           github-token: ${{ github.token }}
 
   # ---------------------------------------------------------------------------
-  # Prod channel: maintainer-triggered stable release.
+  # Stable channel: maintainer-triggered stable release.
   # The "release" environment gates this run (add required reviewers in repo settings for a hard,
   # owner-only approval on top of the write-access that workflow_dispatch already requires).
   # ---------------------------------------------------------------------------
-  prod:
-    name: Prod channel (manual)
+  stable:
+    name: Stable channel (manual)
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     environment: release
     permissions:
       contents: write
-    # Exposed so the dev job can adopt this exact stable base deterministically (see its compute step)
+    # Exposed so the testing job can adopt this exact stable base deterministically (see its compute step)
     # instead of re-reading releases/latest.
     outputs:
       version: ${{ steps.ver.outputs.version }}
@@ -134,7 +135,7 @@ jobs:
         # Auto-computes the next X.Y.Z from the latest stable tag and the chosen bump, with strict
         # monotonic + SemVer-format + tag-collision guards. Fails the run rather than regressing.
         shell: pwsh
-        run: ./scripts/compute-version.ps1 -Channel prod -Bump ${{ inputs.bump }}
+        run: ./scripts/compute-version.ps1 -Channel stable -Bump ${{ inputs.bump }}
 
       - name: Build & package plugin (Release)
         id: build

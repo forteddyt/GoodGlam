@@ -6,21 +6,21 @@
 .DESCRIPTION
     Emits a single-entry plugin-master array with GoodGlam's two distribution channels:
 
-      * Stable / "prod"  -> AssemblyVersion        + DownloadLinkInstall / DownloadLinkUpdate
-      * Testing / "dev"  -> TestingAssemblyVersion  + DownloadLinkTesting
+      * Stable   -> AssemblyVersion         + DownloadLinkInstall / DownloadLinkUpdate
+      * Testing  -> TestingAssemblyVersion  + DownloadLinkTesting
 
     Dalamud consumers see the stable channel by default and the testing channel only when the user
     enables "Get plugin testing builds". One repo URL therefore serves both.
 
     Static fields (Name, Author, Punchline, ...) come from the locally built manifest passed via
     -ManifestPath. The per-channel VERSIONS are derived from the actual GitHub Releases so that this
-    script produces a correct, complete repo.json no matter which release job invoked it (the dev job
-    and the prod job each only touch their own channel's release, but both must emit the full file
-    without clobbering the other channel). For each channel we download that channel's uploaded
+    script produces a correct, complete repo.json no matter which release job invoked it (the testing
+    job and the stable job each only touch their own channel's release, but both must emit the full
+    file without clobbering the other channel). For each channel we download that channel's uploaded
     GoodGlam.json asset and read its AssemblyVersion / DalamudApiLevel, so the advertised version
     always matches exactly what ships in that channel's latest.zip.
 
-    Bootstrap: before the first stable (prod) release exists, the stable channel falls back to the dev
+    Bootstrap: before the first stable release exists, the stable channel falls back to the testing
     build and the entry is marked IsTestingExclusive = true, so Dalamud only offers it to testing
     users until a real stable release is cut.
 
@@ -33,8 +33,8 @@
 .PARAMETER Repo
     owner/repo slug. Defaults to the GITHUB_REPOSITORY environment variable.
 
-.PARAMETER DevTag
-    The rolling prerelease tag used for the dev channel. Defaults to "dev".
+.PARAMETER TestingTag
+    The rolling prerelease tag used for the testing channel. Defaults to "testing".
 
 .NOTES
     Requires the GitHub CLI (gh) authenticated with repo read access (GH_TOKEN / GITHUB_TOKEN).
@@ -49,7 +49,7 @@ param(
 
     [string]$Repo = $env:GITHUB_REPOSITORY,
 
-    [string]$DevTag = "dev"
+    [string]$TestingTag = "testing"
 )
 
 $ErrorActionPreference = "Stop"
@@ -110,40 +110,40 @@ $local = Get-Content $ManifestPath -Raw | ConvertFrom-Json
 
 # --- channel state (from GitHub Releases) ----------------------------------
 
-$stableTag      = Get-StableTag
-$stableManifest = if ($stableTag) { Get-ReleaseManifest -Tag $stableTag } else { $null }
-$devManifest    = Get-ReleaseManifest -Tag $DevTag
+$stableTag        = Get-StableTag
+$stableManifest   = if ($stableTag) { Get-ReleaseManifest -Tag $stableTag } else { $null }
+$testingManifest  = Get-ReleaseManifest -Tag $TestingTag
 
-$baseUrl        = "https://github.com/$Repo/releases"
-$stableZipUrl   = "$baseUrl/latest/download/latest.zip"
-$devZipUrl      = "$baseUrl/download/$DevTag/latest.zip"
+$baseUrl          = "https://github.com/$Repo/releases"
+$stableZipUrl     = "$baseUrl/latest/download/latest.zip"
+$testingZipUrl    = "$baseUrl/download/$TestingTag/latest.zip"
 
 $hasStable = $null -ne $stableManifest
-$hasDev    = $null -ne $devManifest
+$hasTesting = $null -ne $testingManifest
 
-if (-not $hasStable -and -not $hasDev) {
-    throw "No stable and no dev ($DevTag) release found for $Repo. Publish a release before generating repo.json."
+if (-not $hasStable -and -not $hasTesting) {
+    throw "No stable and no testing ($TestingTag) release found for $Repo. Publish a release before generating repo.json."
 }
 
 # Prefer each channel's own manifest for its version + API level; fall back across channels so a
-# bootstrap (dev-only) or a stable-only repo still emits every required, non-nullable field.
-$stableVersion = if ($hasStable) { [string]$stableManifest.AssemblyVersion } else { [string]$devManifest.AssemblyVersion }
-$devVersion    = if ($hasDev)    { [string]$devManifest.AssemblyVersion }    else { [string]$stableManifest.AssemblyVersion }
+# bootstrap (testing-only) or a stable-only repo still emits every required, non-nullable field.
+$stableVersion  = if ($hasStable)  { [string]$stableManifest.AssemblyVersion } else { [string]$testingManifest.AssemblyVersion }
+$testingVersion = if ($hasTesting) { [string]$testingManifest.AssemblyVersion } else { [string]$stableManifest.AssemblyVersion }
 
 $stableApi = if ($hasStable) { [int]$stableManifest.DalamudApiLevel } else { [int]$local.DalamudApiLevel }
-$devApi    = if ($hasDev)    { [int]$devManifest.DalamudApiLevel }    else { [int]$local.DalamudApiLevel }
+$testingApi = if ($hasTesting) { [int]$testingManifest.DalamudApiLevel } else { [int]$local.DalamudApiLevel }
 
 # Until a real stable release exists, only offer the plugin to testing users.
 $isTestingExclusive = -not $hasStable
 
 # Stable download links point at GitHub's "latest" (non-prerelease); before that exists they fall
-# back to the dev zip so the non-nullable link fields stay valid.
-$stableInstallUrl = if ($hasStable) { $stableZipUrl } else { $devZipUrl }
+# back to the testing zip so the non-nullable link fields stay valid.
+$stableInstallUrl = if ($hasStable) { $stableZipUrl } else { $testingZipUrl }
 
-# The testing link normally points at the rolling dev zip. If a stable release exists but no dev
-# release does yet (a prod release cut before any dev build), fall back to the stable zip so the
-# advertised testing download is always resolvable rather than a 404.
-$testingInstallUrl = if ($hasDev) { $devZipUrl } else { $stableInstallUrl }
+# The testing link normally points at the rolling testing zip. If a stable release exists but no
+# testing release does yet (a stable release cut before any testing build), fall back to the stable
+# zip so the advertised testing download is always resolvable rather than a 404.
+$testingInstallUrl = if ($hasTesting) { $testingZipUrl } else { $stableInstallUrl }
 
 # --- assemble the plugin-master entry --------------------------------------
 
@@ -159,8 +159,8 @@ $entry = [ordered]@{
     DalamudApiLevel       = $stableApi
     IconUrl               = [string]$local.IconUrl
     AssemblyVersion       = $stableVersion
-    TestingAssemblyVersion = $devVersion
-    TestingDalamudApiLevel = $devApi
+    TestingAssemblyVersion = $testingVersion
+    TestingDalamudApiLevel = $testingApi
     IsTestingExclusive    = $isTestingExclusive
     IsHide                = $false
     LastUpdate            = [int64][Math]::Floor(([DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
@@ -183,7 +183,7 @@ if ($outDir -and -not (Test-Path $outDir)) {
 
 Write-Host "Wrote $OutputPath"
 Write-Host "  stable (AssemblyVersion):        $stableVersion  (api $stableApi, testing-exclusive: $isTestingExclusive)"
-Write-Host "  testing (TestingAssemblyVersion): $devVersion  (api $devApi)"
+Write-Host "  testing (TestingAssemblyVersion): $testingVersion  (api $testingApi)"
 
 # gh calls above may leave a non-zero $LASTEXITCODE from a tolerated "not found" (e.g. no stable
 # release yet). We only reach here on success - real errors throw - so clear it explicitly; GitHub
