@@ -16,8 +16,7 @@
     -ManifestPath. The per-channel VERSIONS are derived from the actual GitHub Releases so that this
     script produces a correct, complete repo.json no matter which release job invoked it (the testing
     job and the stable job each only touch their own channel's release, but both must emit the full
-    file
-    without clobbering the other channel). For each channel we download that channel's uploaded
+    file without clobbering the other channel). For each channel we download that channel's uploaded
     GoodGlam.json asset and read its AssemblyVersion / DalamudApiLevel, so the advertised version
     always matches exactly what ships in that channel's latest.zip.
 
