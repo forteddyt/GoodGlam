@@ -32,6 +32,13 @@
 .PARAMETER RunNumber
     For dev: the monotonically increasing build number (e.g. github.run_number).
 
+.PARAMETER StableBase
+    For dev only: an explicit stable X.Y.Z to use as the base instead of reading the newest stable
+    release from GitHub. The release workflow passes this after a prod release (from the prod job's
+    computed version) so the dev build adopts the just-cut stable base deterministically, without
+    depending on the eventual consistency of the releases/latest API. Ignored for prod; when empty,
+    the stable base is read from GitHub Releases as usual.
+
 .PARAMETER Repo
     owner/repo slug. Defaults to GITHUB_REPOSITORY.
 
@@ -55,6 +62,8 @@ param(
     [string]$Bump = "patch",
 
     [int]$RunNumber = 0,
+
+    [string]$StableBase = "",
 
     [string]$Repo = $env:GITHUB_REPOSITORY,
 
@@ -115,7 +124,18 @@ function Step-Version {
 }
 
 if ($Channel -eq "dev") {
-    $effectiveBase = if ($stableXyz) { $stableXyz } else { $baseXyz }
+    # An explicit -StableBase (passed by the release workflow after a prod release) takes precedence
+    # over the API-read stable version so the dev build deterministically adopts the just-cut stable
+    # base. Validate its format defensively even though the caller derives it from a guarded prod
+    # computation. Fall back to the current stable release, then the csproj base.
+    if (-not [string]::IsNullOrWhiteSpace($StableBase)) {
+        if ($StableBase -notmatch "^[0-9]+\.[0-9]+\.[0-9]+$") {
+            throw "Provided -StableBase '$StableBase' is not a valid X.Y.Z."
+        }
+        $effectiveBase = $StableBase
+    }
+    elseif ($stableXyz) { $effectiveBase = $stableXyz }
+    else { $effectiveBase = $baseXyz }
     $version = "$effectiveBase.$RunNumber"
 }
 else {
