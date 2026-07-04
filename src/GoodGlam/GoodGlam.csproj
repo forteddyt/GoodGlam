@@ -12,8 +12,11 @@
   -->
 
   <PropertyGroup>
-    <!-- Drives the manifest AssemblyVersion (DalamudPackager writes it from the assembly). -->
-    <Version>0.1.0.0</Version>
+    <!--
+      Local/source builds (plain Release without CI stamping) intentionally use a sentinel so they
+      can't be mistaken for shipped channel releases. CI/release builds pass -p:Version=<computed>.
+    -->
+    <Version>0.0.0.0</Version>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>GoodGlam</RootNamespace>

@@ -14,15 +14,15 @@ BeforeAll {
 Describe "compute-version.ps1" {
 
     Context "dev channel" {
-        It "on a fresh repo (no stable release) seeds from the csproj base and appends the run number" {
+        It "on a fresh repo (no stable release) seeds from the explicit first stable base and appends the run number" {
             $fx = New-GhFixture   # no latest_tag => releases/latest 404
-            $csproj = New-Csproj -Version "0.1.0.0"
+            $csproj = New-Csproj -Version "0.0.0.0"
             $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
                 -Arguments @("-Channel", "dev", "-RunNumber", "7", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
 
             $r.ExitCode | Should -Be 0
-            $r.Outputs["version"] | Should -Be "0.1.0.7"
-            $r.StdOut | Should -Match "0\.1\.0\.7"
+            $r.Outputs["version"] | Should -Be "0.0.1.7"
+            $r.StdOut | Should -Match "0\.0\.1\.7"
         }
 
         It "bases the dev version on the current stable X.Y.Z so it stays just ahead of stable" {
@@ -111,15 +111,15 @@ Describe "compute-version.ps1" {
     }
 
     Context "prod channel - first release" {
-        It "ships the csproj base version as-is when no stable release exists yet (bump ignored)" {
+        It "ships the explicit first stable base when no stable release exists yet (bump ignored)" {
             $fx = New-GhFixture
-            $csproj = New-Csproj -Version "0.1.0.0"
+            $csproj = New-Csproj -Version "0.0.0.0"
             $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
                 -Arguments @("-Channel", "prod", "-Bump", "major", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
 
             $r.ExitCode | Should -Be 0
-            $r.Outputs["version"] | Should -Be "0.1.0"
-            $r.Outputs["tag"] | Should -Be "v0.1.0"
+            $r.Outputs["version"] | Should -Be "0.0.1"
+            $r.Outputs["tag"] | Should -Be "v0.0.1"
         }
     }
 

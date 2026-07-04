@@ -8,19 +8,20 @@
 
       * dev  -> "<X.Y.Z>.<RunNumber>", where X.Y.Z is the current stable version (so the dev build is
                 always just ahead of stable, satisfying Dalamud's "testing is ahead" semantics). Uses
-                the csproj base version when no stable release exists yet.
+                the explicit first stable seed when no stable release exists yet.
 
-      * prod -> the next stable X.Y.Z. When no stable release exists yet, this is the csproj base
-                version (the first release; -Bump is ignored). Otherwise the requested component of the
-                current stable version is incremented (patch/minor/major).
+      * prod -> the next stable X.Y.Z. When no stable release exists yet, this is the explicit first
+                stable seed (the first release; -Bump is ignored). Otherwise the requested component of
+                the current stable version is incremented (patch/minor/major).
 
     Guardrails for prod (defence-in-depth so a stable version can never go backwards or collide):
       * SemVer-format validation of the computed X.Y.Z.
       * Strict monotonic check: computed version must be greater than the current stable version.
       * Collision guard: fail if a release tag v<version> already exists.
 
-    The current stable version is read from the newest non-prerelease GitHub Release (via gh);
-    the base/seed version is read from the plugin csproj <Version>.
+    The current stable version is read from the newest non-prerelease GitHub Release (via gh).
+    The first stable seed is explicit so release seeding cannot regress if the csproj local-build
+    sentinel changes.
 
 .PARAMETER Channel
     "dev" or "prod".
@@ -42,8 +43,12 @@
 .PARAMETER Repo
     owner/repo slug. Defaults to GITHUB_REPOSITORY.
 
+.PARAMETER FirstStableSeed
+    Explicit first stable X.Y.Z used when no stable release exists yet. Defaults to 0.0.1.
+
 .PARAMETER CsprojPath
-    Path to the plugin csproj holding the base <Version>. Defaults to src/GoodGlam/GoodGlam.csproj.
+    Path to the plugin csproj. The script validates that the file contains a numeric <Version>, but
+    release seeding does not derive from it.
 
 .OUTPUTS
     Writes the computed version to stdout. When GITHUB_OUTPUT is set, also appends
@@ -67,6 +72,8 @@ param(
 
     [string]$Repo = $env:GITHUB_REPOSITORY,
 
+    [string]$FirstStableSeed = "0.0.1",
+
     [string]$CsprojPath = "src/GoodGlam/GoodGlam.csproj"
 )
 
@@ -86,15 +93,17 @@ if ([string]::IsNullOrWhiteSpace($Repo)) {
 if (-not (Test-Path $CsprojPath)) {
     throw "csproj not found: $CsprojPath"
 }
+if ($FirstStableSeed -notmatch "^[0-9]+\.[0-9]+\.[0-9]+$") {
+    throw "Provided -FirstStableSeed '$FirstStableSeed' is not a valid X.Y.Z."
+}
 
-# --- base (seed) version from the csproj ------------------------------------
+# --- local-build version validation from the csproj --------------------------
 
 $csproj = Get-Content $CsprojPath -Raw
 $m = [regex]::Match($csproj, "<Version>\s*([0-9]+\.[0-9]+\.[0-9]+)(?:\.[0-9]+)?\s*</Version>")
 if (-not $m.Success) {
     throw "Could not read a X.Y.Z <Version> from $CsprojPath"
 }
-$baseXyz = $m.Groups[1].Value
 
 # --- current stable X.Y.Z from GitHub Releases ------------------------------
 
@@ -127,7 +136,7 @@ if ($Channel -eq "dev") {
     # An explicit -StableBase (passed by the release workflow after a prod release) takes precedence
     # over the API-read stable version so the dev build deterministically adopts the just-cut stable
     # base. Validate its format defensively even though the caller derives it from a guarded prod
-    # computation. Fall back to the current stable release, then the csproj base.
+    # computation. Fall back to the current stable release, then the explicit first stable seed.
     if (-not [string]::IsNullOrWhiteSpace($StableBase)) {
         if ($StableBase -notmatch "^[0-9]+\.[0-9]+\.[0-9]+$") {
             throw "Provided -StableBase '$StableBase' is not a valid X.Y.Z."
@@ -135,14 +144,14 @@ if ($Channel -eq "dev") {
         $effectiveBase = $StableBase
     }
     elseif ($stableXyz) { $effectiveBase = $stableXyz }
-    else { $effectiveBase = $baseXyz }
+    else { $effectiveBase = $FirstStableSeed }
     $version = "$effectiveBase.$RunNumber"
 }
 else {
     # prod
     if (-not $stableXyz) {
-        # First stable release: ship the csproj base version as-is (bump ignored).
-        $version = $baseXyz
+        # First stable release: ship the explicit first stable seed as-is (bump ignored).
+        $version = $FirstStableSeed
     }
     else {
         $version = Step-Version -Xyz $stableXyz -Which $Bump
