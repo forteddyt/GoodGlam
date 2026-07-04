@@ -4,9 +4,16 @@ name: Release
 #
 #   * dev  - published automatically on every push to main. Lands in the repo.json TESTING channel,
 #            so it only reaches users who enable "Get plugin testing builds" in Dalamud. Backed by a
-#            single rolling "dev" prerelease.
+#            single rolling "dev" prerelease. Also re-published right after a prod release (see below)
+#            so the testing channel never trails stable.
 #   * prod - cut manually by a maintainer (workflow_dispatch). Lands in the STABLE channel, seen by
 #            everyone. Backed by a permanent vX.Y.Z release marked --latest.
+#
+# On a workflow_dispatch (prod) run, the dev job runs AFTER prod (needs: prod) so it recomputes the
+# rolling dev version off the freshly-cut stable base (X.Y.Z.<run>) and republishes the TESTING
+# channel in the same run. This keeps the "dev is always just ahead of stable" invariant: without it,
+# a stable release would leave the testing channel advertising the previous, now-lower dev number
+# until the next push to main.
 on:
   push:
     branches: [main]
@@ -28,11 +35,24 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Dev channel: auto-publish the testing build on every push to main.
+  # Dev channel: publish the rolling testing build.
+  #   * On push to main: runs directly (prod is skipped).
+  #   * On workflow_dispatch: runs AFTER the prod job (needs: prod) so it recomputes the dev version
+  #     off the freshly-cut stable base and republishes the TESTING channel in the same run, keeping
+  #     testing >= stable. Sequencing via needs also serializes this job's repo.json publish after
+  #     prod's, so they don't race the shared gh-pages concurrency group.
   # ---------------------------------------------------------------------------
   dev:
     name: Dev channel (auto)
-    if: github.event_name == 'push'
+    needs: [prod]
+    # !cancelled() lets this run even though prod is skipped on a push. On push the first branch is
+    # true and dev runs immediately (it does not wait on the skipped prod job). On workflow_dispatch
+    # dev runs whenever prod actually ran (result != 'skipped') - including a prod FAILURE after the
+    # stable release was created: dev's own repo.json publish then regenerates BOTH channels from the
+    # live releases, self-healing a flaky prod publish so testing never trails stable.
+    if: >-
+      !cancelled() &&
+      (github.event_name == 'push' || needs.prod.result != 'skipped')
     runs-on: windows-latest
     permissions:
       contents: write
@@ -45,7 +65,14 @@ jobs:
       - name: Compute dev version
         id: ver
         shell: pwsh
-        run: ./scripts/compute-version.ps1 -Channel dev -RunNumber ${{ github.run_number }}
+        # On a successful workflow_dispatch, prod has just created the --latest stable release; use
+        # its computed X.Y.Z directly (needs.prod.outputs.version) so the dev base doesn't depend on
+        # releases/latest API propagation. On push (prod skipped) or a prod failure, no -StableBase is
+        # passed and the script reads whatever stable release actually exists - never a base that
+        # wasn't released.
+        run: >-
+          ./scripts/compute-version.ps1 -Channel dev -RunNumber ${{ github.run_number }}
+          ${{ needs.prod.result == 'success' && format('-StableBase {0}', needs.prod.outputs.version) || '' }}
 
       - name: Build & package plugin (Release)
         id: build
@@ -72,7 +99,7 @@ jobs:
             --target "${{ github.sha }}" `
             --prerelease `
             --title "Dev channel (rolling)" `
-            --notes "Rolling testing build ${{ steps.ver.outputs.version }} from the latest push to main. Enable 'Get plugin testing builds' in Dalamud to receive it."
+            --notes "Rolling testing build ${{ steps.ver.outputs.version }} from the latest main commit. Enable 'Get plugin testing builds' in Dalamud to receive it."
 
       - name: Publish repo.json
         uses: ./.github/actions/publish-repo-json
@@ -92,6 +119,10 @@ jobs:
     environment: release
     permissions:
       contents: write
+    # Exposed so the dev job can adopt this exact stable base deterministically (see its compute step)
+    # instead of re-reading releases/latest.
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:

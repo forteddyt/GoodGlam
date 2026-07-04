@@ -44,6 +44,70 @@ Describe "compute-version.ps1" {
 
             $r.Outputs.ContainsKey("tag") | Should -BeFalse
         }
+
+        It "immediately after a fresh stable X.Y.Z yields X.Y.Z.<run> that stays >= the new stable (issue #67)" {
+            # Regression guard for #67: the release workflow now runs the dev publish AFTER a prod
+            # release creates the --latest stable. Computing the dev version at that point must read
+            # the freshly-cut stable base so the testing channel never trails stable.
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "v0.3.0" -AssemblyVersion "0.3.0.0" -Latest
+            $csproj = New-Csproj -Version "0.1.0.0"
+            $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "128", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            $r.ExitCode | Should -Be 0
+            $r.Outputs["version"] | Should -Be "0.3.0.128"
+            # Testing (X.Y.Z.<run>) must be >= the new stable (X.Y.Z) so the "dev >= stable" invariant holds.
+            ([version]$r.Outputs["version"]) | Should -BeGreaterThan ([version]"0.3.0")
+        }
+
+        It "strictly increases across builds as run number advances against the same stable base (monotonic)" {
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "v0.3.0" -AssemblyVersion "0.3.0.0" -Latest
+            $csproj = New-Csproj -Version "0.1.0.0"
+
+            $earlier = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "128", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+            $later = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "129", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            ([version]$later.Outputs["version"]) | Should -BeGreaterThan ([version]$earlier.Outputs["version"])
+        }
+
+        It "uses an explicit -StableBase over the API-read stable so a fresh prod release is adopted without API-propagation lag (issue #67)" {
+            # The release workflow passes the prod job's just-computed X.Y.Z as -StableBase so the dev
+            # build adopts the new stable deterministically, even if releases/latest still reports the
+            # OLD stable. Here the fixture's "latest" is the old 0.2.5, but -StableBase 0.3.0 wins.
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "v0.2.5" -AssemblyVersion "0.2.5.0" -Latest
+            $csproj = New-Csproj -Version "0.1.0.0"
+            $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "200", "-StableBase", "0.3.0", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            $r.ExitCode | Should -Be 0
+            $r.Outputs["version"] | Should -Be "0.3.0.200"
+            ([version]$r.Outputs["version"]) | Should -BeGreaterThan ([version]"0.3.0")
+        }
+
+        It "honors -StableBase even on a fresh repo with no stable release yet" {
+            $fx = New-GhFixture   # no latest_tag => releases/latest 404
+            $csproj = New-Csproj -Version "0.1.0.0"
+            $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "5", "-StableBase", "0.3.0", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            $r.ExitCode | Should -Be 0
+            $r.Outputs["version"] | Should -Be "0.3.0.5"
+        }
+
+        It "rejects a malformed -StableBase rather than stamping a bad version" {
+            $fx = New-GhFixture
+            $csproj = New-Csproj -Version "0.1.0.0"
+            $r = Invoke-ScriptUnderTest -ScriptPath $Script -FixtureDir $fx `
+                -Arguments @("-Channel", "dev", "-RunNumber", "5", "-StableBase", "0.3", "-Repo", "forteddyt/GoodGlam", "-CsprojPath", $csproj)
+
+            $r.ExitCode | Should -Not -Be 0
+            $r.StdOut | Should -Match "StableBase"
+        }
     }
 
     Context "prod channel - first release" {
