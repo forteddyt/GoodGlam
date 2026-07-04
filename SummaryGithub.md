@@ -3,30 +3,30 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/4/2026 - 8:07:12 PM |
-| Coverage date: | 7/4/2026 - 8:06:59 PM - 7/4/2026 - 8:07:08 PM |
+| Generated on: | 7/4/2026 - 9:01:24 PM |
+| Coverage date: | 7/4/2026 - 9:01:10 PM - 7/4/2026 - 9:01:19 PM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
 | Classes: | 48 |
 | Files: | 34 |
-| **Line coverage:** | 93% (1132 of 1216) |
-| Covered lines: | 1132 |
+| **Line coverage:** | 93.1% (1138 of 1222) |
+| Covered lines: | 1138 |
 | Uncovered lines: | 84 |
-| Coverable lines: | 1216 |
-| Total lines: | 3935 |
-| **Branch coverage:** | 90.7% (424 of 467) |
-| Covered branches: | 424 |
-| Total branches: | 467 |
+| Coverable lines: | 1222 |
+| Total lines: | 3943 |
+| **Branch coverage:** | 90.8% (426 of 469) |
+| Covered branches: | 426 |
+| Total branches: | 469 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 93%</summary>
+<details><summary>GoodGlam - 93.1%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**93%**|**90.7%**|
+|**GoodGlam**|**93.1%**|**90.8%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
