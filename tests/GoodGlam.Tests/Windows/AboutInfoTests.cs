@@ -7,8 +7,9 @@ namespace GoodGlam.Tests.Windows;
 /// <summary>
 /// Covers the pure logic behind the About tab (<see cref="AboutInfo"/>): formatting the plugin
 /// version as <c>v</c> followed by the full version (every component the assembly version defines,
-/// e.g. <c>v0.1.0.0</c>) and the "open the repo" effect. The tab's ImGui rendering can't run in CI,
-/// so these guard the parts that decide what the user sees and where the link goes.
+/// e.g. <c>v0.1.0.0</c>) plus the local-build label for the sentinel version, and the "open the repo"
+/// effect. The tab's ImGui rendering can't run in CI, so these guard the parts that decide what the
+/// user sees and where the link goes.
 /// </summary>
 public class AboutInfoTests
 {
@@ -33,6 +34,12 @@ public class AboutInfoTests
     public void FormatVersion_of_a_null_version_is_unknown()
     {
         AboutInfo.FormatVersion(null).Should().Be("v(unknown)");
+    }
+
+    [Fact]
+    public void FormatVersion_of_the_local_sentinel_marks_it_as_a_local_build()
+    {
+        AboutInfo.FormatVersion(new Version(0, 0, 0, 0)).Should().Be("v0.0.0.0 (local build)");
     }
 
     [Fact]

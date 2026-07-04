@@ -127,7 +127,7 @@ function New-LocalManifest {
     return $path
 }
 
-# Write a fake csproj carrying <Version> (the base/seed version compute-version.ps1 reads).
+# Write a fake csproj carrying <Version> (validated by compute-version.ps1).
 function New-Csproj {
     param([string]$Version = "0.1.0.0")
     $dir = Join-Path ([System.IO.Path]::GetTempPath()) "gg-proj-$([guid]::NewGuid())"
