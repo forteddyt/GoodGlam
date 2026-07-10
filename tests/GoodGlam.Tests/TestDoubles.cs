@@ -155,8 +155,8 @@ internal static class TestServices
     {
         string[] services =
         [
-            "PluginInterface", "Commands", "DataManager", "ClientState", "PlayerState",
-            "AddonLifecycle", "Notifications", "Framework", "TextureProvider",
+            "PluginInterface", "Commands", "DataManager", "ClientState", "Condition", "GameGui",
+            "PlayerState", "AddonLifecycle", "Notifications", "Framework", "TextureProvider",
         ];
 
         foreach (var name in services)
