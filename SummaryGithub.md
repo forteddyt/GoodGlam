@@ -3,30 +3,30 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/4/2026 - 10:30:41 PM |
-| Coverage date: | 7/4/2026 - 10:30:29 PM - 7/4/2026 - 10:30:37 PM |
+| Generated on: | 7/10/2026 - 3:35:31 AM |
+| Coverage date: | 7/10/2026 - 3:35:13 AM - 7/10/2026 - 3:35:23 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 48 |
-| Files: | 34 |
-| **Line coverage:** | 93.1% (1138 of 1222) |
-| Covered lines: | 1138 |
+| Classes: | 49 |
+| Files: | 35 |
+| **Line coverage:** | 93.2% (1162 of 1246) |
+| Covered lines: | 1162 |
 | Uncovered lines: | 84 |
-| Coverable lines: | 1222 |
-| Total lines: | 3943 |
-| **Branch coverage:** | 90.8% (426 of 469) |
-| Covered branches: | 426 |
-| Total branches: | 469 |
+| Coverable lines: | 1246 |
+| Total lines: | 4005 |
+| **Branch coverage:** | 91% (436 of 479) |
+| Covered branches: | 436 |
+| Total branches: | 479 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 93.1%</summary>
+<details><summary>GoodGlam - 93.2%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**93.1%**|**90.8%**|
+|**GoodGlam**|**93.2%**|**91%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
@@ -71,7 +71,8 @@
 |GoodGlam.Windows.HistoryTabFocus|100%||
 |GoodGlam.Windows.ImageSharpDecoder|100%|100%|
 |GoodGlam.Windows.LogoInteraction|100%|100%|
-|GoodGlam.Windows.LogoWindow|96.8%|75%|
+|GoodGlam.Windows.LogoVisibilityGate|100%|100%|
+|GoodGlam.Windows.LogoWindow|97.4%|90%|
 |GoodGlam.Windows.MainWindow|100%||
 |GoodGlam.Windows.NotificationGlow|100%|100%|
 |GoodGlam.Windows.SettingsActions|100%|100%|
