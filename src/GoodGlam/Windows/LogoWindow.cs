@@ -14,12 +14,13 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// A small, frameless floating button that shows the GoodGlam logo (the brand mark adapted from
-/// Eorzea Collection). It is only drawn once a character is logged in (see
-/// <see cref="DrawConditions"/>), so it stays hidden on the title / character-select screen.
-/// Clicking it opens the GoodGlam window. The logo is drawn from an embedded high-resolution PNG,
-/// scaled by the current UI/DPI factor so it stays crisp and correctly sized on any monitor. The
-/// window is draggable; ImGui persists its position by window id. A right-click context menu
-/// exposes opening the window and a hide option.
+/// Eorzea Collection). It is only drawn once a character is logged in and the player's state has
+/// finished loading (see <see cref="DrawConditions"/>), so it stays hidden on the title /
+/// character-select screen and through the initial login loading screen. Clicking it opens the
+/// GoodGlam window. The logo is drawn from an embedded high-resolution PNG, scaled by the current
+/// UI/DPI factor so it stays crisp and correctly sized on any monitor. The window is draggable;
+/// ImGui persists its position by window id. A right-click context menu exposes opening the window
+/// and a hide option.
 /// </summary>
 public sealed class LogoWindow : Window, IDisposable
 {
@@ -76,11 +77,12 @@ public sealed class LogoWindow : Window, IDisposable
     }
 
     /// <summary>
-    /// Only draw the logo while a character is logged in, so it stays hidden on the title /
-    /// character-select screen. <see cref="Window.IsOpen"/> still reflects the user's show/hide
+    /// Only draw the logo once a character is logged in and the player's own state has finished
+    /// loading, so it stays hidden on the title / character-select screen and through the initial
+    /// loading screen on login. <see cref="Window.IsOpen"/> still reflects the user's show/hide
     /// preference; this gates the in-world visibility on top of it.
     /// </summary>
-    public override bool DrawConditions() => Services.ClientState.IsLoggedIn;
+    public override bool DrawConditions() => Services.ClientState.IsLoggedIn && Services.PlayerState.IsLoaded;
 
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the drag/click/tooltip decisions live in the tested LogoInteraction and the menu actions (ToggleLock/Hide) are tested. Needs a live ImGui context that can't run in CI.")]
     public override void Draw()

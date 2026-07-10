@@ -9,20 +9,23 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// Covers the config-mutating actions on <see cref="LogoWindow"/> (the right-click menu's lock
-/// toggle and hide) and its login-gated visibility. A faked <see cref="IDalamudPluginInterface"/>
-/// is installed into the static <c>Services</c> holder so <see cref="Configuration.Save"/> is
-/// observable without a framework; a faked <see cref="IClientState"/> drives the login gate.
+/// toggle and hide) and its login/loading visibility gate. Faked <see cref="IDalamudPluginInterface"/>,
+/// <see cref="IClientState"/>, and <see cref="IPlayerState"/> services are installed into the
+/// static <c>Services</c> holder so config persistence is observable and the in-world visibility
+/// gate can be driven without a live game.
 /// </summary>
 public class LogoWindowTests
 {
     private readonly IDalamudPluginInterface pluginInterface = A.Fake<IDalamudPluginInterface>();
     private readonly IClientState clientState = A.Fake<IClientState>();
+    private readonly IPlayerState playerState = A.Fake<IPlayerState>();
 
     public LogoWindowTests()
     {
         TestServices.EnsureLog();
         TestServices.Install("PluginInterface", this.pluginInterface);
         TestServices.Install("ClientState", this.clientState);
+        TestServices.Install("PlayerState", this.playerState);
     }
 
     private LogoWindow NewWindow(Configuration config)
@@ -60,31 +63,36 @@ public class LogoWindowTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void DrawConditions_follows_login_state(bool loggedIn)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DrawConditions_requires_login_and_loaded_player_state(bool loggedIn, bool playerLoaded)
     {
         A.CallTo(() => this.clientState.IsLoggedIn).Returns(loggedIn);
+        A.CallTo(() => this.playerState.IsLoaded).Returns(playerLoaded);
         var window = this.NewWindow(new Configuration());
 
-        window.DrawConditions().Should().Be(loggedIn);
+        window.DrawConditions().Should().Be(loggedIn && playerLoaded);
     }
 
     [Fact]
-    public void DrawConditions_tracks_login_logout_transitions_on_one_instance()
+    public void DrawConditions_stays_hidden_through_loading_then_appears_once_the_player_state_loads()
     {
-        var loggedIn = false;
+        var loggedIn = true;
+        var playerLoaded = false;
         A.CallTo(() => this.clientState.IsLoggedIn).ReturnsLazily(() => loggedIn);
+        A.CallTo(() => this.playerState.IsLoaded).ReturnsLazily(() => playerLoaded);
         var window = this.NewWindow(new Configuration());
 
-        // Character select (logged out): hidden.
+        // Login/loading screen: stay hidden until the player's UI-backed state is ready.
         window.DrawConditions().Should().BeFalse();
 
-        // Log in: appears.
-        loggedIn = true;
+        // The loading screen ends and the player state resolves: now the logo can appear.
+        playerLoaded = true;
         window.DrawConditions().Should().BeTrue();
 
-        // Log out: disappears again — no latched state keeps it visible.
+        // Logging back out hides it again immediately — no latched state keeps it visible.
         loggedIn = false;
         window.DrawConditions().Should().BeFalse();
     }
