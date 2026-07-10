@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -14,8 +15,8 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// A small, frameless floating button that shows the GoodGlam logo (the brand mark adapted from
-/// Eorzea Collection). It is only drawn once a character is logged in (see
-/// <see cref="DrawConditions"/>), so it stays hidden on the title / character-select screen.
+/// Eorzea Collection). It is only drawn once the active game UI has settled after a login or
+/// loading screen (see <see cref="DrawConditions"/>), so it enters alongside the native HUD.
 /// Clicking it opens the GoodGlam window. The logo is drawn from an embedded high-resolution PNG,
 /// scaled by the current UI/DPI factor so it stays crisp and correctly sized on any monitor. The
 /// window is draggable; ImGui persists its position by window id. A right-click context menu
@@ -36,6 +37,7 @@ public sealed class LogoWindow : Window, IDisposable
     private readonly Configuration config;
     private readonly Action openMain;
     private readonly NotificationState notificationState;
+    private readonly LogoVisibilityGate visibilityGate;
     private readonly ITraceLogger<LogoWindow> log = new TraceLogger<LogoWindow>();
 
     /// <summary>Pure pointer-interaction logic (drag/lock/click decisions); see LogoInteraction.</summary>
@@ -61,6 +63,15 @@ public sealed class LogoWindow : Window, IDisposable
     private readonly object glowLock = new();
 
     public LogoWindow(Configuration config, Action openMain, NotificationState notificationState)
+        : this(config, openMain, notificationState, new LogoVisibilityGate())
+    {
+    }
+
+    internal LogoWindow(
+        Configuration config,
+        Action openMain,
+        NotificationState notificationState,
+        LogoVisibilityGate visibilityGate)
         : base("GoodGlam###GoodGlamLogo",
             ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar
             | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoBackground
@@ -69,6 +80,7 @@ public sealed class LogoWindow : Window, IDisposable
         this.config = config;
         this.openMain = openMain;
         this.notificationState = notificationState;
+        this.visibilityGate = visibilityGate;
 
         // It's a toolbar widget, not a dialog: Escape shouldn't close it and it shouldn't click-clack.
         this.RespectCloseHotkey = false;
@@ -76,11 +88,18 @@ public sealed class LogoWindow : Window, IDisposable
     }
 
     /// <summary>
-    /// Only draw the logo while a character is logged in, so it stays hidden on the title /
-    /// character-select screen. <see cref="Window.IsOpen"/> still reflects the user's show/hide
-    /// preference; this gates the in-world visibility on top of it.
+    /// Draws only after the logged-in, non-loading game UI has remained visible for a short settle
+    /// interval. The interval absorbs the final native HUD fade after Dalamud's loading conditions
+    /// clear. <see cref="Window.IsOpen"/> still reflects the user's show/hide preference.
     /// </summary>
-    public override bool DrawConditions() => Services.ClientState.IsLoggedIn;
+    public override bool DrawConditions()
+    {
+        var gameplayReady = Services.ClientState.IsLoggedIn
+            && !Services.Condition[ConditionFlag.BetweenAreas]
+            && !Services.Condition[ConditionFlag.BetweenAreas51]
+            && !Services.GameGui.GameUiHidden;
+        return this.visibilityGate.ShouldDraw(gameplayReady);
+    }
 
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the drag/click/tooltip decisions live in the tested LogoInteraction and the menu actions (ToggleLock/Hide) are tested. Needs a live ImGui context that can't run in CI.")]
     public override void Draw()
