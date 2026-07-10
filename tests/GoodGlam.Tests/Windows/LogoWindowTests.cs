@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FakeItEasy;
@@ -11,22 +12,30 @@ namespace GoodGlam.Tests.Windows;
 /// Covers the config-mutating actions on <see cref="LogoWindow"/> (the right-click menu's lock
 /// toggle and hide) and its login-gated visibility. A faked <see cref="IDalamudPluginInterface"/>
 /// is installed into the static <c>Services</c> holder so <see cref="Configuration.Save"/> is
-/// observable without a framework; a faked <see cref="IClientState"/> drives the login gate.
+/// observable without a framework; faked client state and conditions drive the gameplay gate.
 /// </summary>
 public class LogoWindowTests
 {
     private readonly IDalamudPluginInterface pluginInterface = A.Fake<IDalamudPluginInterface>();
     private readonly IClientState clientState = A.Fake<IClientState>();
+    private readonly ICondition condition = A.Fake<ICondition>();
+    private readonly IGameGui gameGui = A.Fake<IGameGui>();
 
     public LogoWindowTests()
     {
         TestServices.EnsureLog();
         TestServices.Install("PluginInterface", this.pluginInterface);
         TestServices.Install("ClientState", this.clientState);
+        TestServices.Install("Condition", this.condition);
+        TestServices.Install("GameGui", this.gameGui);
     }
 
     private LogoWindow NewWindow(Configuration config)
-        => new(config, openMain: () => { }, new GoodGlam.History.NotificationState());
+        => new(
+            config,
+            openMain: () => { },
+            new GoodGlam.History.NotificationState(),
+            new LogoVisibilityGate(TimeProvider.System, TimeSpan.Zero));
 
     [Fact]
     public void ToggleLock_locks_then_unlocks_and_persists_each_time()
@@ -68,6 +77,28 @@ public class LogoWindowTests
         var window = this.NewWindow(new Configuration());
 
         window.DrawConditions().Should().Be(loggedIn);
+    }
+
+    [Theory]
+    [InlineData(ConditionFlag.BetweenAreas)]
+    [InlineData(ConditionFlag.BetweenAreas51)]
+    public void DrawConditions_hides_during_login_loading(ConditionFlag loadingFlag)
+    {
+        A.CallTo(() => this.clientState.IsLoggedIn).Returns(true);
+        A.CallTo(() => this.condition[loadingFlag]).Returns(true);
+        var window = this.NewWindow(new Configuration());
+
+        window.DrawConditions().Should().BeFalse();
+    }
+
+    [Fact]
+    public void DrawConditions_hides_until_the_native_game_ui_is_visible()
+    {
+        A.CallTo(() => this.clientState.IsLoggedIn).Returns(true);
+        A.CallTo(() => this.gameGui.GameUiHidden).Returns(true);
+        var window = this.NewWindow(new Configuration());
+
+        window.DrawConditions().Should().BeFalse();
     }
 
     [Fact]

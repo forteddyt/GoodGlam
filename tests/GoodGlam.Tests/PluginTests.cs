@@ -24,6 +24,8 @@ public class PluginTests : IDisposable
     private readonly string configDir;
     private readonly IDalamudPluginInterface pi = A.Fake<IDalamudPluginInterface>();
     private readonly IClientState clientState = A.Fake<IClientState>();
+    private readonly ICondition condition = A.Fake<ICondition>();
+    private readonly IGameGui gameGui = A.Fake<IGameGui>();
     private readonly IPlayerState playerState = A.Fake<IPlayerState>();
     private readonly ICommandManager commands = A.Fake<ICommandManager>();
     private readonly IAddonLifecycle addon = A.Fake<IAddonLifecycle>();
@@ -44,6 +46,8 @@ public class PluginTests : IDisposable
         TestServices.EnsureLog();
         TestServices.Install("PluginInterface", this.pi);
         TestServices.Install("ClientState", this.clientState);
+        TestServices.Install("Condition", this.condition);
+        TestServices.Install("GameGui", this.gameGui);
         TestServices.Install("PlayerState", this.playerState);
         TestServices.Install("Commands", this.commands);
         TestServices.Install("AddonLifecycle", this.addon);
