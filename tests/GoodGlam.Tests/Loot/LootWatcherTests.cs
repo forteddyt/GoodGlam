@@ -1,4 +1,5 @@
 using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FakeItEasy;
 using FluentAssertions;
@@ -10,16 +11,17 @@ using Xunit;
 namespace GoodGlam.Tests.Loot;
 
 /// <summary>
-/// Exercises <see cref="LootWatcher"/>'s scan/dispatch/dedup logic through its two seams: a faked
-/// <see cref="IAddonLifecycle"/> (whose registered handlers are captured and invoked to simulate the
-/// Need/Greed window opening) and a <see cref="StubLootReader"/> standing in for the native game
-/// struct. Popularity dispatch is observed through a real <see cref="GlamPopularityService"/> backed
-/// by the in-memory fakes, so we can count how many drops were pushed through the pipeline.
+/// Exercises <see cref="LootWatcher"/>'s scan/dispatch/dedup logic through faked addon and framework
+/// events plus a <see cref="StubLootReader"/> standing in for the native game struct. Popularity
+/// dispatch is observed through a real <see cref="GlamPopularityService"/> backed by the in-memory
+/// fakes, so we can count how many drops were pushed through the pipeline.
 /// </summary>
 public class LootWatcherTests
 {
     private readonly IAddonLifecycle addon = A.Fake<IAddonLifecycle>();
     private readonly Dictionary<AddonEvent, IAddonLifecycle.AddonEventDelegate> handlers = new();
+    private readonly ICondition condition = A.Fake<ICondition>();
+    private readonly IFramework framework = A.Fake<IFramework>();
     private readonly IItemResolver resolver = A.Fake<IItemResolver>();
     private readonly FakeGlamSource source = new();
     private readonly FakeNotifier notifier = new();
@@ -29,6 +31,8 @@ public class LootWatcherTests
     {
         TestServices.EnsureLog();
         TestServices.Install("AddonLifecycle", this.addon);
+        TestServices.Install("Condition", this.condition);
+        TestServices.Install("Framework", this.framework);
         A.CallTo(() => this.addon.RegisterListener(A<AddonEvent>._, A<string>._, A<IAddonLifecycle.AddonEventDelegate>._))
             .Invokes(call =>
                 this.handlers[(AddonEvent)call.Arguments[0]!] = (IAddonLifecycle.AddonEventDelegate)call.Arguments[2]!);
@@ -55,6 +59,15 @@ public class LootWatcherTests
 
     private void Fire(AddonEvent evt) => this.handlers[evt].Invoke(evt, null!);
 
+    private void FireFramework(TimeSpan elapsed)
+    {
+        A.CallTo(() => this.framework.UpdateDelta).Returns(elapsed);
+        this.framework.Update += Raise.FreeForm.With(this.framework);
+    }
+
+    private void SetDutyBound(bool bound, ConditionFlag flag = ConditionFlag.BoundByDuty)
+        => A.CallTo(() => this.condition[flag]).Returns(bound);
+
     [Fact]
     public void Ctor_registers_the_three_needgreed_listeners()
     {
@@ -76,9 +89,120 @@ public class LootWatcherTests
         this.New(reader);
 
         this.Fire(AddonEvent.PostSetup);
+        this.SetDutyBound(true);
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
 
         reader.ReadCalls.Should().Be(0);
         this.notifier.CaptureCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(ConditionFlag.BoundByDuty)]
+    [InlineData(ConditionFlag.BoundByDuty56)]
+    [InlineData(ConditionFlag.BoundByDuty95)]
+    public void Framework_poll_dispatches_loot_without_a_needgreed_addon_event(ConditionFlag dutyFlag)
+    {
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+        this.SetDutyBound(true, dutyFlag);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        reader.ReadCalls.Should().Be(1);
+        this.notifier.CaptureCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void Framework_poll_does_not_read_loot_outside_a_duty()
+    {
+        var reader = new StubLootReader(Snapshot(Entry(3610)));
+        this.New(reader);
+
+        this.FireFramework(TimeSpan.FromSeconds(10));
+
+        reader.ReadCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public void Framework_poll_is_throttled_to_500_milliseconds()
+    {
+        var reader = new StubLootReader(Snapshot());
+        this.New(reader);
+        this.SetDutyBound(true);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(200));
+        this.FireFramework(TimeSpan.FromMilliseconds(299));
+        reader.ReadCalls.Should().Be(0);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(1));
+        reader.ReadCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void Less_than_one_second_empty_does_not_redispatch_unchanged_loot()
+    {
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+        this.SetDutyBound(true);
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        reader.Snapshot = Snapshot();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        reader.Snapshot = Snapshot(Entry(3610, chestObjectId: 100));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        this.notifier.CaptureCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void One_second_continuously_empty_ends_the_observed_loot_batch()
+    {
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+        this.SetDutyBound(true);
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        reader.Snapshot = Snapshot();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        reader.Snapshot = Snapshot(Entry(3610, chestObjectId: 100));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        this.notifier.CaptureCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void Leaving_a_duty_immediately_clears_the_observed_loot_batch()
+    {
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        var reader = new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100)));
+        this.New(reader);
+        this.SetDutyBound(true);
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        this.SetDutyBound(false);
+        this.FireFramework(TimeSpan.FromMilliseconds(1));
+
+        this.SetDutyBound(true);
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        this.notifier.CaptureCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void Addon_event_remains_a_fallback_outside_a_duty()
+    {
+        A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        this.New(new StubLootReader(Snapshot(Entry(3610))));
+
+        this.Fire(AddonEvent.PostSetup);
+
+        this.notifier.CaptureCalls.Should().Be(1);
     }
 
     [Fact]
@@ -116,6 +240,27 @@ public class LootWatcherTests
         this.Fire(AddonEvent.PostSetup);
 
         this.notifier.CaptureCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public void Unresolved_drop_is_resolved_once_per_observed_batch()
+    {
+        var reader = new StubLootReader(Snapshot(Entry(999, chestObjectId: 100)));
+        this.New(reader);
+        this.SetDutyBound(true);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        A.CallTo(() => this.resolver.Resolve(999)).MustHaveHappenedOnceExactly();
+
+        reader.Snapshot = Snapshot();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        reader.Snapshot = Snapshot(Entry(999, chestObjectId: 100));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        A.CallTo(() => this.resolver.Resolve(999)).MustHaveHappenedTwiceExactly();
     }
 
     [Fact]
@@ -302,6 +447,20 @@ public class LootWatcherTests
     }
 
     [Fact]
+    public void ResetDispatchedDrops_rechecks_unresolved_loot()
+    {
+        var reader = new StubLootReader(Snapshot(Entry(999, chestObjectId: 100)));
+        var watcher = this.New(reader);
+        this.SetDutyBound(true);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        watcher.ResetDispatchedDrops();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        A.CallTo(() => this.resolver.Resolve(999)).MustHaveHappenedTwiceExactly();
+    }
+
+    [Fact]
     public void Scan_errors_are_swallowed()
     {
         // A resolver that throws must not let the exception escape the addon callback.
@@ -312,14 +471,18 @@ public class LootWatcherTests
     }
 
     [Fact]
-    public void Dispose_unregisters_both_handlers()
+    public void Dispose_unregisters_addon_handlers_and_framework_poll()
     {
-        var watcher = this.New(new StubLootReader());
+        var reader = new StubLootReader(Snapshot());
+        var watcher = this.New(reader);
+        this.SetDutyBound(true);
 
         watcher.Dispose();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
 
         A.CallTo(() => this.addon.UnregisterListener(A<IAddonLifecycle.AddonEventDelegate[]>._))
             .MustHaveHappened(2, Times.Exactly);
+        reader.ReadCalls.Should().Be(0);
     }
 
     [Fact]

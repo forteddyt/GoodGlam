@@ -1,5 +1,7 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
@@ -7,13 +9,15 @@ using GoodGlam.Glam;
 namespace GoodGlam.Loot;
 
 /// <summary>
-/// Hooks the Need/Greed roll window. When it appears (or refreshes), each rollable
-/// item is read straight from the game's <c>Loot</c> struct and dispatched to
-/// the popularity check. No packet capture required.
+/// Polls the game's native loot state independently of the Need/Greed window and also listens for
+/// addon lifecycle events for immediate scans and reconciliation. Each rollable item is dispatched
+/// to the popularity check without packet capture.
 /// </summary>
 public sealed class LootWatcher : IDisposable
 {
     private const string AddonName = "NeedGreed";
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan EmptyBatchGracePeriod = TimeSpan.FromSeconds(1);
 
     private readonly IItemResolver resolver;
     private readonly GlamPopularityService popularity;
@@ -29,9 +33,13 @@ public sealed class LootWatcher : IDisposable
 
     // Drops already dispatched for popularity this loot session. Keyed by DropKey (not item id) and
     // persisted across window close so reopening unchanged loot doesn't re-dispatch. Reconciled when
-    // the window (re)opens (PostSetup) against the live loot so departed drops are forgotten (bounding
-    // memory and letting a reused chest identity count as new); never pruned on an in-window refresh.
+    // the window (re)opens or a new observed loot batch begins; sustained emptiness ends the batch.
     private readonly HashSet<DropKey> dispatchedDrops = [];
+    private readonly HashSet<DropKey> unresolvedDrops = [];
+    private TimeSpan timeSincePoll;
+    private TimeSpan continuouslyEmptyFor;
+    private bool pollSessionActive;
+    private bool wasBoundByDuty;
 
     public LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config)
         : this(resolver, popularity, config, new GameLootReader())
@@ -54,6 +62,7 @@ public sealed class LootWatcher : IDisposable
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, AddonName, this.OnAddonEvent);
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostRefresh, AddonName, this.OnAddonEvent);
         Services.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, AddonName, this.OnAddonClosed);
+        Services.Framework.Update += this.OnFrameworkUpdate;
     }
 
     private void OnAddonEvent(AddonEvent type, AddonArgs args)
@@ -66,7 +75,7 @@ public sealed class LootWatcher : IDisposable
 
         try
         {
-            this.ScanLoot(type);
+            this.ReadAndScan($"{AddonName} {type}", type == AddonEvent.PostSetup, frameworkPoll: false);
         }
         catch (Exception ex)
         {
@@ -82,11 +91,81 @@ public sealed class LootWatcher : IDisposable
         this.log.Verbose($"{AddonName} closed — keeping {this.dispatchedDrops.Count} dispatched drop(s) for reopen dedup.");
     }
 
-    private void ScanLoot(AddonEvent type)
+    private void OnFrameworkUpdate(IFramework framework)
     {
-        if (this.lootReader.Read() is not { } loot)
+        var boundByDuty = IsBoundByDuty();
+        if (this.wasBoundByDuty && !boundByDuty)
+            this.EndObservedLootBatch("left duty");
+        this.wasBoundByDuty = boundByDuty;
+
+        if (!boundByDuty)
         {
-            this.log.Verbose($"{AddonName} {type} but no active loot session; nothing to scan.");
+            this.timeSincePoll = TimeSpan.Zero;
+            return;
+        }
+
+        if (!this.config.Enabled)
+        {
+            this.timeSincePoll = TimeSpan.Zero;
+            return;
+        }
+
+        this.timeSincePoll += framework.UpdateDelta;
+        if (this.timeSincePoll < PollInterval)
+            return;
+
+        var elapsedSinceLastPoll = this.timeSincePoll;
+        this.timeSincePoll = TimeSpan.Zero;
+        try
+        {
+            this.ReadAndScan(
+                "native loot poll",
+                pruneDeparted: false,
+                frameworkPoll: true,
+                elapsedSinceLastPoll: elapsedSinceLastPoll);
+        }
+        catch (Exception ex)
+        {
+            this.log.Error("failed to poll the native loot state.", ex);
+        }
+    }
+
+    private static bool IsBoundByDuty() =>
+        Services.Condition[ConditionFlag.BoundByDuty]
+        || Services.Condition[ConditionFlag.BoundByDuty56]
+        || Services.Condition[ConditionFlag.BoundByDuty95];
+
+    private void ReadAndScan(
+        string source,
+        bool pruneDeparted,
+        bool frameworkPoll,
+        TimeSpan elapsedSinceLastPoll = default)
+    {
+        var loot = this.lootReader.Read();
+        if (frameworkPoll)
+        {
+            if (loot is null || !HasPopulatedSlots(loot.Value))
+            {
+                this.ObserveEmptyPoll(elapsedSinceLastPoll);
+                return;
+            }
+
+            this.continuouslyEmptyFor = TimeSpan.Zero;
+            if (!this.pollSessionActive)
+            {
+                this.pollSessionActive = true;
+                pruneDeparted = true;
+            }
+        }
+        else if (loot is not null && HasPopulatedSlots(loot.Value))
+        {
+            this.pollSessionActive = true;
+            this.continuouslyEmptyFor = TimeSpan.Zero;
+        }
+
+        if (loot is not { } snapshot)
+        {
+            this.log.Verbose($"{source} but no active loot session; nothing to scan.");
             return;
         }
 
@@ -95,26 +174,38 @@ public sealed class LootWatcher : IDisposable
         // and then re-dispatch it on the next refresh — a milder recurrence of #6. On open we forget any
         // previously-dispatched drop no longer present, so memory stays bounded and a reused chest
         // identity counts as new; within a window we only ever add newly-appeared drops.
-        if (type == AddonEvent.PostSetup)
-            this.PruneDeparted(loot);
+        if (pruneDeparted)
+            this.PruneDeparted(snapshot);
 
         var dispatched = 0;
         var skipped = 0;
-        this.log.Debug($"{AddonName} {type} — scanning {loot.Items.Count} slot(s).");
-        for (var i = 0; i < loot.Items.Count; i++)
+        if (!frameworkPoll)
+            this.log.Debug($"{source} — scanning {snapshot.Items.Count} slot(s).");
+        for (var i = 0; i < snapshot.Items.Count; i++)
         {
-            var lootItem = loot.Items[i];
+            var lootItem = snapshot.Items[i];
             if (lootItem.ItemId == 0 || lootItem.RollState == RollState.Unavailable)
             {
                 skipped++;
                 continue;
             }
 
-            this.log.Verbose($"slot {i} ItemId={lootItem.ItemId} RollState={lootItem.RollState}.");
+            var key = KeyOf(lootItem);
+            if (this.dispatchedDrops.Contains(key) || this.unresolvedDrops.Contains(key))
+            {
+                if (!frameworkPoll)
+                    this.log.Verbose($"item {lootItem.ItemId} already handled this batch; skipping.");
+                skipped++;
+                continue;
+            }
+
+            if (!frameworkPoll)
+                this.log.Verbose($"slot {i} ItemId={lootItem.ItemId} RollState={lootItem.RollState}.");
 
             var drop = this.resolver.Resolve(lootItem.ItemId);
             if (drop is null)
             {
+                this.unresolvedDrops.Add(key);
                 skipped++;
                 continue;
             }
@@ -131,24 +222,53 @@ public sealed class LootWatcher : IDisposable
 
             // Dedup on the drop's chest identity, not its item id, so two consecutive drops of the same
             // item (different coffer/slot) are both counted while a reopened window is not.
-            if (!this.dispatchedDrops.Add(KeyOf(lootItem)))
-            {
-                this.log.Verbose($"{drop.Name} ({drop.ItemId}) already dispatched this session; skipping.");
-                skipped++;
-                continue;
-            }
+            this.dispatchedDrops.Add(key);
 
             this.log.Debug($"dispatching {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] for popularity check.");
             dispatched++;
             _ = this.popularity.ProcessAsync(drop);
         }
 
-        this.log.Debug($"scan complete — {dispatched} dispatched, {skipped} skipped of {loot.Items.Count} slot(s).");
+        if (!frameworkPoll || dispatched > 0)
+            this.log.Debug($"{source} scan complete — {dispatched} dispatched, {skipped} skipped of {snapshot.Items.Count} slot(s).");
     }
 
-    // Forgets any previously-dispatched drop that is no longer present in the live loot. Called only
-    // when the window (re)opens so an in-window refresh reporting a partial view can never evict a
-    // still-valid drop. Keeps the dispatched set a subset of the current window's slots.
+    private static bool HasPopulatedSlots(in LootSnapshot loot)
+    {
+        for (var i = 0; i < loot.Items.Count; i++)
+        {
+            if (loot.Items[i].ItemId != 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void ObserveEmptyPoll(TimeSpan elapsedSinceLastPoll)
+    {
+        if (!this.pollSessionActive)
+            return;
+
+        this.continuouslyEmptyFor += elapsedSinceLastPoll;
+        if (this.continuouslyEmptyFor < EmptyBatchGracePeriod)
+            return;
+
+        this.EndObservedLootBatch("native loot remained empty for one second");
+    }
+
+    private void EndObservedLootBatch(string reason)
+    {
+        var cleared = this.dispatchedDrops.Count + this.unresolvedDrops.Count;
+        this.dispatchedDrops.Clear();
+        this.unresolvedDrops.Clear();
+        this.pollSessionActive = false;
+        this.continuouslyEmptyFor = TimeSpan.Zero;
+        this.log.Verbose($"observed loot batch ended ({reason}); cleared {cleared} handled drop(s).");
+    }
+
+    // Forgets any previously-dispatched drop that is no longer present in the live loot. Called when
+    // the window (re)opens or polling observes the first populated snapshot after a session boundary;
+    // never called for routine refreshes, where a partial view could otherwise cause redispatch.
     private void PruneDeparted(LootSnapshot loot)
     {
         var present = new HashSet<DropKey>();
@@ -160,8 +280,9 @@ public sealed class LootWatcher : IDisposable
         }
 
         var pruned = this.dispatchedDrops.RemoveWhere(key => !present.Contains(key));
+        pruned += this.unresolvedDrops.RemoveWhere(key => !present.Contains(key));
         if (pruned > 0)
-            this.log.Verbose($"pruned {pruned} dispatched drop(s) no longer present since the window last opened.");
+            this.log.Verbose($"pruned {pruned} handled drop(s) no longer present since the window last opened.");
     }
 
     // Builds a drop's identity from the raw loot entry (raw item id, before HQ normalization) so it
@@ -243,20 +364,22 @@ public sealed class LootWatcher : IDisposable
     }
 
     /// <summary>
-    /// Debug helper (<c>/goodglam reset</c>): clears the set of already-dispatched drops so the same,
-    /// still-open loot is re-dispatched through the pipeline on the next scan. Intended for testing the
-    /// detection/notify path repeatedly without needing a fresh coffer.
+    /// Debug helper (<c>/goodglam reset</c>): clears the handled-drop sets so the same, still-open loot
+    /// is resolved and dispatched through the pipeline again on the next scan. Intended for testing
+    /// the detection/notify path repeatedly without needing a fresh coffer.
     /// </summary>
     public void ResetDispatchedDrops()
     {
-        var count = this.dispatchedDrops.Count;
+        var count = this.dispatchedDrops.Count + this.unresolvedDrops.Count;
         this.dispatchedDrops.Clear();
+        this.unresolvedDrops.Clear();
         this.log.Information(
-            $"reset: cleared {count} dispatched drop(s); the next loot scan will re-dispatch all rollable items.");
+            $"reset: cleared {count} handled drop(s); the next loot scan will re-evaluate all rollable items.");
     }
 
     public void Dispose()
     {
+        Services.Framework.Update -= this.OnFrameworkUpdate;
         Services.AddonLifecycle.UnregisterListener(this.OnAddonEvent);
         Services.AddonLifecycle.UnregisterListener(this.OnAddonClosed);
     }
