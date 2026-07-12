@@ -23,11 +23,11 @@ internal readonly record struct LootEntry(
     uint ChestItemIndex,
     LootMode LootMode);
 
-/// <summary>A point-in-time copy of the Need/Greed loot window.</summary>
+/// <summary>A point-in-time copy of the game's native rollable loot state.</summary>
 internal readonly record struct LootSnapshot(int SelectedIndex, IReadOnlyList<LootEntry> Items);
 
 /// <summary>
-/// Reads the live Need/Greed loot window. The one seam over the native game struct: production
+/// Reads the live native loot state. The one seam over the native game struct: production
 /// reads <see cref="CSLoot"/> through a raw pointer (see <see cref="GameLootReader"/>), while tests
 /// feed a scripted <see cref="LootSnapshot"/>. Returns <c>null</c> when there is no active session.
 /// </summary>

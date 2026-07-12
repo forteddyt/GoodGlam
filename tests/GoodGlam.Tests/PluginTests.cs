@@ -1,5 +1,6 @@
 using System.Reflection;
 using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Interface;
 using Dalamud.Plugin;
@@ -65,6 +66,12 @@ public class PluginTests : IDisposable
 
     private Plugin NewPlugin() => new(this.pi, this.lootReader);
 
+    private void FireFramework(TimeSpan elapsed)
+    {
+        A.CallTo(() => this.framework.UpdateDelta).Returns(elapsed);
+        this.framework.Update += Raise.FreeForm.With(this.framework);
+    }
+
     private string MetaPath(ulong contentId) =>
         Path.Combine(this.configDir, "characters", contentId.ToString("x16"), "meta.json");
 
@@ -76,14 +83,17 @@ public class PluginTests : IDisposable
     }
 
     [Fact]
-    public void Ctor_registers_the_command_and_loot_listeners()
+    public void Ctor_registers_the_command_loot_listeners_and_native_poll()
     {
+        A.CallTo(() => this.condition[ConditionFlag.BoundByDuty]).Returns(true);
         using var plugin = this.NewPlugin();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
 
         this.command.Should().NotBeNull();
         A.CallTo(() => this.commands.AddHandler("/goodglam", A<CommandInfo>._)).MustHaveHappenedOnceExactly();
         A.CallTo(() => this.addon.RegisterListener(A<AddonEvent>._, "NeedGreed", A<IAddonLifecycle.AddonEventDelegate>._))
             .MustHaveHappened(3, Times.Exactly);
+        this.lootReader.ReadCalls.Should().Be(1);
     }
 
     [Fact]
@@ -208,15 +218,17 @@ public class PluginTests : IDisposable
     }
 
     [Fact]
-    public void Dispose_removes_the_command_and_loot_listeners()
+    public void Dispose_removes_the_command_loot_listeners_and_native_poll()
     {
         var plugin = this.NewPlugin();
 
         plugin.Dispose();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
 
         A.CallTo(() => this.commands.RemoveHandler("/goodglam")).MustHaveHappenedOnceExactly();
         A.CallTo(() => this.addon.UnregisterListener(A<IAddonLifecycle.AddonEventDelegate[]>._))
             .MustHaveHappened(2, Times.Exactly);
+        this.lootReader.ReadCalls.Should().Be(0);
     }
 
     public void Dispose()
