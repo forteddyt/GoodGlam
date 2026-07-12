@@ -35,6 +35,7 @@ public sealed class LootWatcher : IDisposable
     // persisted across window close so reopening unchanged loot doesn't re-dispatch. Reconciled when
     // the window (re)opens or a new observed loot batch begins; sustained emptiness ends the batch.
     private readonly HashSet<DropKey> dispatchedDrops = [];
+    private readonly HashSet<DropKey> unresolvedDrops = [];
     private TimeSpan timeSincePoll;
     private TimeSpan continuouslyEmptyFor;
     private bool pollSessionActive;
@@ -189,20 +190,22 @@ public sealed class LootWatcher : IDisposable
                 continue;
             }
 
-            this.log.Verbose($"slot {i} ItemId={lootItem.ItemId} RollState={lootItem.RollState}.");
-
             var key = KeyOf(lootItem);
-            if (this.dispatchedDrops.Contains(key))
+            if (this.dispatchedDrops.Contains(key) || this.unresolvedDrops.Contains(key))
             {
                 if (!frameworkPoll)
-                    this.log.Verbose($"item {lootItem.ItemId} already dispatched this session; skipping.");
+                    this.log.Verbose($"item {lootItem.ItemId} already handled this batch; skipping.");
                 skipped++;
                 continue;
             }
 
+            if (!frameworkPoll)
+                this.log.Verbose($"slot {i} ItemId={lootItem.ItemId} RollState={lootItem.RollState}.");
+
             var drop = this.resolver.Resolve(lootItem.ItemId);
             if (drop is null)
             {
+                this.unresolvedDrops.Add(key);
                 skipped++;
                 continue;
             }
@@ -255,11 +258,12 @@ public sealed class LootWatcher : IDisposable
 
     private void EndObservedLootBatch(string reason)
     {
-        var cleared = this.dispatchedDrops.Count;
+        var cleared = this.dispatchedDrops.Count + this.unresolvedDrops.Count;
         this.dispatchedDrops.Clear();
+        this.unresolvedDrops.Clear();
         this.pollSessionActive = false;
         this.continuouslyEmptyFor = TimeSpan.Zero;
-        this.log.Verbose($"observed loot batch ended ({reason}); cleared {cleared} dispatched drop(s).");
+        this.log.Verbose($"observed loot batch ended ({reason}); cleared {cleared} handled drop(s).");
     }
 
     // Forgets any previously-dispatched drop that is no longer present in the live loot. Called when
@@ -276,8 +280,9 @@ public sealed class LootWatcher : IDisposable
         }
 
         var pruned = this.dispatchedDrops.RemoveWhere(key => !present.Contains(key));
+        pruned += this.unresolvedDrops.RemoveWhere(key => !present.Contains(key));
         if (pruned > 0)
-            this.log.Verbose($"pruned {pruned} dispatched drop(s) no longer present since the window last opened.");
+            this.log.Verbose($"pruned {pruned} handled drop(s) no longer present since the window last opened.");
     }
 
     // Builds a drop's identity from the raw loot entry (raw item id, before HQ normalization) so it
@@ -359,16 +364,17 @@ public sealed class LootWatcher : IDisposable
     }
 
     /// <summary>
-    /// Debug helper (<c>/goodglam reset</c>): clears the set of already-dispatched drops so the same,
-    /// still-open loot is re-dispatched through the pipeline on the next scan. Intended for testing the
-    /// detection/notify path repeatedly without needing a fresh coffer.
+    /// Debug helper (<c>/goodglam reset</c>): clears the handled-drop sets so the same, still-open loot
+    /// is resolved and dispatched through the pipeline again on the next scan. Intended for testing
+    /// the detection/notify path repeatedly without needing a fresh coffer.
     /// </summary>
     public void ResetDispatchedDrops()
     {
-        var count = this.dispatchedDrops.Count;
+        var count = this.dispatchedDrops.Count + this.unresolvedDrops.Count;
         this.dispatchedDrops.Clear();
+        this.unresolvedDrops.Clear();
         this.log.Information(
-            $"reset: cleared {count} dispatched drop(s); the next loot scan will re-dispatch all rollable items.");
+            $"reset: cleared {count} handled drop(s); the next loot scan will re-evaluate all rollable items.");
     }
 
     public void Dispose()

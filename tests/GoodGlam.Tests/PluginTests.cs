@@ -221,6 +221,7 @@ public class PluginTests : IDisposable
     public void Dispose_removes_the_command_loot_listeners_and_native_poll()
     {
         var plugin = this.NewPlugin();
+        A.CallTo(() => this.condition[ConditionFlag.BoundByDuty]).Returns(true);
 
         plugin.Dispose();
         this.FireFramework(TimeSpan.FromMilliseconds(500));

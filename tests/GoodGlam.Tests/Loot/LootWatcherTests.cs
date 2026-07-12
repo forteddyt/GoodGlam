@@ -243,6 +243,27 @@ public class LootWatcherTests
     }
 
     [Fact]
+    public void Unresolved_drop_is_resolved_once_per_observed_batch()
+    {
+        var reader = new StubLootReader(Snapshot(Entry(999, chestObjectId: 100)));
+        this.New(reader);
+        this.SetDutyBound(true);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        A.CallTo(() => this.resolver.Resolve(999)).MustHaveHappenedOnceExactly();
+
+        reader.Snapshot = Snapshot();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        reader.Snapshot = Snapshot(Entry(999, chestObjectId: 100));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        A.CallTo(() => this.resolver.Resolve(999)).MustHaveHappenedTwiceExactly();
+    }
+
+    [Fact]
     public void Skips_drops_in_a_disabled_slot_but_still_dispatches_enabled_ones()
     {
         // #43 core: a drop whose slot is disabled is skipped before any EC lookup (nothing captured),
@@ -426,6 +447,20 @@ public class LootWatcherTests
     }
 
     [Fact]
+    public void ResetDispatchedDrops_rechecks_unresolved_loot()
+    {
+        var reader = new StubLootReader(Snapshot(Entry(999, chestObjectId: 100)));
+        var watcher = this.New(reader);
+        this.SetDutyBound(true);
+
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+        watcher.ResetDispatchedDrops();
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
+
+        A.CallTo(() => this.resolver.Resolve(999)).MustHaveHappenedTwiceExactly();
+    }
+
+    [Fact]
     public void Scan_errors_are_swallowed()
     {
         // A resolver that throws must not let the exception escape the addon callback.
@@ -440,9 +475,10 @@ public class LootWatcherTests
     {
         var reader = new StubLootReader(Snapshot());
         var watcher = this.New(reader);
+        this.SetDutyBound(true);
 
         watcher.Dispose();
-        this.FireFramework(TimeSpan.FromMilliseconds(250));
+        this.FireFramework(TimeSpan.FromMilliseconds(500));
 
         A.CallTo(() => this.addon.UnregisterListener(A<IAddonLifecycle.AddonEventDelegate[]>._))
             .MustHaveHappened(2, Times.Exactly);
