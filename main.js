@@ -315,7 +315,7 @@ var assemblies = [
       { "name": "GoodGlam.History.PopularDropRecord", "rp": "GoodGlam_PopularDropRecord.html", "cl": 10, "ucl": 0, "cal": 10, "tl": 207, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootEntry", "rp": "GoodGlam_LootEntry.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 74, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Loot.LootSnapshot", "rp": "GoodGlam_LootSnapshot.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 74, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 116, "ucl": 1, "cal": 117, "tl": 263, "cb": 43, "tb": 44, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Loot.LootWatcher", "rp": "GoodGlam_LootWatcher.html", "cl": 185, "ucl": 4, "cal": 189, "tl": 386, "cb": 89, "tb": 90, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Plugin", "rp": "GoodGlam_Plugin.html", "cl": 109, "ucl": 0, "cal": 109, "tl": 234, "cb": 49, "tb": 52, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Services", "rp": "GoodGlam_Services.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 25, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.AboutInfo", "rp": "GoodGlam_AboutInfo.html", "cl": 8, "ucl": 0, "cal": 8, "tl": 30, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -365,6 +365,12 @@ var riskHotspots = [
       { "value": 47, "exceeded": true },
     ]},
   {
+    "assembly": "GoodGlam", "class": "GoodGlam.Loot.LootWatcher", "reportPath": "GoodGlam_LootWatcher.html", "methodName": "ReadAndScan(System.String,System.Boolean,System.Boolean,System.TimeSpan)", "methodShortName": "ReadAndScan(...)", "fileIndex": 0, "line": 144,
+    "metrics": [
+      { "value": 40, "exceeded": true },
+      { "value": 40, "exceeded": true },
+    ]},
+  {
     "assembly": "GoodGlam", "class": "GoodGlam.Plugin", "reportPath": "GoodGlam_Plugin.html", "methodName": "OnCommand(System.String,System.String)", "methodShortName": "OnCommand(...)", "fileIndex": 0, "line": 150,
     "metrics": [
       { "value": 36, "exceeded": true },
@@ -381,12 +387,6 @@ var riskHotspots = [
     "metrics": [
       { "value": 24, "exceeded": false },
       { "value": 24, "exceeded": true },
-    ]},
-  {
-    "assembly": "GoodGlam", "class": "GoodGlam.Loot.LootWatcher", "reportPath": "GoodGlam_LootWatcher.html", "methodName": "ScanLoot(Dalamud.Game.Addon.Lifecycle.AddonEvent)", "methodShortName": "ScanLoot(...)", "fileIndex": 0, "line": 87,
-    "metrics": [
-      { "value": 16, "exceeded": false },
-      { "value": 16, "exceeded": true },
     ]},
 ];
 
