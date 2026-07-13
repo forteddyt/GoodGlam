@@ -9,19 +9,9 @@ using Xunit;
 
 namespace GoodGlam.Tests.Windows;
 
-/// <summary>
-/// Guards how the History-tab glam cover preview is placed and, crucially, that it's painted on the
-/// ImGui <b>foreground</b> layer so it floats above the GoodGlam window (the regression fixed when it
-/// was previously drawn in a plain window that rendered behind the focused main window). The live
-/// ImGui submission itself can't run in CI, so these cover the extracted decision seam:
-/// <see cref="GlamPreviewLayout"/>, <see cref="GlamPreviewRenderer"/>, and the layer declared by the
-/// production <see cref="ForegroundPreviewCanvas"/> / <see cref="HistoryTab"/>.
-/// </summary>
 public class GlamPreviewTests
 {
     public GlamPreviewTests() => TestServices.EnsureLog();
-
-    // ---- Foreground-layer guards (the actual ask) ----
 
     [Fact]
     public void Production_canvas_draws_on_the_foreground_layer()
@@ -35,7 +25,25 @@ public class GlamPreviewTests
             "the cover preview must float above the GoodGlam window, not behind it");
     }
 
-    // ---- Placement maths ----
+    [Fact]
+    public void Header_labels_the_current_rank_and_disables_the_boundary_hint()
+    {
+        var first = GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 10);
+        var last = GlamPreviewHeader.Create(selectedIndex: 9, glamCount: 10);
+        var single = GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1);
+
+        first.LeftHint.Text.Should().Be("← right click");
+        first.LeftHint.Enabled.Should().BeFalse();
+        first.RankLabel.Text.Should().Be("Rank #1");
+        first.RightHint.Text.Should().Be("left click →");
+        first.RightHint.Enabled.Should().BeTrue();
+
+        last.RankLabel.Text.Should().Be("Rank #10");
+        last.RightHint.Enabled.Should().BeFalse();
+
+        single.LeftHint.Enabled.Should().BeFalse();
+        single.RightHint.Enabled.Should().BeFalse();
+    }
 
     [Fact]
     public void Layout_anchors_to_the_right_of_the_icon_with_scaled_padding()
@@ -43,16 +51,15 @@ public class GlamPreviewTests
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(100, 200),
             iconMax: new Vector2(120, 220),
-            contentSize: new Vector2(300, 300),
+            measurements: BodyOnly(new Vector2(300, 300)),
+            header: GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1),
             displaySize: new Vector2(1920, 1080),
             scale: 1f);
 
-        // x = iconMax.X + gap(8); y = iconMin.Y.
         box.Min.Should().Be(new Vector2(128, 200));
-        // box = content(300) + padding(6)*2 = 312.
         box.Max.Should().Be(new Vector2(128 + 312, 200 + 312));
-        box.ContentMin.Should().Be(new Vector2(128 + 6, 200 + 6));
-        box.ContentSize.Should().Be(new Vector2(300, 300));
+        box.BodyMin.Should().Be(new Vector2(128 + 6, 200 + 6));
+        box.BodySize.Should().Be(new Vector2(300, 300));
     }
 
     [Fact]
@@ -61,14 +68,14 @@ public class GlamPreviewTests
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(1000, 100),
             iconMax: new Vector2(1020, 120),
-            contentSize: new Vector2(300, 300),
-            displaySize: new Vector2(1080, 1080), // right side (1020+8+312=1340) overflows 1080
+            measurements: BodyOnly(new Vector2(300, 300)),
+            header: GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1),
+            displaySize: new Vector2(1080, 1080),
             scale: 1f);
 
-        // Flipped: x = iconMin.X - gap(8) - boxWidth(312).
         box.Min.X.Should().Be(1000 - 8 - 312);
         box.Min.Y.Should().Be(100);
-        box.Max.X.Should().Be(1000 - 8); // right edge sits a gap left of the icon
+        box.Max.X.Should().Be(1000 - 8);
     }
 
     [Fact]
@@ -77,13 +84,13 @@ public class GlamPreviewTests
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(0, 0),
             iconMax: new Vector2(20, 20),
-            contentSize: new Vector2(100, 100),
+            measurements: BodyOnly(new Vector2(100, 100)),
+            header: GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1),
             displaySize: new Vector2(4000, 4000),
             scale: 2f);
 
-        // gap 8*2=16, padding 6*2=12 each side.
         box.Min.X.Should().Be(20 + 16);
-        box.ContentMin.Should().Be(new Vector2(20 + 16 + 12, 0 + 12));
+        box.BodyMin.Should().Be(new Vector2(20 + 16 + 12, 0 + 12));
         box.Max.Should().Be(box.Min + new Vector2(100 + 24, 100 + 24));
     }
 
@@ -91,25 +98,25 @@ public class GlamPreviewTests
     public void Layout_clamps_vertically_so_a_bottom_row_preview_stays_on_screen()
     {
         var box = GlamPreviewLayout.Compute(
-            iconMin: new Vector2(100, 1000), // near the bottom of a 1080-tall display
+            iconMin: new Vector2(100, 1000),
             iconMax: new Vector2(120, 1020),
-            contentSize: new Vector2(300, 300), // box 312 tall -> 1000+312 = 1312 overflows 1080
+            measurements: BodyOnly(new Vector2(300, 300)),
+            header: GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1),
             displaySize: new Vector2(1920, 1080),
             scale: 1f);
 
         box.Max.Y.Should().BeLessThanOrEqualTo(1080);
-        box.Min.Y.Should().Be(1080 - 312); // pinned so the bottom edge sits on the display edge
+        box.Min.Y.Should().Be(1080 - 312);
     }
 
     [Fact]
     public void Layout_clamps_the_flipped_x_to_the_left_edge()
     {
-        // Icon hugs the left edge and the display is too narrow to fit the box on either side, so the
-        // right-side placement overflows and the flip would go negative; both must pin to x = 0.
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(10, 100),
             iconMax: new Vector2(30, 120),
-            contentSize: new Vector2(300, 300),
+            measurements: BodyOnly(new Vector2(300, 300)),
+            header: GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1),
             displaySize: new Vector2(320, 1080),
             scale: 1f);
 
@@ -122,46 +129,77 @@ public class GlamPreviewTests
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(50, 50),
             iconMax: new Vector2(70, 70),
-            contentSize: new Vector2(500, 500),
-            displaySize: new Vector2(200, 200), // box far exceeds the display on both axes
+            measurements: BodyOnly(new Vector2(500, 500)),
+            header: GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1),
+            displaySize: new Vector2(200, 200),
             scale: 1f);
 
         box.Min.Should().Be(Vector2.Zero);
     }
 
-    // ---- Render flow (background always; image when ready, else note) ----
+    [Fact]
+    public void Layout_reserves_header_width_and_centers_a_short_body_without_overlap()
+    {
+        var measurements = new GlamPreviewMeasurements(
+            BodySize: new Vector2(40, 20),
+            LeftHintSize: new Vector2(80, 10),
+            RankLabelSize: new Vector2(50, 10),
+            RightHintSize: new Vector2(70, 10));
+        var box = GlamPreviewLayout.Compute(
+            iconMin: new Vector2(100, 200),
+            iconMax: new Vector2(120, 220),
+            measurements: measurements,
+            header: GlamPreviewHeader.Create(selectedIndex: 4, glamCount: 10),
+            displaySize: new Vector2(1920, 1080),
+            scale: 1f);
+
+        var contentWidth = box.Max.X - box.Min.X - (GlamPreviewLayout.Padding * 2f);
+
+        contentWidth.Should().Be(226);
+        box.LeftHint.Position.Should().Be(new Vector2(134, 206));
+        box.RankLabel.Position.Should().Be(new Vector2(222, 206));
+        box.RightHint.Position.Should().Be(new Vector2(290, 206));
+        box.BodyMin.Should().Be(new Vector2(227, 222));
+        box.BodySize.Should().Be(new Vector2(40, 20));
+        (box.LeftHint.Position.X + measurements.LeftHintSize.X + GlamPreviewLayout.HeaderGap).Should().BeLessThanOrEqualTo(box.RankLabel.Position.X);
+        (box.RankLabel.Position.X + measurements.RankLabelSize.X + GlamPreviewLayout.HeaderGap).Should().BeLessThanOrEqualTo(box.RightHint.Position.X);
+    }
 
     [Fact]
-    public void Renderer_draws_background_then_image_when_ready()
+    public void Renderer_draws_background_header_then_image_when_ready()
     {
         var canvas = new RecordingCanvas();
-        var box = new GlamPreviewBox(new Vector2(1, 2), new Vector2(3, 4), new Vector2(5, 6), new Vector2(7, 8));
+        var box = Box();
         var image = new GlamImage(GlamImageState.Ready, A.Fake<IDalamudTextureWrap>());
 
         GlamPreviewRenderer.Render(canvas, box, image, "unused");
 
-        canvas.Calls.Should().Equal("Background", "Image");
-        canvas.LastImageMin.Should().Be(box.ContentMin);
-        canvas.LastImageMax.Should().Be(box.ContentMin + box.ContentSize);
+        canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Image");
+        canvas.HeaderSegments.Select(segment => (segment.Text, segment.Enabled)).Should().Equal(
+            ("← right click", false),
+            ("Rank #1", true),
+            ("left click →", true));
+        canvas.LastImageMin.Should().Be(box.BodyMin);
+        canvas.LastImageMax.Should().Be(box.BodyMin + box.BodySize);
     }
 
     [Fact]
-    public void Renderer_draws_background_then_note_when_loading()
+    public void Renderer_draws_background_header_then_note_when_loading()
         => this.AssertNoteRendered(GlamImageState.Loading);
 
     [Fact]
-    public void Renderer_draws_background_then_note_when_failed()
+    public void Renderer_draws_background_header_then_note_when_failed()
         => this.AssertNoteRendered(GlamImageState.Failed);
 
     private void AssertNoteRendered(GlamImageState state)
     {
         var canvas = new RecordingCanvas();
-        var box = new GlamPreviewBox(Vector2.Zero, Vector2.One, new Vector2(5, 6), Vector2.One);
+        var box = Box();
 
         GlamPreviewRenderer.Render(canvas, box, new GlamImage(state, null), "the note");
 
-        canvas.Calls.Should().Equal("Background", "Note");
-        canvas.LastNotePos.Should().Be(box.ContentMin);
+        canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Note");
+        canvas.LastNotePos.Should().Be(box.BodyMin);
         canvas.LastNoteText.Should().Be("the note");
     }
 
@@ -169,17 +207,30 @@ public class GlamPreviewTests
     public void Renderer_falls_back_to_note_when_ready_but_texture_is_missing()
     {
         var canvas = new RecordingCanvas();
-        var box = new GlamPreviewBox(Vector2.Zero, Vector2.One, Vector2.Zero, Vector2.One);
 
-        // Defensive: a Ready state with a null texture must not attempt to draw an image.
-        GlamPreviewRenderer.Render(canvas, box, new GlamImage(GlamImageState.Ready, null), "note");
+        GlamPreviewRenderer.Render(canvas, Box(), new GlamImage(GlamImageState.Ready, null), "note");
 
-        canvas.Calls.Should().Equal("Background", "Note");
+        canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Note");
     }
+
+    private static GlamPreviewMeasurements BodyOnly(Vector2 bodySize)
+        => new(bodySize, Vector2.Zero, Vector2.Zero, Vector2.Zero);
+
+    private static GlamPreviewBox Box()
+        => new(
+            Min: new Vector2(1, 2),
+            Max: new Vector2(300, 400),
+            LeftHint: new GlamPreviewPlacedLabel("← right click", new Vector2(10, 20), false),
+            RankLabel: new GlamPreviewPlacedLabel("Rank #1", new Vector2(100, 20), true),
+            RightHint: new GlamPreviewPlacedLabel("left click →", new Vector2(200, 20), true),
+            BodyMin: new Vector2(30, 60),
+            BodySize: new Vector2(70, 80));
 
     private sealed class RecordingCanvas : IGlamPreviewCanvas
     {
         public List<string> Calls { get; } = [];
+
+        public List<GlamPreviewPlacedLabel> HeaderSegments { get; } = [];
 
         public Vector2 LastImageMin { get; private set; }
 
@@ -192,6 +243,12 @@ public class GlamPreviewTests
         public PreviewLayer Layer => PreviewLayer.Foreground;
 
         public void Background(GlamPreviewBox box) => this.Calls.Add("Background");
+
+        public void Header(GlamPreviewPlacedLabel segment)
+        {
+            this.Calls.Add("Header");
+            this.HeaderSegments.Add(segment);
+        }
 
         public void Image(ImTextureID handle, Vector2 min, Vector2 max)
         {

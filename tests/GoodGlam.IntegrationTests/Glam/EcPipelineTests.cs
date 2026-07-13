@@ -64,7 +64,7 @@ public sealed class EcPipelineTests
 
         popularity.TopLoves.Should().BeGreaterThan(0,
             "'{0}' is a well-loved glamour piece on EC", item.Name);
-        popularity.TopGlamUrl.Should().StartWith("https://ffxiv.eorzeacollection.com/glamour/");
+        popularity.Top!.Url.Should().StartWith("https://ffxiv.eorzeacollection.com/glamour/");
 
         notifier.Count.Should().Be(1, "the loves count clears the threshold, so the drop is popular");
         notifier.LastDrop.Should().Be(drop);
@@ -77,19 +77,23 @@ public sealed class EcPipelineTests
     /// scraping (loves + name + image regexes) the unit tests can only cover against canned markup.
     /// </summary>
     [Fact]
-    public async Task Top_popularity_scrapes_loves_url_name_and_image_for_known_piece()
+    public async Task Ranked_popularity_scrapes_ordered_loves_url_name_and_image_for_known_piece()
     {
         var item = EcFixtures.ScionJacket;
         var client = new EorzeaCollectionClient();
 
         var popularity = await LiveEc.RetryAsync(
-            ct => client.GetTopPopularityAsync(item.Slot, item.EcId, new PopularityFilters(), ct),
+            ct => client.GetPopularityAsync(item.Slot, item.EcId, new PopularityFilters(), ct),
             result => result.TopLoves > 0);
 
         popularity.TopLoves.Should().BeGreaterThan(0);
-        popularity.TopGlamUrl.Should().StartWith("https://ffxiv.eorzeacollection.com/glamour/");
-        popularity.TopGlamName.Should().NotBeNullOrWhiteSpace();
-        popularity.TopGlamImageUrl.Should().StartWith("https://glamours.eorzeacollection.com/",
+        popularity.RankedGlams.Should().NotBeEmpty();
+        popularity.RankedGlams.Should().HaveCountLessThanOrEqualTo(10);
+        popularity.RankedGlams.Select(glam => glam.Loves)
+            .Should().BeInDescendingOrder();
+        popularity.Top!.Url.Should().StartWith("https://ffxiv.eorzeacollection.com/glamour/");
+        popularity.Top.Name.Should().NotBeNullOrWhiteSpace();
+        popularity.Top.ImageUrl.Should().StartWith("https://glamours.eorzeacollection.com/",
             "the winning card's cover image is scraped from the listing so the History tab can preview it");
         popularity.ListingUrl.Should().Contain($"{item.Slot.FilterParam}%5D={item.EcId}");
     }

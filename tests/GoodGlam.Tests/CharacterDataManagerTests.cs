@@ -1,4 +1,5 @@
 using FluentAssertions;
+using GoodGlam.Glam;
 using GoodGlam.History;
 using Xunit;
 
@@ -30,7 +31,12 @@ public class CharacterDataManagerTests : IDisposable
     }
 
     private static PopularDropRecord Record(uint id) =>
-        new(id, $"Item {id}", "body", 200, "Glam", "https://x/glamour/1", DateTimeOffset.UnixEpoch, null);
+        new(
+            id,
+            $"Item {id}",
+            "body",
+            [new GlamResult(200, "https://x/glamour/1", "Glam")],
+            DateTimeOffset.UnixEpoch);
 
     [Fact]
     public void Activate_isolates_config_and_history_per_character()

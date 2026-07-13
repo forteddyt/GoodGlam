@@ -11,8 +11,31 @@ namespace GoodGlam.Glam;
 /// <summary>An Eorzea Collection item record, bridging the game item ID to EC's own filter ID.</summary>
 public sealed record EcItem(int EcId, string Name, long XivApiId);
 
-/// <summary>The most-loved glamour found for a given item, used to judge popularity.</summary>
-public sealed record GlamPopularity(int TopLoves, string? TopGlamUrl, string? TopGlamName = null, string? ListingUrl = null, string? TopGlamImageUrl = null);
+/// <summary>A ranked glamour result scraped from an Eorzea Collection listing.</summary>
+public sealed record GlamResult(int Loves, string Url, string? Name = null, string? ImageUrl = null);
+
+/// <summary>
+/// The ranked glamour results found for a given item, used to judge popularity while retaining the
+/// rest of the listing for later browsing.
+/// </summary>
+public sealed record GlamPopularity
+{
+    public GlamPopularity(IEnumerable<GlamResult>? rankedGlams = null, string? listingUrl = null)
+    {
+        this.RankedGlams = rankedGlams?.Take(10).ToArray() ?? [];
+        this.ListingUrl = listingUrl;
+    }
+
+    public IReadOnlyList<GlamResult> RankedGlams { get; init; }
+
+    public string? ListingUrl { get; init; }
+
+    [JsonIgnore]
+    public GlamResult? Top => this.RankedGlams.Count == 0 ? null : this.RankedGlams[0];
+
+    [JsonIgnore]
+    public int TopLoves => this.Top?.Loves ?? 0;
+}
 
 /// <summary>
 /// Abstraction over the glamour data source so the live scraper can be swapped for a
@@ -22,14 +45,14 @@ public interface IGlamSource
 {
     Task<EcItem?> ResolveEcItemAsync(GlamSlot slot, string itemName, uint gameItemId, CancellationToken ct);
 
-    Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct);
+    Task<GlamPopularity> GetPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct);
 }
 
 /// <summary>
 /// Live Eorzea Collection client. EorzeaCollection has no public API, so two endpoints are
 /// scraped:
 ///   * POST /gear/{slot}/search  -> JSON, maps game item ID (XIVApiId) -> EC ID.
-///   * GET  /glamours?filter[..]  -> HTML listing we scrape for the top "loves" count.
+///   * GET  /glamours?filter[..]  -> HTML listing we scrape for the ranked "loves" results.
 ///
 /// The actual HTTP is delegated to an <see cref="IEcTransport"/> chosen for the current
 /// platform (in-process HttpClient under Wine, the curl.exe subprocess on native Windows),
@@ -100,7 +123,7 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         return null;
     }
 
-    public async Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
+    public async Task<GlamPopularity> GetPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
     {
         var url = BuildListingUrl(slot, ecId, filters);
 
@@ -110,72 +133,72 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         if (string.IsNullOrWhiteSpace(html))
         {
             this.log.Debug($"glamour listing for EC id {ecId} returned an empty/blocked response.");
-            return new GlamPopularity(0, null, null, url);
+            return new GlamPopularity(listingUrl: url);
         }
 
         this.log.Verbose($"listing for EC id {ecId} returned {html.Length} chars of HTML.");
 
-        // Each glamour card exposes its loves count as:
-        //   <span id="js-glamour-likes-<glamId>" ...>1,234</span>
-        // and its title in a sibling link:
-        //   <a ... href="/glamour/<glamId>/<slug>"> ... <h3 class="...content-title...">Name</h3>
-        // We take the maximum loves across the page rather than trusting result ordering,
-        // then pair the winner with its name.
-        var bestLoves = 0;
-        string? bestId = null;
-        foreach (Match m in LovesRegex().Matches(html))
-        {
-            var raw = m.Groups[2].Value.Replace(",", string.Empty);
-            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var loves) && loves > bestLoves)
-            {
-                bestLoves = loves;
-                bestId = m.Groups[1].Value;
-            }
-        }
+        var names = ExtractGlamNames(html);
+        var images = ExtractGlamImages(html);
+        var rankedGlams = LovesRegex().Matches(html)
+            .Cast<Match>()
+            .Select(match => ParseGlam(match, names, images))
+            .Where(glam => glam is not null)
+            .Select(glam => glam!)
+            .OrderByDescending(glam => glam.Loves)
+            .Take(10)
+            .ToArray();
 
-        if (bestId is null)
+        if (rankedGlams.Length == 0)
         {
             this.log.Debug($"no glamour cards found in the listing for EC id {ecId}.");
-            return new GlamPopularity(0, null, null, url);
+            return new GlamPopularity(listingUrl: url);
         }
 
-        var name = ExtractGlamName(html, bestId);
-        var imageUrl = ExtractGlamImage(html, bestId);
-        this.log.Debug($"top glamour for EC id {ecId} is {bestId} '{name ?? "(name not found)"}' with {bestLoves} loves.");
-        return new GlamPopularity(bestLoves, $"{BaseUrl}/glamour/{bestId}", name, url, imageUrl);
+        var top = rankedGlams[0];
+        this.log.Debug(
+            $"top glamour for EC id {ecId} is '{top.Name ?? top.Url}' with {top.Loves} loves " +
+            $"({rankedGlams.Length} ranked result(s) captured).");
+        return new GlamPopularity(rankedGlams, url);
     }
 
-    /// <summary>
-    /// Pulls the glamour title for a specific id out of the listing HTML, decoding HTML entities.
-    /// Returns <c>null</c> if the card's title can't be located (the URL alone is still useful).
-    /// </summary>
-    private static string? ExtractGlamName(string html, string glamId)
+    private static GlamResult? ParseGlam(
+        Match match,
+        IReadOnlyDictionary<string, string?> names,
+        IReadOnlyDictionary<string, string?> images)
     {
-        foreach (Match m in NameRegex().Matches(html))
-        {
-            if (m.Groups[1].Value == glamId)
-                return WebUtility.HtmlDecode(m.Groups[2].Value).Trim();
-        }
+        var rawLoves = match.Groups[2].Value.Replace(",", string.Empty);
+        if (!int.TryParse(rawLoves, NumberStyles.Integer, CultureInfo.InvariantCulture, out var loves))
+            return null;
 
-        return null;
+        var glamId = match.Groups[1].Value;
+        names.TryGetValue(glamId, out var name);
+        images.TryGetValue(glamId, out var imageUrl);
+        return new GlamResult(loves, $"{BaseUrl}/glamour/{glamId}", name, imageUrl);
     }
 
-    /// <summary>
-    /// Pulls the cover-image URL for a specific id out of the listing HTML. The card's cover
-    /// <c>&lt;img&gt;</c> is the glamour's first image, so this avoids a second page fetch. Matches
-    /// the cover <c>&lt;img&gt;</c> (whose <c>src</c> path embeds the glam id) and skips the secondary
-    /// hover image (a <c>&lt;div&gt;</c> with a <c>background-image</c>, which has no <c>src</c>).
-    /// Returns <c>null</c> when the winner has no locatable card image (the URL/name are still useful).
-    /// </summary>
-    private static string? ExtractGlamImage(string html, string glamId)
+    private static IReadOnlyDictionary<string, string?> ExtractGlamNames(string html)
     {
-        foreach (Match m in ImageRegex().Matches(html))
+        Dictionary<string, string?> names = new();
+        foreach (Match match in NameRegex().Matches(html))
         {
-            if (m.Groups[2].Value == glamId)
-                return m.Groups[1].Value;
+            var glamId = match.Groups[1].Value;
+            names.TryAdd(glamId, WebUtility.HtmlDecode(match.Groups[2].Value).Trim());
         }
 
-        return null;
+        return names;
+    }
+
+    private static IReadOnlyDictionary<string, string?> ExtractGlamImages(string html)
+    {
+        Dictionary<string, string?> images = new();
+        foreach (Match match in ImageRegex().Matches(html))
+        {
+            var glamId = match.Groups[2].Value;
+            images.TryAdd(glamId, match.Groups[1].Value);
+        }
+
+        return images;
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using GoodGlam.Glam;
 using GoodGlam.History;
 using Xunit;
 
@@ -14,9 +15,20 @@ public class NotificationHistoryStoreTests : IDisposable
         this.path = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
     }
 
-    private static PopularDropRecord Record(uint id = 1, int loves = 200) =>
-        new(id, $"Item {id}", "body", loves, "Glam", "https://x/glamour/1", DateTimeOffset.UnixEpoch,
-            "https://x/glamours?filter=1");
+    private static PopularDropRecord Record(
+        uint id = 1,
+        IReadOnlyList<GlamResult>? rankedGlams = null,
+        int selectedIndex = 0,
+        Guid rowId = default)
+        => new(
+            id,
+            $"Item {id}",
+            "body",
+            rankedGlams ?? [new GlamResult(200, "https://x/glamour/1", "Glam", "https://glamours.x/1/cover-0-9.png")],
+            DateTimeOffset.UnixEpoch,
+            "https://x/glamours?filter=1",
+            selectedIndex,
+            rowId);
 
     [Fact]
     public void Adds_newest_first()
@@ -45,15 +57,81 @@ public class NotificationHistoryStoreTests : IDisposable
     }
 
     [Fact]
-    public void Persists_and_reloads_across_instances()
+    public void Persists_and_reloads_ranked_glams()
     {
-        new NotificationHistoryStore(this.path).Add(Record(7, 333));
+        new NotificationHistoryStore(this.path).Add(Record(
+            7,
+            [
+                new GlamResult(333, "https://x/glamour/7", "Winner", "https://glamours.x/7.png"),
+                new GlamResult(111, "https://x/glamour/8", "Runner Up"),
+            ]));
 
-        var reloaded = new NotificationHistoryStore(this.path).Snapshot();
-        reloaded.Should().ContainSingle();
-        reloaded[0].ItemId.Should().Be(7);
-        reloaded[0].Loves.Should().Be(333);
-        reloaded[0].ListingUrl.Should().Be("https://x/glamours?filter=1");
+        var reloaded = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
+        reloaded.ItemId.Should().Be(7);
+        reloaded.RankedGlams.Select(glam => (glam.Loves, glam.Name, glam.ImageUrl)).Should().Equal(
+            (333, "Winner", "https://glamours.x/7.png"),
+            (111, "Runner Up", null));
+        reloaded.ListingUrl.Should().Be("https://x/glamours?filter=1");
+    }
+
+    [Fact]
+    public void Persists_and_reloads_the_selected_index()
+    {
+        var rowId = Guid.NewGuid();
+        var store = new NotificationHistoryStore(this.path);
+        store.Add(Record(
+            5,
+            [
+                new GlamResult(300, "https://x/glamour/1", "Top"),
+                new GlamResult(200, "https://x/glamour/2", "Selected"),
+            ],
+            rowId: rowId));
+
+        store.UpdateSelectedIndex(rowId, 1).Should().BeTrue();
+
+        var reloaded = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
+        reloaded.SelectedIndex.Should().Be(1);
+        reloaded.ClampedSelectedIndex.Should().Be(1);
+        reloaded.SelectedGlam!.Name.Should().Be("Selected");
+    }
+
+    [Fact]
+    public void Invalid_selected_index_clamps_current_selection_access()
+    {
+        new NotificationHistoryStore(this.path).Add(Record(
+            9,
+            [
+                new GlamResult(300, "https://x/glamour/1", "Top"),
+                new GlamResult(200, "https://x/glamour/2", "Last"),
+            ],
+            selectedIndex: 99));
+
+        var reloaded = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
+        reloaded.SelectedIndex.Should().Be(99);
+        reloaded.ClampedSelectedIndex.Should().Be(1);
+        reloaded.SelectedGlam!.Name.Should().Be("Last");
+        reloaded.Loves.Should().Be(200);
+    }
+
+    [Fact]
+    public void UpdateSelectedIndex_targets_the_exact_row_when_rows_look_identical()
+    {
+        var firstId = Guid.NewGuid();
+        var secondId = Guid.NewGuid();
+        var glams = new[]
+        {
+            new GlamResult(300, "https://x/glamour/1", "Top"),
+            new GlamResult(200, "https://x/glamour/2", "Alt"),
+        };
+        var store = new NotificationHistoryStore(this.path);
+        store.Add(Record(7, glams, rowId: firstId));
+        store.Add(Record(7, glams, rowId: secondId));
+
+        store.UpdateSelectedIndex(firstId, 1).Should().BeTrue();
+
+        var snapshot = store.Snapshot();
+        snapshot.Single(record => record.RowId == firstId).SelectedGlam!.Url.Should().Be("https://x/glamour/2");
+        snapshot.Single(record => record.RowId == secondId).SelectedGlam!.Url.Should().Be("https://x/glamour/1");
     }
 
     [Fact]
@@ -79,52 +157,12 @@ public class NotificationHistoryStoreTests : IDisposable
     }
 
     [Fact]
-    public void Legacy_entry_without_listing_url_loads_with_null()
-    {
-        // A record persisted before ListingUrl existed: the field is simply absent from the JSON.
-        File.WriteAllText(
-            this.path,
-            """[{"ItemId":7,"ItemName":"Old","Slot":"body","Loves":150,"GlamName":"G","GlamUrl":"u","Timestamp":"2020-01-01T00:00:00+00:00"}]""");
-
-        var record = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
-        record.ItemId.Should().Be(7);
-        record.GlamUrl.Should().Be("u");
-        record.ListingUrl.Should().BeNull();
-    }
-
-    [Fact]
-    public void Legacy_entry_without_glam_image_url_loads_with_null()
-    {
-        // A record persisted before GlamImageUrl existed (older history, incl. entries that already
-        // carried a ListingUrl): the field is simply absent and must deserialize to null.
-        File.WriteAllText(
-            this.path,
-            """[{"ItemId":7,"ItemName":"Old","Slot":"body","Loves":150,"GlamName":"G","GlamUrl":"u","Timestamp":"2020-01-01T00:00:00+00:00","ListingUrl":"https://x/glamours?filter=1"}]""");
-
-        var record = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
-        record.ItemId.Should().Be(7);
-        record.ListingUrl.Should().Be("https://x/glamours?filter=1");
-        record.GlamImageUrl.Should().BeNull();
-    }
-
-    [Fact]
-    public void Persists_and_reloads_the_glam_image_url()
-    {
-        new NotificationHistoryStore(this.path).Add(new PopularDropRecord(
-            5, "Item 5", "body", 200, "Glam", "https://x/glamour/1", DateTimeOffset.UnixEpoch,
-            "https://x/glamours?filter=1", "https://glamours.x/1/cover-0-9.png"));
-
-        var reloaded = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
-        reloaded.GlamImageUrl.Should().Be("https://glamours.x/1/cover-0-9.png");
-    }
-
-    [Fact]
     public void Rebind_swaps_file_and_reloads_records()
     {
         var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
         try
         {
-            new NotificationHistoryStore(other).Add(Record(42, 500));
+            new NotificationHistoryStore(other).Add(Record(42));
 
             var store = new NotificationHistoryStore(this.path);
             store.Add(Record(1));
@@ -151,7 +189,6 @@ public class NotificationHistoryStoreTests : IDisposable
             store.Rebind(other);
             store.Add(Record(2));
 
-            // The second character's file gets the new record; the first character's is untouched.
             new NotificationHistoryStore(other).Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(2);
             new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(1);
         }
@@ -171,7 +208,6 @@ public class NotificationHistoryStoreTests : IDisposable
         store.Rebind(null);
         store.Snapshot().Should().BeEmpty();
 
-        // A detached store keeps everything in memory only — nothing is written to disk.
         store.Add(Record(9));
         store.Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(9);
         File.Exists(this.path).Should().BeTrue();
@@ -204,18 +240,15 @@ public class NotificationHistoryStoreTests : IDisposable
         var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
         try
         {
-            // Drop is captured while character A (this.path) is active...
             var store = new NotificationHistoryStore(this.path);
             var bindingForA = store.CaptureBinding();
 
-            // ...then the player switches to character B before the lookup completes.
             store.Rebind(other);
-            store.Add(Record(2)); // B's own drop
+            store.Add(Record(2));
 
-            var landedActive = store.AddTo(bindingForA, Record(1)); // A's late drop
+            var landedActive = store.AddTo(bindingForA, Record(1));
 
             landedActive.Should().BeFalse();
-            // A's drop went to A's file; B's live history is untouched (no leak, no glow).
             new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(1);
             store.Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(2);
         }
@@ -244,14 +277,12 @@ public class NotificationHistoryStoreTests : IDisposable
         var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
         try
         {
-            // Fill character A (this.path) to the cap, capture its binding, then switch to B.
             var store = new NotificationHistoryStore(this.path);
             for (uint i = 0; i < NotificationHistoryStore.MaxEntries; i++)
                 store.Add(Record(i));
             var bindingForA = store.CaptureBinding();
             store.Rebind(other);
 
-            // A late drop for A is appended directly to A's file, which then prunes back to the cap.
             store.AddTo(bindingForA, Record(9999)).Should().BeFalse();
 
             var reloaded = new NotificationHistoryStore(this.path).Snapshot();
@@ -268,8 +299,6 @@ public class NotificationHistoryStoreTests : IDisposable
     [Fact]
     public void AddTo_swallows_io_errors_when_appending_to_a_since_switched_origin()
     {
-        // Character A's history path is unwritable ("<file>/history.json"); after switching to B, a
-        // late drop for A hits AppendDirect's catch and is reported as not-active without throwing.
         var blocker = Path.Combine(Path.GetTempPath(), $"goodglam-blocker-{Guid.NewGuid():N}");
         File.WriteAllText(blocker, "x");
         var other = Path.Combine(Path.GetTempPath(), $"goodglam-history-{Guid.NewGuid():N}.json");
@@ -299,7 +328,6 @@ public class NotificationHistoryStoreTests : IDisposable
             var store = new NotificationHistoryStore(Path.Combine(blocker, "history.json"));
             store.Invoking(s => s.Add(Record(1))).Should().NotThrow();
 
-            // The record still lives in memory even though persistence failed.
             store.Snapshot().Should().ContainSingle().Which.ItemId.Should().Be(1);
         }
         finally

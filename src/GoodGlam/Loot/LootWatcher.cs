@@ -359,7 +359,7 @@ public sealed class LootWatcher : IDisposable
         var passed = popularity.TopLoves >= threshold;
         this.log.Information(
             $"check: {drop.Name} -> topLoves={popularity.TopLoves}, " +
-            $"glam={popularity.TopGlamUrl ?? "(none)"}, threshold={threshold} => " +
+            $"glam={popularity.Top?.Url ?? "(none)"}, threshold={threshold} => " +
             $"{(passed ? "POPULAR — logged to history (logo glow raised)" : "below threshold — not logged")}");
     }
 

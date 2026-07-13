@@ -44,12 +44,9 @@ public sealed class HistoryNotifier : INotifier
                 drop.ItemId,
                 drop.Name,
                 drop.Slot.Key,
-                popularity.TopLoves,
-                popularity.TopGlamName,
-                popularity.TopGlamUrl,
+                popularity.RankedGlams,
                 DateTimeOffset.Now,
-                popularity.ListingUrl,
-                popularity.TopGlamImageUrl));
+                popularity.ListingUrl));
 
             // Only light the active character's logo; a drop recorded for a since-switched character
             // must not glow on whoever is logged in now.
