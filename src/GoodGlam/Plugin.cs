@@ -17,6 +17,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly Configuration config;
     private readonly WindowSystem windowSystem = new("GoodGlam");
     private readonly MainWindow mainWindow;
+    private readonly DropDetailsWindow dropDetailsWindow;
     private readonly LogoWindow logoWindow;
     private readonly NotificationHistoryStore history;
     private readonly NotificationState notificationState = new();
@@ -47,12 +48,19 @@ public sealed class Plugin : IDalamudPlugin
         var popularity = new GlamPopularityService(this.config, this.ecClient, notifier);
         this.lootWatcher = new LootWatcher(new ItemResolver(), popularity, this.config, lootReader);
 
-        this.mainWindow = new MainWindow(this.config, EcFilterCatalog.LoadEmbedded(), this.history, this.SetLogoVisible);
+        this.dropDetailsWindow = new DropDetailsWindow();
+        this.mainWindow = new MainWindow(
+            this.config,
+            EcFilterCatalog.LoadEmbedded(),
+            this.history,
+            this.SetLogoVisible,
+            this.dropDetailsWindow);
 
         // No IsOpen initializer here: the config is neutral until a character logs in, so the logo's
         // per-character show/hide preference is applied in ActivateCurrentCharacter instead.
         this.logoWindow = new LogoWindow(this.config, this.ToggleMain, this.notificationState);
         this.windowSystem.AddWindow(this.mainWindow);
+        this.windowSystem.AddWindow(this.dropDetailsWindow);
         this.windowSystem.AddWindow(this.logoWindow);
 
         Services.PluginInterface.UiBuilder.Draw += this.windowSystem.Draw;

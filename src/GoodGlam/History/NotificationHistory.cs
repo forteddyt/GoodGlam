@@ -9,7 +9,8 @@ namespace GoodGlam.History;
 /// <see cref="ListingUrl"/> is the EC glamours listing for the item with the filters that were
 /// active when the drop was logged, frozen so the row keeps linking to that same filtered view.
 /// <see cref="GlamImageUrl"/> is the top glamour's cover-image URL (its first image), used to show a
-/// hover preview in the history table; optional so older entries saved before it existed still load.
+/// hover preview in the history table. <see cref="DroppedAt"/> and <see cref="DutyName"/> are captured
+/// when the loot is detected rather than when the asynchronous popularity lookup finishes.
 /// </summary>
 public sealed record PopularDropRecord(
     uint ItemId,
@@ -18,7 +19,8 @@ public sealed record PopularDropRecord(
     int Loves,
     string? GlamName,
     string? GlamUrl,
-    DateTimeOffset Timestamp,
+    DateTimeOffset DroppedAt,
+    string? DutyName,
     string? ListingUrl = null,
     string? GlamImageUrl = null);
 

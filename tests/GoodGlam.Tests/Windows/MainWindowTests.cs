@@ -25,7 +25,8 @@ public class MainWindowTests
             new Configuration { Filters = new() },
             EcFilterCatalog.LoadEmbedded(),
             new NotificationHistoryStore(string.Empty),
-            _ => { });
+            _ => { },
+            new DropDetailsWindow());
 
     [Fact]
     public void Constructs_without_a_framework()

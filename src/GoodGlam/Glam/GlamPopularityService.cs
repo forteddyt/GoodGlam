@@ -21,7 +21,7 @@ public interface INotifier
 /// <summary>The character-bound sink a captured popularity result is delivered to on completion.</summary>
 public interface INotificationTarget
 {
-    void NotifyPopular(DropItem drop, GlamPopularity popularity);
+    void NotifyPopular(DropOccurrence drop, GlamPopularity popularity);
 }
 
 /// <summary>
@@ -54,7 +54,7 @@ public sealed class GlamPopularityService
     /// Returns the popularity it found (or an empty result on error) so callers/diagnostics
     /// can inspect the outcome.
     /// </summary>
-    public async Task<GlamPopularity> ProcessAsync(DropItem drop)
+    public async Task<GlamPopularity> ProcessAsync(DropOccurrence drop)
     {
         // Capture the history target now, synchronously on the caller's (framework) thread, before
         // any await hands control to a thread-pool continuation. This pins the drop to the character
@@ -81,7 +81,7 @@ public sealed class GlamPopularityService
         }
     }
 
-    private async Task<GlamPopularity> GetPopularityAsync(DropItem drop)
+    private async Task<GlamPopularity> GetPopularityAsync(DropOccurrence drop)
     {
         // Filters are global, but fold their signature into the cache key so toggling a filter
         // is treated as a fresh lookup instead of returning a stale, differently-filtered result.

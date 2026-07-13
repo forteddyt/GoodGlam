@@ -103,12 +103,12 @@ internal class NoopLog : DispatchProxy
 internal sealed class CapturingNotifier : INotifier, INotificationTarget
 {
     public int Count;
-    public DropItem? LastDrop;
+    public DropOccurrence? LastDrop;
     public GlamPopularity? LastPopularity;
 
     public INotificationTarget CaptureTarget() => this;
 
-    public void NotifyPopular(DropItem drop, GlamPopularity popularity)
+    public void NotifyPopular(DropOccurrence drop, GlamPopularity popularity)
     {
         this.Count++;
         this.LastDrop = drop;
