@@ -15,7 +15,7 @@ internal sealed class FakeGlamSource : IGlamSource
     public int ResolveCalls;
     public int PopularityCalls;
     public EcItem? EcItem = new(14930, "X", 25430);
-    public GlamPopularity Popularity = new(0, null);
+    public GlamPopularity Popularity = new();
     public Exception? Throw;
     public PopularityFilters? LastFilters;
 
@@ -26,7 +26,7 @@ internal sealed class FakeGlamSource : IGlamSource
         return Task.FromResult(this.EcItem);
     }
 
-    public Task<GlamPopularity> GetTopPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
+    public Task<GlamPopularity> GetPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct)
     {
         this.PopularityCalls++;
         this.LastFilters = filters;

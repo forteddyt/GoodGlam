@@ -1,4 +1,5 @@
 using FluentAssertions;
+using GoodGlam.Glam;
 using GoodGlam.History;
 using GoodGlam.Windows;
 using Xunit;
@@ -11,9 +12,7 @@ public class HistoryDetailsStateTests
         3610,
         "Cavalry Gauntlets",
         "hands",
-        250,
-        "Nirvana",
-        "https://ec/glamour/200",
+        [new GlamResult(250, "https://ec/glamour/200", "Nirvana")],
         new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero),
         "The Aurum Vale");
 

@@ -1,6 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Numerics;
-using System.Diagnostics.CodeAnalysis;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
@@ -14,25 +14,27 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// The History tab of the unified <see cref="MainWindow"/>: a browsable, persistent table of every
-/// qualifying drop. Each row shows its equipment piece, item, top loves count, a clickable glamour
-/// name that opens the Eorzea Collection page, a hover preview of the top glamour's cover image, and
-/// an action that opens the drop time and duty details. (Formerly the standalone HistoryWindow.)
+/// qualifying drop. Each row shows its equipment piece, the selected glamour's loves count, the
+/// item, a hover preview with rank navigation, the selected rank, a clickable glamour name that opens
+/// the selected Eorzea Collection page, a link to all matching glamours, and an action that opens the
+/// captured drop time and duty details. (Formerly the standalone HistoryWindow.)
 /// </summary>
 /// <remarks>
 /// Rendering only. The link-vs-text decision lives in the tested <see cref="HistoryLinkCell"/>, the
-/// open effect in the tested <see cref="HistoryActions"/>, the lazy per-URL image caching in the
-/// tested <see cref="GlamImageCache"/>, and the preview load flow (download/decode/upload + failure
-/// handling) in the tested <see cref="GlamImageLoader"/>; this class just draws from and wires up
-/// those, so it is excluded from coverage while the logic behind it is tested.
+/// open effect in the tested <see cref="HistoryActions"/>, the preview navigation/hover policy in the
+/// pure helpers at the bottom of this file, the load scheduler in the tested <see cref="GlamImageCache"/>,
+/// and the preview load flow (download/decode/upload + failure handling) in the tested
+/// <see cref="GlamImageLoader"/>; this class just draws from and wires up those, so it is excluded
+/// from coverage while the logic behind it is tested.
 /// </remarks>
-[ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the link decision (HistoryLinkCell), open effect (HistoryActions), and image cache (GlamImageCache) are extracted and tested, and a live ImGui context can't run in CI.")]
+[ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the link decision (HistoryLinkCell), open effect (HistoryActions), preview policy helpers, image cache scheduler (GlamImageCache), and preview renderer/layout are extracted and tested, and a live ImGui context can't run in CI.")]
 internal sealed class HistoryTab : IDisposable
 {
     /// <summary>Logical longest-edge cap of the cover preview thumbnail, scaled by GlobalScale.</summary>
     private const float PreviewMaxSide = 320f;
     private const string DetailsBackdropId = "##GoodGlamDropDetailsBackdrop";
     internal static readonly string[] ColumnOrder =
-        ["Piece", "Loves", "Item", "Preview", "Top Glam", "All Glams", "Details"];
+        ["Piece", "Loves", "Item", "Preview", "Rank", "Glam", "All Glams", "Details"];
 
     private static readonly HttpClient Http = CreateHttpClient();
 
@@ -61,6 +63,7 @@ internal sealed class HistoryTab : IDisposable
     private readonly ITraceLogger<HistoryTab> log = new TraceLogger<HistoryTab>();
     private readonly HistoryActions actions;
     private readonly GlamImageCache imageCache;
+    private readonly GlamPreviewHoverState previewHover = new();
     private readonly IGlamPreviewCanvas previewCanvas = new ForegroundPreviewCanvas();
     private readonly DropDetailsWindow detailsWindow;
 
@@ -112,69 +115,89 @@ internal sealed class HistoryTab : IDisposable
         var overlaySize = ImGui.GetContentRegionAvail();
         this.detailsWindow.SetHostBounds(overlayMin, overlaySize);
 
-        ImGui.TextDisabled($"{records.Count} qualifying drop(s) logged.");
-        ImGui.SameLine();
-        if (ImGui.Button("Clear"))
+        var tableOpen = false;
+        try
         {
-            this.log.Debug($"history Clear clicked ({records.Count} entries).");
-            this.store.Clear();
+            ImGui.TextDisabled($"{records.Count} qualifying drop(s) logged.");
+            ImGui.SameLine();
+            if (ImGui.Button("Clear"))
+            {
+                this.log.Debug($"history Clear clicked ({records.Count} entries).");
+                this.store.Clear();
+            }
+
+            ImGui.Separator();
+
+            if (records.Count == 0)
+            {
+                ImGui.TextWrapped("No popular drops yet. Qualifying drops appear here, and persist across sessions.");
+                return;
+            }
+
+            const ImGuiTableFlags flags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
+                | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable;
+
+            if (!ImGui.BeginTable("##history", 8, flags))
+                return;
+
+            tableOpen = true;
+            ImGui.TableSetupScrollFreeze(0, 1);
+            ImGui.TableSetupColumn(ColumnOrder[0], ImGuiTableColumnFlags.WidthFixed, 70);
+            ImGui.TableSetupColumn(ColumnOrder[1], ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableSetupColumn(ColumnOrder[2], ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn(ColumnOrder[3], ImGuiTableColumnFlags.WidthFixed, 48);
+            ImGui.TableSetupColumn(ColumnOrder[4], ImGuiTableColumnFlags.WidthFixed, 45);
+            ImGui.TableSetupColumn(ColumnOrder[5], ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn(ColumnOrder[6], ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn(ColumnOrder[7], ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableHeadersRow();
+
+            for (var index = 0; index < records.Count; index++)
+            {
+                var record = records[index];
+                ImGui.PushID(index);
+                try
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.TextUnformatted(HistoryRecordPresentation.PieceLabel(record.Slot));
+
+                    ImGui.TableSetColumnIndex(1);
+                    ImGui.TextUnformatted(record.Loves.ToString());
+
+                    ImGui.TableSetColumnIndex(2);
+                    ImGui.TextUnformatted(record.ItemName);
+
+                    ImGui.TableSetColumnIndex(3);
+                    this.DrawImageIndicator(record);
+
+                    ImGui.TableSetColumnIndex(4);
+                    ImGui.TextUnformatted(HistoryRecordPresentation.SelectedRank(record));
+
+                    ImGui.TableSetColumnIndex(5);
+                    this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
+
+                    ImGui.TableSetColumnIndex(6);
+                    this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+
+                    ImGui.TableSetColumnIndex(7);
+                    if (ImGui.SmallButton("View"))
+                        this.detailsWindow.Show(record);
+                }
+                finally
+                {
+                    ImGui.PopID();
+                }
+            }
         }
-
-        ImGui.Separator();
-
-        if (records.Count == 0)
+        finally
         {
-            ImGui.TextWrapped("No popular drops yet. Qualifying drops appear here, and persist across sessions.");
-            return;
+            if (tableOpen)
+                ImGui.EndTable();
+
+            this.DrawDetailsBackdrop(overlayMin, overlaySize);
+            this.previewHover.EndFrame();
         }
-
-        const ImGuiTableFlags flags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
-            | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable;
-
-        if (!ImGui.BeginTable("##history", 7, flags))
-            return;
-
-        ImGui.TableSetupScrollFreeze(0, 1);
-        ImGui.TableSetupColumn(ColumnOrder[0], ImGuiTableColumnFlags.WidthFixed, 70);
-        ImGui.TableSetupColumn(ColumnOrder[1], ImGuiTableColumnFlags.WidthFixed, 60);
-        ImGui.TableSetupColumn(ColumnOrder[2], ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn(ColumnOrder[3], ImGuiTableColumnFlags.WidthFixed, 48);
-        ImGui.TableSetupColumn(ColumnOrder[4], ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn(ColumnOrder[5], ImGuiTableColumnFlags.WidthFixed, 80);
-        ImGui.TableSetupColumn(ColumnOrder[6], ImGuiTableColumnFlags.WidthFixed, 60);
-        ImGui.TableHeadersRow();
-
-        for (var index = 0; index < records.Count; index++)
-        {
-            var record = records[index];
-            ImGui.PushID(index);
-            ImGui.TableNextRow();
-            ImGui.TableSetColumnIndex(0);
-            ImGui.TextUnformatted(HistoryRecordPresentation.PieceLabel(record.Slot));
-
-            ImGui.TableSetColumnIndex(1);
-            ImGui.TextUnformatted(record.Loves.ToString());
-
-            ImGui.TableSetColumnIndex(2);
-            ImGui.TextUnformatted(record.ItemName);
-
-            ImGui.TableSetColumnIndex(3);
-            this.DrawImageIndicator(record.GlamImageUrl);
-
-            ImGui.TableSetColumnIndex(4);
-            this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
-
-            ImGui.TableSetColumnIndex(5);
-            this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
-
-            ImGui.TableSetColumnIndex(6);
-            if (ImGui.SmallButton("View"))
-                this.detailsWindow.Show(record);
-            ImGui.PopID();
-        }
-
-        ImGui.EndTable();
-        this.DrawDetailsBackdrop(overlayMin, overlaySize);
     }
 
     internal void CloseDetails() => this.detailsWindow.Close();
@@ -235,43 +258,67 @@ internal sealed class HistoryTab : IDisposable
     }
 
     /// <summary>
-    /// Draws the Image-column indicator: a small FontAwesome image glyph, coloured when a cover image
-    /// was captured and dimmed when not. Hovering the lit glyph shows the top glamour's cover image in
-    /// a preview anchored beside the icon (not following the cursor); the image is fetched lazily and
-    /// cached per URL by <see cref="GlamImageCache"/>.
+    /// Draws the Preview-column image glyph. Hovering shows the selected glamour's anchored preview,
+    /// while left/right click step through the ranked glamour list without wrapping and persist the new
+    /// selection through <see cref="NotificationHistoryStore.UpdateSelectedIndex"/>.
     /// </summary>
-    private void DrawImageIndicator(string? imageUrl)
+    private void DrawImageIndicator(PopularDropRecord record)
     {
-        var hasImage = !string.IsNullOrEmpty(imageUrl);
+        var interactive = GlamPreviewIndicatorInteraction.IsInteractive(record);
         var glyph = FontAwesomeIcon.Image.ToIconString();
 
         ImGui.PushFont(UiBuilder.IconFont);
-        if (hasImage)
+        if (interactive)
             ImGui.TextUnformatted(glyph);
         else
             ImGui.TextDisabled(glyph);
         ImGui.PopFont();
 
-        if (hasImage && ImGui.IsItemHovered())
-            this.DrawAnchoredPreview(imageUrl, ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+        if (!interactive)
+            return;
+
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+            GlamSelectionNavigator.TryMove(record, GlamSelectionDirection.Next, this.store.UpdateSelectedIndex);
+        else if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+            GlamSelectionNavigator.TryMove(record, GlamSelectionDirection.Previous, this.store.UpdateSelectedIndex);
+
+        if (!ImGui.IsItemHovered())
+            return;
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        var batch = this.previewHover.OnHover(record);
+        if (batch.Count != 0)
+            this.imageCache.SubmitBatch(batch);
+
+        this.DrawAnchoredPreview(record, ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
     }
 
     /// <summary>
-    /// Draws the cover preview (or a small loading/absent note) anchored just beside the hovered icon,
-    /// so it stays put instead of trailing the mouse like a default tooltip. Placement is decided by
-    /// the pure <see cref="GlamPreviewLayout"/> and submission by <see cref="GlamPreviewRenderer"/>
-    /// onto the foreground <see cref="previewCanvas"/> (so it floats above the window); this method
-    /// only measures the content (which needs live ImGui) and hands off. The texture is fetched
-    /// lazily and cached per URL by <see cref="GlamImageCache"/>, so hovering doesn't refetch each frame.
+    /// Draws the selected glamour's cover preview (or a small loading/absent note) anchored just beside
+    /// the hovered icon, so it stays put instead of trailing the mouse like a default tooltip.
+    /// Placement is decided by the pure <see cref="GlamPreviewLayout"/> and submission by
+    /// <see cref="GlamPreviewRenderer"/> onto the foreground <see cref="previewCanvas"/>.
     /// </summary>
-    private void DrawAnchoredPreview(string? imageUrl, Vector2 iconMin, Vector2 iconMax)
+    private void DrawAnchoredPreview(PopularDropRecord record, Vector2 iconMin, Vector2 iconMax)
     {
-        var image = this.imageCache.Get(imageUrl);
+        var image = this.imageCache.Get(record.GlamImageUrl);
         var ready = image is { State: GlamImageState.Ready, Texture: not null };
-        var note = image.State == GlamImageState.Loading ? "Loading preview…" : "No preview available.";
-
-        var contentSize = ready ? PreviewSize(image.Texture!) : ImGui.CalcTextSize(note);
-        var box = GlamPreviewLayout.Compute(iconMin, iconMax, contentSize, ImGui.GetIO().DisplaySize, ImGuiHelpers.GlobalScale);
+        var note = image.State == GlamImageState.Loading && !string.IsNullOrEmpty(record.GlamImageUrl)
+            ? "Loading preview…"
+            : "No preview available.";
+        var header = GlamPreviewHeader.Create(record.ClampedSelectedIndex, record.RankedGlams.Count);
+        var bodySize = ready ? PreviewSize(image.Texture!) : ImGui.CalcTextSize(note);
+        var measurements = new GlamPreviewMeasurements(
+            bodySize,
+            ImGui.CalcTextSize(header.Text),
+            ImGui.CalcTextSize(GlamPreviewFooter.Text));
+        var box = GlamPreviewLayout.Compute(
+            iconMin,
+            iconMax,
+            measurements,
+            header,
+            ImGui.GetIO().DisplaySize,
+            ImGuiHelpers.GlobalScale);
 
         GlamPreviewRenderer.Render(this.previewCanvas, box, image, note);
     }
@@ -304,4 +351,126 @@ internal sealed class HistoryTab : IDisposable
 
     /// <summary>Releases the per-URL image textures owned by the cache when the window tears down.</summary>
     public void Dispose() => this.imageCache.Dispose();
+}
+
+internal enum GlamSelectionDirection
+{
+    Previous = -1,
+    Next = 1,
+}
+
+/// <summary>Pure row-selection navigation: clamp-aware next/previous stepping with persistence delegation.</summary>
+internal static class GlamSelectionNavigator
+{
+    internal static bool TryMove(PopularDropRecord record, GlamSelectionDirection direction, Func<Guid, int, bool> persist)
+    {
+        var count = record.RankedGlams.Count;
+        if (count <= 1)
+            return false;
+
+        var next = record.ClampedSelectedIndex + (int)direction;
+        if (next < 0 || next >= count)
+            return false;
+
+        return persist(record.RowId, next);
+    }
+}
+
+/// <summary>Pure interactivity seam for the Preview glyph: empty rows draw disabled and stay fully inert.</summary>
+internal static class GlamPreviewIndicatorInteraction
+{
+    internal static bool IsInteractive(PopularDropRecord record) => record.RankedGlams.Count != 0;
+}
+
+/// <summary>
+/// Pure preload policy for one row's selected rank. Hover entry queues the selected image first and
+/// its clipped initial neighborhood; subsequent one-rank moves queue the selected image plus only the
+/// newly exposed edge. Missing image URLs are skipped.
+/// </summary>
+internal static class GlamPreviewPreloadPolicy
+{
+    internal static IReadOnlyList<string> BuildInitialBatch(PopularDropRecord record)
+    {
+        if (record.RankedGlams.Count == 0)
+            return [];
+
+        var current = record.ClampedSelectedIndex;
+        var start = Math.Max(0, current - 5);
+        var end = Math.Min(record.RankedGlams.Count - 1, current == 0 ? 4 : current + 5);
+        var urls = new List<string>(end - start + 1);
+
+        Add(record, urls, current);
+        for (var index = start; index <= end; index++)
+        {
+            if (index != current)
+                Add(record, urls, index);
+        }
+
+        return urls;
+    }
+
+    internal static IReadOnlyList<string> BuildSelectionChangeBatch(PopularDropRecord record, int previousIndex)
+    {
+        if (record.RankedGlams.Count == 0)
+            return [];
+
+        var current = record.ClampedSelectedIndex;
+        var previous = Math.Clamp(previousIndex, 0, record.RankedGlams.Count - 1);
+        if (Math.Abs(current - previous) != 1)
+            return BuildInitialBatch(record);
+
+        var urls = new List<string>(2);
+        Add(record, urls, current);
+
+        var exposed = current > previous ? current + 4 : current - 5;
+        if (exposed >= 0 && exposed < record.RankedGlams.Count && exposed != current)
+            Add(record, urls, exposed);
+
+        return urls;
+    }
+
+    private static void Add(PopularDropRecord record, List<string> urls, int index)
+    {
+        var url = record.RankedGlams[index].ImageUrl;
+        if (!string.IsNullOrEmpty(url) && !urls.Contains(url, StringComparer.Ordinal))
+            urls.Add(url);
+    }
+}
+
+/// <summary>
+/// Tracks hover entry for the preview icon. A batch is submitted only when a row is newly hovered,
+/// re-entered after leaving, or its selected rank changes while still hovered; steady-state hover on
+/// the same row/rank does not resubmit every frame.
+/// </summary>
+internal sealed class GlamPreviewHoverState
+{
+    private Guid? hoveredRowId;
+    private int hoveredSelectedIndex = -1;
+    private bool hoveredThisFrame;
+
+    internal IReadOnlyList<string> OnHover(PopularDropRecord record)
+    {
+        this.hoveredThisFrame = true;
+        var selectedIndex = record.ClampedSelectedIndex;
+        IReadOnlyList<string> batch = [];
+        if (this.hoveredRowId != record.RowId)
+            batch = GlamPreviewPreloadPolicy.BuildInitialBatch(record);
+        else if (this.hoveredSelectedIndex != selectedIndex)
+            batch = GlamPreviewPreloadPolicy.BuildSelectionChangeBatch(record, this.hoveredSelectedIndex);
+
+        this.hoveredRowId = record.RowId;
+        this.hoveredSelectedIndex = selectedIndex;
+        return batch;
+    }
+
+    internal void EndFrame()
+    {
+        if (!this.hoveredThisFrame)
+        {
+            this.hoveredRowId = null;
+            this.hoveredSelectedIndex = -1;
+        }
+
+        this.hoveredThisFrame = false;
+    }
 }

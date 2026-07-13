@@ -122,7 +122,7 @@ public class LootWatcherTests
     {
         A.CallTo(() => this.resolver.Resolve(3610u))
             .Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
-        this.source.Popularity = new GlamPopularity(150, "u");
+        this.source.Popularity = new GlamPopularity([new GlamResult(150, "u")]);
         this.New(new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100))));
 
         this.Fire(AddonEvent.PostSetup);
@@ -293,7 +293,7 @@ public class LootWatcherTests
         A.CallTo(() => this.resolver.Resolve(3610u)).Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
         A.CallTo(() => this.resolver.Resolve(3611u)).Returns(new DropItem(3611, "Cavalry Cuisses", GlamSlot.Legs));
         this.config.Slots[GlamSlot.Hands.Key] = new SlotSetting { Enabled = false };
-        this.source.Popularity = new GlamPopularity(150, "u"); // above the default 100 threshold, so it notifies
+        this.source.Popularity = new GlamPopularity([new GlamResult(150, "u")]); // above the default 100 threshold, so it notifies
         this.New(new StubLootReader(Snapshot(Entry(3610), Entry(3611, chestItemIndex: 1))));
 
         this.Fire(AddonEvent.PostSetup);

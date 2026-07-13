@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using GoodGlam.Diagnostics;
+using GoodGlam.Glam;
 
 namespace GoodGlam.History;
 
@@ -8,21 +10,73 @@ namespace GoodGlam.History;
 /// row can be rendered (and its glamour reopened) long after the drop, across game sessions.
 /// <see cref="ListingUrl"/> is the EC glamours listing for the item with the filters that were
 /// active when the drop was logged, frozen so the row keeps linking to that same filtered view.
-/// <see cref="GlamImageUrl"/> is the top glamour's cover-image URL (its first image), used to show a
-/// hover preview in the history table. <see cref="DroppedAt"/> and <see cref="DutyName"/> are captured
-/// when the loot is detected rather than when the asynchronous popularity lookup finishes.
+/// <see cref="RankedGlams"/> stores up to ten ranked glamour candidates and <see cref="SelectedIndex"/>
+/// chooses which one the UI should currently present. <see cref="DroppedAt"/> and <see cref="DutyName"/>
+/// are captured when the loot is detected rather than when the asynchronous popularity lookup finishes.
 /// </summary>
-public sealed record PopularDropRecord(
-    uint ItemId,
-    string ItemName,
-    string Slot,
-    int Loves,
-    string? GlamName,
-    string? GlamUrl,
-    DateTimeOffset DroppedAt,
-    string? DutyName,
-    string? ListingUrl = null,
-    string? GlamImageUrl = null);
+public sealed record PopularDropRecord
+{
+    public PopularDropRecord(
+        uint itemId,
+        string itemName,
+        string slot,
+        IReadOnlyList<GlamResult>? rankedGlams,
+        DateTimeOffset droppedAt,
+        string? dutyName,
+        string? listingUrl = null,
+        int selectedIndex = 0,
+        Guid rowId = default)
+    {
+        this.RowId = rowId == Guid.Empty ? Guid.NewGuid() : rowId;
+        this.ItemId = itemId;
+        this.ItemName = itemName;
+        this.Slot = slot;
+        this.RankedGlams = rankedGlams?.Take(10).ToArray() ?? [];
+        this.DroppedAt = droppedAt;
+        this.DutyName = dutyName;
+        this.ListingUrl = listingUrl;
+        this.SelectedIndex = selectedIndex;
+    }
+
+    public Guid RowId { get; init; }
+
+    public uint ItemId { get; init; }
+
+    public string ItemName { get; init; }
+
+    public string Slot { get; init; }
+
+    public IReadOnlyList<GlamResult> RankedGlams { get; init; }
+
+    public DateTimeOffset DroppedAt { get; init; }
+
+    public string? DutyName { get; init; }
+
+    public string? ListingUrl { get; init; }
+
+    public int SelectedIndex { get; init; }
+
+    [JsonIgnore]
+    public int ClampedSelectedIndex => this.RankedGlams.Count == 0 ? 0 : Math.Clamp(this.SelectedIndex, 0, this.RankedGlams.Count - 1);
+
+    [JsonIgnore]
+    public GlamResult? SelectedGlam => this.RankedGlams.Count == 0 ? null : this.RankedGlams[this.ClampedSelectedIndex];
+
+    [JsonIgnore]
+    public int Loves => this.SelectedGlam?.Loves ?? 0;
+
+    [JsonIgnore]
+    public string? GlamName => this.SelectedGlam?.Name;
+
+    [JsonIgnore]
+    public string? GlamUrl => this.SelectedGlam?.Url;
+
+    [JsonIgnore]
+    public string? GlamImageUrl => this.SelectedGlam?.ImageUrl;
+
+    public PopularDropRecord WithSelectedIndex(int selectedIndex)
+        => this with { SelectedIndex = this.RankedGlams.Count == 0 ? 0 : Math.Clamp(selectedIndex, 0, this.RankedGlams.Count - 1) };
+}
 
 /// <summary>
 /// Persists qualifying drops to a JSON file in the plugin config directory so history survives
@@ -77,6 +131,27 @@ public sealed class NotificationHistoryStore
             if (this.records.Count > MaxEntries)
                 this.records.RemoveRange(MaxEntries, this.records.Count - MaxEntries);
             this.Save();
+        }
+    }
+
+    /// <summary>
+    /// Updates the selected ranked glamour for one exact row, persists the change, and returns
+    /// whether that row was found. The row id avoids collisions when two entries look identical.
+    /// </summary>
+    public bool UpdateSelectedIndex(Guid rowId, int selectedIndex)
+    {
+        lock (this.gate)
+        {
+            var index = this.records.FindIndex(record => record.RowId == rowId);
+            if (index < 0)
+            {
+                this.log.Warning($"could not update selected glamour for missing history row {rowId}.");
+                return false;
+            }
+
+            this.records[index] = this.records[index].WithSelectedIndex(selectedIndex);
+            this.Save();
+            return true;
         }
     }
 

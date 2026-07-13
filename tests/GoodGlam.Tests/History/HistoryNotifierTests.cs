@@ -5,12 +5,6 @@ using Xunit;
 
 namespace GoodGlam.Tests.History;
 
-/// <summary>
-/// Exercises <see cref="HistoryNotifier"/>: every qualifying drop is appended to the persistent
-/// store and the shared <see cref="NotificationState"/> is raised so the floating logo lights up.
-/// The notifier no longer touches any Dalamud service (the old bell is gone), so these run without
-/// a framework.
-/// </summary>
 public class HistoryNotifierTests : IDisposable
 {
     private readonly string path;
@@ -32,11 +26,14 @@ public class HistoryNotifierTests : IDisposable
         "The Aurum Vale");
 
     [Fact]
-    public void Maps_every_field_onto_the_record()
+    public void Maps_the_ranked_result_onto_the_record()
     {
         var popularity = new GlamPopularity(
-            250, "https://ec/glamour/200", "Nirvana", "https://ec/glamours?filter=1",
-            "https://glamours.ec/200/cover-0-9.png");
+        [
+            new GlamResult(250, "https://ec/glamour/200", "Nirvana", "https://glamours.ec/200/cover-0-9.png"),
+            new GlamResult(180, "https://ec/glamour/100", "Runner Up"),
+        ],
+        "https://ec/glamours?filter=1");
 
         this.Notifier().NotifyPopular(Drop(), popularity);
 
@@ -44,25 +41,35 @@ public class HistoryNotifierTests : IDisposable
         record.ItemId.Should().Be(3610);
         record.ItemName.Should().Be("Cavalry Gauntlets");
         record.Slot.Should().Be("hands");
+        record.RankedGlams.Should().Equal(popularity.RankedGlams);
+        record.SelectedIndex.Should().Be(0);
+        record.ClampedSelectedIndex.Should().Be(0);
+        record.SelectedGlam.Should().Be(popularity.Top);
         record.Loves.Should().Be(250);
         record.GlamName.Should().Be("Nirvana");
         record.GlamUrl.Should().Be("https://ec/glamour/200");
-        record.ListingUrl.Should().Be("https://ec/glamours?filter=1");
         record.GlamImageUrl.Should().Be("https://glamours.ec/200/cover-0-9.png");
+        record.ListingUrl.Should().Be("https://ec/glamours?filter=1");
+        record.RowId.Should().NotBe(Guid.Empty);
         record.DroppedAt.Should().Be(new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero));
         record.DutyName.Should().Be("The Aurum Vale");
     }
 
     [Fact]
-    public void Persists_null_glam_and_listing_fields()
+    public void Persists_an_empty_ranked_result_safely()
     {
-        this.Notifier().NotifyPopular(Drop(), new GlamPopularity(120, null));
+        this.Notifier().NotifyPopular(Drop(), new GlamPopularity());
 
         var record = this.store.Snapshot().Single();
+        record.RankedGlams.Should().BeEmpty();
+        record.SelectedGlam.Should().BeNull();
+        record.Loves.Should().Be(0);
         record.GlamName.Should().BeNull();
         record.GlamUrl.Should().BeNull();
-        record.ListingUrl.Should().BeNull();
         record.GlamImageUrl.Should().BeNull();
+        record.ListingUrl.Should().BeNull();
+        record.DroppedAt.Should().Be(new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero));
+        record.DutyName.Should().Be("The Aurum Vale");
     }
 
     [Fact]
@@ -70,7 +77,7 @@ public class HistoryNotifierTests : IDisposable
     {
         this.notificationState.HasUnseen.Should().BeFalse();
 
-        this.Notifier().NotifyPopular(Drop(), new GlamPopularity(250, "u", "Nirvana", "list"));
+        this.Notifier().NotifyPopular(Drop(), new GlamPopularity([new GlamResult(250, "u", "Nirvana")], "list"));
 
         this.notificationState.HasUnseen.Should().BeTrue();
     }

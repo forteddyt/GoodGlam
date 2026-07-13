@@ -1,4 +1,6 @@
 using FluentAssertions;
+using GoodGlam.Glam;
+using GoodGlam.History;
 using GoodGlam.Windows;
 using Xunit;
 
@@ -13,9 +15,28 @@ public class HistoryRecordPresentationTests
             "Loves",
             "Item",
             "Preview",
-            "Top Glam",
+            "Rank",
+            "Glam",
             "All Glams",
             "Details");
+
+    [Fact]
+    public void SelectedRank_uses_the_current_one_based_glamour_rank()
+    {
+        var record = new PopularDropRecord(
+            1,
+            "Item",
+            "body",
+            [
+                new GlamResult(300, "https://ec/glamour/1"),
+                new GlamResult(200, "https://ec/glamour/2"),
+            ],
+            DateTimeOffset.UnixEpoch,
+            null,
+            selectedIndex: 1);
+
+        HistoryRecordPresentation.SelectedRank(record).Should().Be("#2");
+    }
 
     [Theory]
     [InlineData("weapon", "Main Hand")]

@@ -17,7 +17,7 @@ public class GlamPopularityServiceTests
     public async Task Notifies_when_loves_meet_threshold()
     {
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var service = new GlamPopularityService(new Configuration { LovesThreshold = 100 }, source, notifier);
 
         var result = await service.ProcessAsync(Drop());
@@ -27,15 +27,24 @@ public class GlamPopularityServiceTests
     }
 
     [Fact]
-    public async Task Forwards_full_popularity_including_name_and_listing_url_to_notifier()
+    public async Task Forwards_full_ranked_popularity_to_notifier()
     {
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u", "Nirvana", "list") };
+        var source = new FakeGlamSource
+        {
+            Popularity = new GlamPopularity(
+            [
+                new GlamResult(150, "u1", "Nirvana", "https://glamours/u1.png"),
+                new GlamResult(120, "u2", "Runner Up"),
+            ],
+            "list"),
+        };
+
         await new GlamPopularityService(new Configuration { LovesThreshold = 100 }, source, notifier)
             .ProcessAsync(Drop());
 
         notifier.LastPopularity.Should().NotBeNull();
-        notifier.LastPopularity!.TopGlamName.Should().Be("Nirvana");
+        notifier.LastPopularity!.RankedGlams.Select(glam => glam.Name).Should().Equal("Nirvana", "Runner Up");
         notifier.LastPopularity.ListingUrl.Should().Be("list");
     }
 
@@ -44,7 +53,7 @@ public class GlamPopularityServiceTests
     {
         var drop = Drop();
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
 
         await new GlamPopularityService(new Configuration { LovesThreshold = 100 }, source, notifier)
             .ProcessAsync(drop);
@@ -56,7 +65,7 @@ public class GlamPopularityServiceTests
     public async Task Does_not_notify_below_threshold()
     {
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(99, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(99, "u")]) };
         await new GlamPopularityService(new Configuration { LovesThreshold = 100 }, source, notifier)
             .ProcessAsync(Drop());
         notifier.Count.Should().Be(0);
@@ -65,10 +74,8 @@ public class GlamPopularityServiceTests
     [Fact]
     public async Task Uses_the_per_slot_threshold_when_advanced_mode_is_on()
     {
-        // Master would block this drop (1000), but the drop's slot has a low override (50), so with
-        // per-slot thresholds on it notifies.
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var config = new Configuration { LovesThreshold = 1000, PerSlotThresholds = true };
         config.Slots[GlamSlot.Hands.Key] = new SlotSetting { LovesThreshold = 50 };
 
@@ -81,7 +88,7 @@ public class GlamPopularityServiceTests
     public async Task A_high_per_slot_threshold_suppresses_a_drop_the_master_would_pass()
     {
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var config = new Configuration { LovesThreshold = 10, PerSlotThresholds = true };
         config.Slots[GlamSlot.Hands.Key] = new SlotSetting { LovesThreshold = 200 };
 
@@ -93,10 +100,8 @@ public class GlamPopularityServiceTests
     [Fact]
     public async Task Ignores_the_per_slot_override_while_advanced_mode_is_off()
     {
-        // Advanced off: the low slot override must be ignored and the master (200) applied, so a
-        // 150-loves drop stays below threshold.
         var notifier = new FakeNotifier();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var config = new Configuration { LovesThreshold = 200, PerSlotThresholds = false };
         config.Slots[GlamSlot.Hands.Key] = new SlotSetting { LovesThreshold = 5 };
 
@@ -113,13 +118,14 @@ public class GlamPopularityServiceTests
         var result = await new GlamPopularityService(new Configuration(), source, notifier).ProcessAsync(Drop());
 
         result.TopLoves.Should().Be(0);
+        result.Top.Should().BeNull();
         notifier.Count.Should().Be(0);
     }
 
     [Fact]
     public async Task Caches_result_so_source_is_hit_once()
     {
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var service = new GlamPopularityService(new Configuration { CacheTtlHours = 12 }, source, new FakeNotifier());
 
         await service.ProcessAsync(Drop());
@@ -132,7 +138,7 @@ public class GlamPopularityServiceTests
     [Fact]
     public async Task Non_positive_ttl_clamps_so_entry_is_not_instantly_expired()
     {
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var service = new GlamPopularityService(new Configuration { CacheTtlHours = 0 }, source, new FakeNotifier());
 
         await service.ProcessAsync(Drop());
@@ -155,7 +161,7 @@ public class GlamPopularityServiceTests
     public async Task Passes_configured_filters_to_source()
     {
         var config = new Configuration { Filters = new PopularityFilters { Gender = "female" } };
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
 
         await new GlamPopularityService(config, source, new FakeNotifier()).ProcessAsync(Drop());
 
@@ -166,7 +172,7 @@ public class GlamPopularityServiceTests
     public async Task Distinct_filters_are_cached_separately()
     {
         var config = new Configuration();
-        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+        var source = new FakeGlamSource { Popularity = new GlamPopularity([new GlamResult(150, "u")]) };
         var service = new GlamPopularityService(config, source, new FakeNotifier());
 
         await service.ProcessAsync(Drop());

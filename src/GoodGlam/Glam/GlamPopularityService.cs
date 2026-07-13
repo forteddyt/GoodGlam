@@ -77,7 +77,7 @@ public sealed class GlamPopularityService
         catch (Exception ex)
         {
             this.log.Warning($"failed to check popularity for {drop.Name} ({drop.ItemId}).", ex);
-            return new GlamPopularity(0, null);
+            return new GlamPopularity();
         }
     }
 
@@ -104,8 +104,8 @@ public sealed class GlamPopularityService
         }
 
         var popularity = ecItem is null
-            ? new GlamPopularity(0, null)
-            : await this.source.GetTopPopularityAsync(drop.Slot, ecItem.EcId, filters, CancellationToken.None).ConfigureAwait(false);
+            ? new GlamPopularity()
+            : await this.source.GetPopularityAsync(drop.Slot, ecItem.EcId, filters, CancellationToken.None).ConfigureAwait(false);
 
         this.cache[cacheKey] = new CacheEntry(popularity, DateTime.UtcNow);
         return popularity;
