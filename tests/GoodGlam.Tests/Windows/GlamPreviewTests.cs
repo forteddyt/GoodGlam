@@ -26,24 +26,14 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Header_labels_the_current_rank_and_disables_the_boundary_hint()
+    public void Footer_uses_the_concise_navigation_label()
+        => GlamPreviewFooter.Text.Should().Be("Navigation: Left/Right Click");
+
+    [Fact]
+    public void Header_labels_the_current_rank()
     {
-        var first = GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 10);
-        var last = GlamPreviewHeader.Create(selectedIndex: 9, glamCount: 10);
-        var single = GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1);
-
-        first.LeftHint.Text.Should().Be("↓ left click");
-        first.LeftHint.Enabled.Should().BeTrue();
-        first.RankLabel.Text.Should().Be("Rank #1");
-        first.RightHint.Text.Should().Be("right click ↑");
-        first.RightHint.Enabled.Should().BeFalse();
-
-        last.RankLabel.Text.Should().Be("Rank #10");
-        last.LeftHint.Enabled.Should().BeFalse();
-        last.RightHint.Enabled.Should().BeTrue();
-
-        single.LeftHint.Enabled.Should().BeFalse();
-        single.RightHint.Enabled.Should().BeFalse();
+        GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 10).Text.Should().Be("Rank #1");
+        GlamPreviewHeader.Create(selectedIndex: 9, glamCount: 10).Text.Should().Be("Rank #10");
     }
 
     [Fact]
@@ -139,13 +129,12 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Layout_reserves_header_width_and_centers_a_short_body_without_overlap()
+    public void Layout_reserves_footer_width_and_centers_it_below_a_short_body()
     {
         var measurements = new GlamPreviewMeasurements(
             BodySize: new Vector2(40, 20),
-            LeftHintSize: new Vector2(80, 10),
             RankLabelSize: new Vector2(50, 10),
-            RightHintSize: new Vector2(70, 10));
+            FooterSize: new Vector2(150, 10));
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(100, 200),
             iconMax: new Vector2(120, 220),
@@ -156,18 +145,17 @@ public class GlamPreviewTests
 
         var contentWidth = box.Max.X - box.Min.X - (GlamPreviewLayout.Padding * 2f);
 
-        contentWidth.Should().Be(226);
-        box.LeftHint.Position.Should().Be(new Vector2(134, 229));
-        box.RankLabel.Position.Should().Be(new Vector2(222, 229));
-        box.RightHint.Position.Should().Be(new Vector2(290, 229));
-        box.BodyMin.Should().Be(new Vector2(227, 245));
+        contentWidth.Should().Be(150);
+        box.RankLabel.Text.Should().Be("Rank #5");
+        box.RankLabel.Position.Should().Be(new Vector2(184, 229));
+        box.BodyMin.Should().Be(new Vector2(189, 245));
         box.BodySize.Should().Be(new Vector2(40, 20));
-        (box.LeftHint.Position.X + measurements.LeftHintSize.X + GlamPreviewLayout.HeaderGap).Should().BeLessThanOrEqualTo(box.RankLabel.Position.X);
-        (box.RankLabel.Position.X + measurements.RankLabelSize.X + GlamPreviewLayout.HeaderGap).Should().BeLessThanOrEqualTo(box.RightHint.Position.X);
+        box.Footer.Text.Should().Be("Navigation: Left/Right Click");
+        box.Footer.Position.Should().Be(new Vector2(134, 271));
     }
 
     [Fact]
-    public void Renderer_draws_background_header_then_image_when_ready()
+    public void Renderer_draws_background_header_image_then_footer_when_ready()
     {
         var canvas = new RecordingCanvas();
         var box = Box();
@@ -175,21 +163,19 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, box, image, "unused");
 
-        canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Image");
-        canvas.HeaderSegments.Select(segment => (segment.Text, segment.Enabled)).Should().Equal(
-            ("↓ left click", true),
-            ("Rank #1", true),
-            ("right click ↑", false));
+        canvas.Calls.Should().Equal("Background", "Header", "Image", "Footer");
+        canvas.LastHeader.Should().Be(box.RankLabel);
+        canvas.LastFooter.Should().Be(box.Footer);
         canvas.LastImageMin.Should().Be(box.BodyMin);
         canvas.LastImageMax.Should().Be(box.BodyMin + box.BodySize);
     }
 
     [Fact]
-    public void Renderer_draws_background_header_then_note_when_loading()
+    public void Renderer_draws_background_header_note_then_footer_when_loading()
         => this.AssertNoteRendered(GlamImageState.Loading);
 
     [Fact]
-    public void Renderer_draws_background_header_then_note_when_failed()
+    public void Renderer_draws_background_header_note_then_footer_when_failed()
         => this.AssertNoteRendered(GlamImageState.Failed);
 
     private void AssertNoteRendered(GlamImageState state)
@@ -199,9 +185,11 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, box, new GlamImage(state, null), "the note");
 
-        canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Note");
+        canvas.Calls.Should().Equal("Background", "Header", "Note", "Footer");
+        canvas.LastHeader.Should().Be(box.RankLabel);
         canvas.LastNotePos.Should().Be(box.BodyMin);
         canvas.LastNoteText.Should().Be("the note");
+        canvas.LastFooter.Should().Be(box.Footer);
     }
 
     [Fact]
@@ -211,27 +199,31 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, Box(), new GlamImage(GlamImageState.Ready, null), "note");
 
-        canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Note");
+        canvas.Calls.Should().Equal("Background", "Header", "Note", "Footer");
     }
 
     private static GlamPreviewMeasurements BodyOnly(Vector2 bodySize)
-        => new(bodySize, Vector2.Zero, Vector2.Zero, Vector2.Zero);
+        => new(bodySize, Vector2.Zero, Vector2.Zero);
 
     private static GlamPreviewBox Box()
         => new(
             Min: new Vector2(1, 2),
             Max: new Vector2(300, 400),
-            LeftHint: new GlamPreviewPlacedLabel("↓ left click", new Vector2(10, 20), true),
             RankLabel: new GlamPreviewPlacedLabel("Rank #1", new Vector2(100, 20), true),
-            RightHint: new GlamPreviewPlacedLabel("right click ↑", new Vector2(200, 20), false),
             BodyMin: new Vector2(30, 60),
-            BodySize: new Vector2(70, 80));
+            BodySize: new Vector2(70, 80),
+            Footer: new GlamPreviewPlacedLabel(
+                "Navigation: Left/Right Click",
+                new Vector2(20, 150),
+                true));
 
     private sealed class RecordingCanvas : IGlamPreviewCanvas
     {
         public List<string> Calls { get; } = [];
 
-        public List<GlamPreviewPlacedLabel> HeaderSegments { get; } = [];
+        public GlamPreviewPlacedLabel LastFooter { get; private set; }
+
+        public GlamPreviewPlacedLabel LastHeader { get; private set; }
 
         public Vector2 LastImageMin { get; private set; }
 
@@ -245,10 +237,16 @@ public class GlamPreviewTests
 
         public void Background(GlamPreviewBox box) => this.Calls.Add("Background");
 
-        public void Header(GlamPreviewPlacedLabel segment)
+        public void Header(GlamPreviewPlacedLabel header)
         {
             this.Calls.Add("Header");
-            this.HeaderSegments.Add(segment);
+            this.LastHeader = header;
+        }
+
+        public void Footer(GlamPreviewPlacedLabel footer)
+        {
+            this.Calls.Add("Footer");
+            this.LastFooter = footer;
         }
 
         public void Image(ImTextureID handle, Vector2 min, Vector2 max)

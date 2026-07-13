@@ -20,89 +20,81 @@ internal enum PreviewLayer
     Foreground,
 }
 
-/// <summary>A single header label before layout assigns it a position.</summary>
+/// <summary>A preview label before layout assigns it a position.</summary>
 internal readonly record struct GlamPreviewLabel(string Text, bool Enabled);
 
-/// <summary>The header chrome above the preview body: navigation hints plus the current rank label.</summary>
-internal readonly record struct GlamPreviewHeaderModel(
-    GlamPreviewLabel LeftHint,
-    GlamPreviewLabel RankLabel,
-    GlamPreviewLabel RightHint);
-
-/// <summary>Builds the header chrome for the current selected glamour rank.</summary>
+/// <summary>Builds the centered header label for the current selected glamour rank.</summary>
 internal static class GlamPreviewHeader
 {
-    internal const string LeftHintText = "↓ left click";
-    internal const string RightHintText = "right click ↑";
-
-    internal static GlamPreviewHeaderModel Create(int selectedIndex, int glamCount)
+    internal static GlamPreviewLabel Create(int selectedIndex, int glamCount)
     {
         var hasSelection = glamCount > 0;
         var clampedIndex = hasSelection ? Math.Clamp(selectedIndex, 0, glamCount - 1) : 0;
         var rank = hasSelection ? clampedIndex + 1 : 0;
-        var movable = glamCount > 1;
-
-        return new GlamPreviewHeaderModel(
-            new GlamPreviewLabel(LeftHintText, movable && clampedIndex < glamCount - 1),
-            new GlamPreviewLabel($"Rank #{rank}", true),
-            new GlamPreviewLabel(RightHintText, movable && clampedIndex > 0));
+        return new GlamPreviewLabel($"Rank #{rank}", true);
     }
 }
 
-/// <summary>Measured body/header sizes for a preview frame, gathered via live ImGui text/image measurement.</summary>
+/// <summary>The centered navigation guidance shown below the preview body.</summary>
+internal static class GlamPreviewFooter
+{
+    internal const string Text = "Navigation: Left/Right Click";
+}
+
+/// <summary>Measured header/body/footer sizes for a preview frame.</summary>
 internal readonly record struct GlamPreviewMeasurements(
     Vector2 BodySize,
-    Vector2 LeftHintSize,
     Vector2 RankLabelSize,
-    Vector2 RightHintSize);
+    Vector2 FooterSize);
 
 /// <summary>A laid-out text label with its on-screen position and enabled/disabled state.</summary>
 internal readonly record struct GlamPreviewPlacedLabel(string Text, Vector2 Position, bool Enabled);
 
 /// <summary>
 /// The resolved on-screen rectangle for a glam cover preview: the outer box (background/border), the
-/// header labels above the body, and the final body rect for either the image or the status note.
+/// rank header above the body, the body rect for the image/note, and the navigation footer below it.
 /// Pure geometry, so it's unit-testable without a live ImGui context.
 /// </summary>
 internal readonly record struct GlamPreviewBox(
     Vector2 Min,
     Vector2 Max,
-    GlamPreviewPlacedLabel LeftHint,
     GlamPreviewPlacedLabel RankLabel,
-    GlamPreviewPlacedLabel RightHint,
     Vector2 BodyMin,
-    Vector2 BodySize);
+    Vector2 BodySize,
+    GlamPreviewPlacedLabel Footer);
 
 /// <summary>
 /// Pure placement maths for the cover preview: anchors the box below and beside the hovered icon so
 /// the rest of its History row stays visible, flipping above or left when the preferred placement
-/// would overflow the display. It also reserves header width so the navigation hints don't overlap
-/// the rank label and centers the image/note when the body is narrower than the header chrome.
+/// would overflow the display. It centers the rank header, body, and navigation footer within the
+/// widest content element.
 /// </summary>
 internal static class GlamPreviewLayout
 {
     internal const float Gap = 8f;
     internal const float VerticalGap = 3f;
     internal const float Padding = 6f;
-    internal const float HeaderGap = 8f;
     internal const float HeaderBodyGap = 6f;
+    internal const float BodyFooterGap = 6f;
 
     internal static GlamPreviewBox Compute(
         Vector2 iconMin,
         Vector2 iconMax,
         GlamPreviewMeasurements measurements,
-        GlamPreviewHeaderModel header,
+        GlamPreviewLabel header,
         Vector2 displaySize,
         float scale)
     {
         var gap = Gap * scale;
         var verticalGap = VerticalGap * scale;
         var padding = Padding * scale;
-        var headerGap = HeaderGap * scale;
-        var headerHeight = MathF.Max(measurements.LeftHintSize.Y, MathF.Max(measurements.RankLabelSize.Y, measurements.RightHintSize.Y));
-        var bodyGap = headerHeight > 0f && measurements.BodySize.Y > 0f ? HeaderBodyGap * scale : 0f;
-        var contentWidth = MathF.Max(measurements.BodySize.X, RequiredHeaderWidth(measurements, headerGap));
-        var contentHeight = headerHeight + bodyGap + measurements.BodySize.Y;
+        var headerHeight = measurements.RankLabelSize.Y;
+        var headerGap = headerHeight > 0f && measurements.BodySize.Y > 0f ? HeaderBodyGap * scale : 0f;
+        var footerGap = measurements.FooterSize.Y > 0f && measurements.BodySize.Y > 0f ? BodyFooterGap * scale : 0f;
+        var contentWidth = MathF.Max(
+            measurements.BodySize.X,
+            MathF.Max(measurements.RankLabelSize.X, measurements.FooterSize.X));
+        var contentHeight = headerHeight + headerGap + measurements.BodySize.Y + footerGap + measurements.FooterSize.Y;
         var boxSize = new Vector2(contentWidth + (padding * 2f), contentHeight + (padding * 2f));
 
         var x = iconMax.X + gap;
@@ -117,34 +109,30 @@ internal static class GlamPreviewLayout
             Clamp(x, displaySize.X - boxSize.X),
             Clamp(y, displaySize.Y - boxSize.Y));
         var contentMin = min + new Vector2(padding, padding);
-        var leftPosition = contentMin;
         var rankPosition = new Vector2(contentMin.X + ((contentWidth - measurements.RankLabelSize.X) / 2f), contentMin.Y);
-        var rightPosition = new Vector2(contentMin.X + contentWidth - measurements.RightHintSize.X, contentMin.Y);
         var bodyMin = new Vector2(
             contentMin.X + ((contentWidth - measurements.BodySize.X) / 2f),
-            contentMin.Y + headerHeight + bodyGap);
+            contentMin.Y + headerHeight + headerGap);
+        var footerPosition = new Vector2(
+            contentMin.X + ((contentWidth - measurements.FooterSize.X) / 2f),
+            bodyMin.Y + measurements.BodySize.Y + footerGap);
 
         return new GlamPreviewBox(
             min,
             min + boxSize,
-            new GlamPreviewPlacedLabel(header.LeftHint.Text, leftPosition, header.LeftHint.Enabled),
-            new GlamPreviewPlacedLabel(header.RankLabel.Text, rankPosition, header.RankLabel.Enabled),
-            new GlamPreviewPlacedLabel(header.RightHint.Text, rightPosition, header.RightHint.Enabled),
+            new GlamPreviewPlacedLabel(header.Text, rankPosition, header.Enabled),
             bodyMin,
-            measurements.BodySize);
+            measurements.BodySize,
+            new GlamPreviewPlacedLabel(GlamPreviewFooter.Text, footerPosition, true));
 
         static float Clamp(float value, float max) => Math.Max(0f, Math.Min(value, max));
-
-        static float RequiredHeaderWidth(GlamPreviewMeasurements measurements, float headerGap)
-            => MathF.Max(
-                measurements.RankLabelSize.X + (2f * (measurements.LeftHintSize.X + headerGap)),
-                measurements.RankLabelSize.X + (2f * (measurements.RightHintSize.X + headerGap)));
     }
 }
 
 /// <summary>
 /// The surface the preview paints onto, abstracted so the render flow (which layer, background,
-/// header, and image-vs-note) is testable with a fake, while the real ImGui submission stays in
+/// rank header, image-vs-note body, and navigation footer) is testable with a fake, while the real
+/// ImGui submission stays in
 /// <see cref="ForegroundPreviewCanvas"/>. <see cref="Layer"/> declares which ImGui layer the canvas
 /// draws to, so a test can assert the preview is on the foreground.
 /// </summary>
@@ -159,26 +147,27 @@ internal interface IGlamPreviewCanvas
     void Image(ImTextureID handle, Vector2 min, Vector2 max);
 
     void Note(Vector2 pos, string text);
+
+    void Footer(GlamPreviewPlacedLabel footer);
 }
 
 /// <summary>
-/// Chooses what to paint for a preview: always a background/border, then the navigation/rank header,
-/// then either the cover image (when ready) or a short status note (loading / unavailable). Pure
-/// decision flow over an <see cref="IGlamPreviewCanvas"/>, so it's unit-tested with a fake canvas.
+/// Chooses what to paint for a preview: background/border, rank header, image/loading body, then the
+/// navigation footer. Pure decision flow over an <see cref="IGlamPreviewCanvas"/>.
 /// </summary>
 internal static class GlamPreviewRenderer
 {
     internal static void Render(IGlamPreviewCanvas canvas, GlamPreviewBox box, GlamImage image, string note)
     {
         canvas.Background(box);
-        canvas.Header(box.LeftHint);
         canvas.Header(box.RankLabel);
-        canvas.Header(box.RightHint);
 
         if (image is { State: GlamImageState.Ready, Texture: { } texture })
             canvas.Image(texture.Handle, box.BodyMin, box.BodyMin + box.BodySize);
         else
             canvas.Note(box.BodyMin, note);
+
+        canvas.Footer(box.Footer);
     }
 }
 
@@ -211,4 +200,10 @@ internal sealed class ForegroundPreviewCanvas : IGlamPreviewCanvas
 
     public void Note(Vector2 pos, string text)
         => ImGui.GetForegroundDrawList().AddText(pos, ImGui.GetColorU32(ImGuiCol.TextDisabled), text);
+
+    public void Footer(GlamPreviewPlacedLabel footer)
+        => ImGui.GetForegroundDrawList().AddText(
+            footer.Position,
+            ImGui.GetColorU32(footer.Enabled ? ImGuiCol.Text : ImGuiCol.TextDisabled),
+            footer.Text);
 }
