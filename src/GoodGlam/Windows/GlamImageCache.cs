@@ -20,14 +20,15 @@ internal enum GlamImageState
 internal readonly record struct GlamImage(GlamImageState State, IDalamudTextureWrap? Texture);
 
 /// <summary>
-/// A lazy, per-URL, load-once cache and scheduler of glamour cover images for the History tab's hover
-/// preview. Callers submit ordered preload batches on hover entry/selection changes; the newest batch
-/// wins pending priority, while already-active loads are left alone. At most five loader invocations
+/// A lazy, per-URL, resident load-once cache and scheduler of glamour cover images for the History
+/// tab's hover preview. Submitted URLs are touched into a 20-entry inactive LRU working set (two full
+/// 10-image neighborhoods), while already-active loads are left alone. At most five loader invocations
 /// run at once across the whole History tab, and textures are disposed on teardown.
 /// </summary>
 internal sealed class GlamImageCache : IDisposable
 {
     private const int MaxConcurrentLoads = 5;
+    private const int ResidentCapacity = 20;
 
     private readonly Func<string, CancellationToken, Task<IDalamudTextureWrap?>> loader;
     private readonly ITraceLogger<GlamImageCache> log;
@@ -35,6 +36,7 @@ internal sealed class GlamImageCache : IDisposable
     private readonly Dictionary<string, Entry> entries = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource cts = new();
     private long submissionSequence;
+    private long touchSequence;
     private int activeLoads;
     private bool disposed;
 
@@ -61,22 +63,25 @@ internal sealed class GlamImageCache : IDisposable
             if (this.disposed)
                 return new GlamImage(GlamImageState.Failed, null);
 
-            return this.entries.TryGetValue(url, out var entry)
-                ? entry.Snapshot()
-                : new GlamImage(GlamImageState.Loading, null);
+            if (!this.entries.TryGetValue(url, out var entry))
+                return new GlamImage(GlamImageState.Loading, null);
+
+            entry.Touch(++this.touchSequence);
+            return entry.Snapshot();
         }
     }
 
     /// <summary>
     /// Submits a hover-ordered preload batch. Missing URLs are skipped, queued URLs are deduplicated,
-    /// ready/failed URLs stay load-once, pending URLs are reprioritized to this newest batch, and
-    /// active loads keep running without cancellation or preemption.
+    /// ready/failed URLs stay resident load-once until LRU eviction, pending URLs are reprioritized to
+    /// this newest batch, and active loads keep running without cancellation or preemption.
     /// </summary>
     public void SubmitBatch(IEnumerable<string?> urls)
     {
         ArgumentNullException.ThrowIfNull(urls);
 
         List<Entry> toStart;
+        List<IDalamudTextureWrap> toDispose;
         lock (this.gate)
         {
             if (this.disposed)
@@ -90,12 +95,17 @@ internal sealed class GlamImageCache : IDisposable
                 if (string.IsNullOrEmpty(url) || !seen.Add(url))
                     continue;
 
+                if (seen.Count > ResidentCapacity)
+                    break;
+
                 if (!this.entries.TryGetValue(url, out var entry))
                 {
                     entry = new Entry(url);
                     this.entries.Add(url, entry);
                 }
 
+                entry.Touch(++this.touchSequence);
+                entry.LastSubmitted = batch;
                 if (entry.State is EntryState.Ready or EntryState.Failed or EntryState.Active)
                 {
                     order++;
@@ -108,8 +118,10 @@ internal sealed class GlamImageCache : IDisposable
             }
 
             toStart = this.StartPendingLocked();
+            toDispose = this.TrimLocked(batch);
         }
 
+        DisposeTextures(toDispose);
         this.StartLoads(toStart);
     }
 
@@ -123,7 +135,6 @@ internal sealed class GlamImageCache : IDisposable
                 return;
 
             this.disposed = true;
-            this.cts.Cancel();
             toDispose = this.entries.Values
                 .Select(entry => entry.TakeTexture())
                 .Where(texture => texture is not null)
@@ -132,9 +143,8 @@ internal sealed class GlamImageCache : IDisposable
             this.entries.Clear();
         }
 
-        foreach (var texture in toDispose)
-            texture.Dispose();
-
+        this.cts.Cancel();
+        DisposeTextures(toDispose);
         this.cts.Dispose();
     }
 
@@ -191,6 +201,7 @@ internal sealed class GlamImageCache : IDisposable
         }
 
         List<Entry> toStart;
+        List<IDalamudTextureWrap> toDispose;
         lock (this.gate)
         {
             if (entry.State == EntryState.Active)
@@ -199,18 +210,69 @@ internal sealed class GlamImageCache : IDisposable
             if (this.disposed)
             {
                 toStart = [];
+                toDispose = [];
             }
             else
             {
                 entry.Texture = wrap;
                 entry.State = wrap is null ? EntryState.Failed : EntryState.Ready;
                 toStart = this.StartPendingLocked();
+                toDispose = this.TrimLocked();
                 wrap = null;
             }
         }
 
         wrap?.Dispose();
+        DisposeTextures(toDispose);
         this.StartLoads(toStart);
+    }
+
+    private List<IDalamudTextureWrap> TrimLocked(long protectedSubmission = 0)
+    {
+        var toDispose = new List<IDalamudTextureWrap>();
+        while (this.InactiveCountLocked() > ResidentCapacity)
+        {
+            Entry? victim = null;
+            foreach (var entry in this.entries.Values)
+            {
+                if (entry.State == EntryState.Active)
+                    continue;
+
+                if (protectedSubmission != 0 && entry.LastSubmitted == protectedSubmission)
+                    continue;
+
+                if (victim is null || entry.LastTouch < victim.LastTouch)
+                    victim = entry;
+            }
+
+            if (victim is null)
+                break;
+
+            this.entries.Remove(victim.Url);
+            var texture = victim.TakeTexture();
+            if (texture is not null)
+                toDispose.Add(texture);
+        }
+
+        return toDispose;
+    }
+
+    private int InactiveCountLocked()
+    {
+        var count = 0;
+        foreach (var entry in this.entries.Values)
+        {
+            if (entry.State != EntryState.Active)
+                count++;
+        }
+
+        return count;
+    }
+
+    private static void DisposeTextures(IEnumerable<IDalamudTextureWrap> textures)
+    {
+        foreach (var texture in textures)
+            texture.Dispose();
     }
 
     private enum EntryState
@@ -233,6 +295,12 @@ internal sealed class GlamImageCache : IDisposable
         public long Submission { get; set; }
 
         public int Order { get; set; }
+
+        public long LastTouch { get; private set; }
+
+        public long LastSubmitted { get; set; }
+
+        public void Touch(long sequence) => this.LastTouch = sequence;
 
         public GlamImage Snapshot()
             => new(

@@ -73,6 +73,13 @@ public class HistoryTabPreviewInteractionTests
     }
 
     [Fact]
+    public void Preview_indicator_is_interactive_only_when_ranked_glams_exist()
+    {
+        GlamPreviewIndicatorInteraction.IsInteractive(Record()).Should().BeFalse();
+        GlamPreviewIndicatorInteraction.IsInteractive(Record(imageUrls: ImageUrls(1))).Should().BeTrue();
+    }
+
+    [Fact]
     public void Preload_policy_queues_the_first_five_ranks_from_rank_one()
     {
         var record = Record(selectedIndex: 0, imageUrls: ImageUrls(10));

@@ -264,15 +264,18 @@ internal sealed class HistoryTab : IDisposable
     /// </summary>
     private void DrawImageIndicator(PopularDropRecord record)
     {
-        var hasGlams = record.RankedGlams.Count > 0;
+        var interactive = GlamPreviewIndicatorInteraction.IsInteractive(record);
         var glyph = FontAwesomeIcon.Image.ToIconString();
 
         ImGui.PushFont(UiBuilder.IconFont);
-        if (hasGlams)
+        if (interactive)
             ImGui.TextUnformatted(glyph);
         else
             ImGui.TextDisabled(glyph);
         ImGui.PopFont();
+
+        if (!interactive)
+            return;
 
         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
             GlamSelectionNavigator.TryMove(record, GlamSelectionDirection.Next, this.store.UpdateSelectedIndex);
@@ -372,6 +375,12 @@ internal static class GlamSelectionNavigator
 
         return persist(record.RowId, next);
     }
+}
+
+/// <summary>Pure interactivity seam for the Preview glyph: empty rows draw disabled and stay fully inert.</summary>
+internal static class GlamPreviewIndicatorInteraction
+{
+    internal static bool IsInteractive(PopularDropRecord record) => record.RankedGlams.Count != 0;
 }
 
 /// <summary>

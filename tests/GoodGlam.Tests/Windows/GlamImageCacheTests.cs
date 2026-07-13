@@ -82,6 +82,50 @@ public class GlamImageCacheTests
     }
 
     [Fact]
+    public void Lru_cap_evicts_the_least_recent_ready_texture_and_keeps_touched_residents()
+    {
+        var loader = new ImmediateLoader();
+        using var cache = new GlamImageCache(loader.Load);
+        var ready = Enumerable.Range(1, 20).Select(UrlFor).ToArray();
+        var touched = ready[0];
+        var evicted = ready[1];
+        var newcomer = UrlFor(21);
+
+        cache.SubmitBatch(ready);
+
+        WaitUntil(() => ready.All(url => cache.Get(url).State == GlamImageState.Ready));
+        _ = cache.Get(touched);
+
+        var touchedWrap = loader.WrapFor(touched);
+        var evictedWrap = loader.WrapFor(evicted);
+
+        cache.SubmitBatch([newcomer]);
+
+        WaitUntil(() => cache.Get(newcomer).State == GlamImageState.Ready);
+        WaitUntilDisposed(evictedWrap);
+
+        cache.Get(touched).Texture.Should().BeSameAs(touchedWrap);
+        cache.Get(newcomer).Texture.Should().BeSameAs(loader.WrapFor(newcomer));
+        cache.Get(evicted).State.Should().Be(GlamImageState.Loading);
+        cache.Get(evicted).Texture.Should().BeNull();
+    }
+
+    [Fact]
+    public void Submission_is_limited_to_the_first_twenty_unique_prioritized_urls()
+    {
+        var loader = new ImmediateLoader();
+        using var cache = new GlamImageCache(loader.Load);
+        var urls = Enumerable.Range(1, 25).Select(UrlFor).ToArray();
+
+        cache.SubmitBatch(urls);
+
+        WaitUntil(() => loader.TotalCalls == 20);
+        cache.Get(urls[19]).State.Should().Be(GlamImageState.Ready);
+        cache.Get(urls[20]).State.Should().Be(GlamImageState.Loading);
+        loader.TotalCalls.Should().Be(20);
+    }
+
+    [Fact]
     public void Failed_fetch_yields_failed_state_and_does_not_retry()
     {
         var calls = 0;
@@ -196,6 +240,44 @@ public class GlamImageCacheTests
     }
 
     [Fact]
+    public void New_hover_batch_evicts_old_pending_backlog_without_starting_it()
+    {
+        var loader = new ControlledLoader();
+        using var cache = new GlamImageCache(loader.Load);
+        var older = Enumerable.Range(1, 20).Select(UrlFor).ToArray();
+        var evicted = older.Skip(5).Take(5).ToArray();
+        var newer = Enumerable.Range(101, 10).Select(UrlFor).ToArray();
+
+        cache.SubmitBatch(older);
+        WaitUntil(() => loader.Started.Count == 5);
+
+        cache.SubmitBatch(newer);
+
+        loader.Started.Should().Equal(older.Take(5));
+
+        for (var index = 0; index < 5; index++)
+        {
+            loader.Complete(older[index]);
+            WaitUntil(() => loader.Started.Count == 6 + index);
+            loader.Started[5 + index].Should().Be(newer[index]);
+        }
+
+        for (var index = 0; index < 5; index++)
+        {
+            loader.Complete(newer[index]);
+            WaitUntil(() => loader.Started.Count == 11 + index);
+            loader.Started[10 + index].Should().Be(newer[5 + index]);
+        }
+
+        loader.Complete(newer[5]);
+        WaitUntil(() => loader.Started.Count == 16);
+        loader.Started[15].Should().Be(older[10]);
+
+        loader.Started.Should().NotContain(evicted);
+        loader.Cancelled.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Resubmitting_a_pending_url_reprioritizes_it_without_starting_a_duplicate_load()
     {
         var loader = new ControlledLoader();
@@ -280,6 +362,39 @@ public class GlamImageCacheTests
     }
 
     [Fact]
+    public void Active_loads_stay_resident_until_completion_and_then_converge_to_the_cap()
+    {
+        var newer = Enumerable.Range(21, 5).Select(UrlFor).ToArray();
+        var loader = new HybridLoader(newer);
+        using var cache = new GlamImageCache(loader.Load);
+        var older = Enumerable.Range(1, 20).Select(UrlFor).ToArray();
+        var oldestWrap = default(IDalamudTextureWrap);
+
+        cache.SubmitBatch(older);
+
+        WaitUntil(() => older.All(url => cache.Get(url).State == GlamImageState.Ready));
+        oldestWrap = loader.WrapFor(older[0]);
+
+        cache.SubmitBatch(newer);
+
+        WaitUntil(() => loader.Started.Count == 5);
+        cache.Get(older[^1]).State.Should().Be(GlamImageState.Ready, "five active loads may temporarily overflow the resident cap");
+        newer.Select(cache.Get).Should().OnlyContain(image => image.State == GlamImageState.Loading);
+        loader.Cancelled.Should().BeEmpty();
+
+        foreach (var url in newer)
+            loader.Complete(url);
+
+        WaitUntil(() => newer.All(url => cache.Get(url).State == GlamImageState.Ready));
+        WaitUntilDisposed(oldestWrap!);
+
+        older.Take(5).Select(cache.Get).Should().OnlyContain(image => image.State == GlamImageState.Loading && image.Texture == null);
+        older.Skip(5).Select(cache.Get).Should().OnlyContain(image => image.State == GlamImageState.Ready && image.Texture != null);
+        newer.Select(cache.Get).Should().OnlyContain(image => image.State == GlamImageState.Ready && image.Texture != null);
+        loader.Cancelled.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Dispose_is_idempotent()
     {
         var wrap = A.Fake<IDalamudTextureWrap>();
@@ -293,7 +408,120 @@ public class GlamImageCacheTests
         A.CallTo(() => wrap.Dispose()).MustHaveHappenedOnceExactly();
     }
 
+    [Fact]
+    public void Dispose_cancels_outside_the_gate_so_cancellation_callbacks_can_reenter_get()
+    {
+        using var loaderStarted = new ManualResetEventSlim();
+        using var callbackFinished = new ManualResetEventSlim();
+        using var getReturned = new ManualResetEventSlim();
+        var callbackSawGetReturn = false;
+        var loadTcs = new TaskCompletionSource<IDalamudTextureWrap?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        GlamImageCache? cache = null;
+
+        cache = new GlamImageCache((_, ct) =>
+        {
+            loaderStarted.Set();
+            ct.Register(() =>
+            {
+                Task.Run(() =>
+                {
+                    cache!.Get(Url);
+                    getReturned.Set();
+                });
+
+                callbackSawGetReturn = getReturned.Wait(TimeSpan.FromSeconds(1));
+                callbackFinished.Set();
+                loadTcs.TrySetCanceled(ct);
+            });
+
+            return loadTcs.Task;
+        });
+
+        cache.SubmitBatch([Url]);
+        loaderStarted.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
+
+        cache.Dispose();
+
+        callbackFinished.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
+        callbackSawGetReturn.Should().BeTrue();
+        WaitUntil(() => getReturned.IsSet);
+    }
+
     private static string UrlFor(int id) => $"https://glamours.ec/{id}/cover.png";
+
+    private static void WaitUntilDisposed(IDalamudTextureWrap wrap)
+        => WaitUntil(() =>
+        {
+            try
+            {
+                A.CallTo(() => wrap.Dispose()).MustHaveHappenedOnceExactly();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        });
+
+    private sealed class ImmediateLoader
+    {
+        private readonly object gate = new();
+        private readonly Dictionary<string, int> calls = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, IDalamudTextureWrap> wraps = new(StringComparer.Ordinal);
+
+        public int TotalCalls
+        {
+            get
+            {
+                lock (this.gate)
+                    return this.calls.Values.Sum();
+            }
+        }
+
+        public Task<IDalamudTextureWrap?> Load(string url, CancellationToken _)
+        {
+            lock (this.gate)
+            {
+                this.calls[url] = this.calls.TryGetValue(url, out var count) ? count + 1 : 1;
+                if (!this.wraps.TryGetValue(url, out var wrap))
+                {
+                    wrap = A.Fake<IDalamudTextureWrap>();
+                    this.wraps.Add(url, wrap);
+                }
+
+                return Task.FromResult<IDalamudTextureWrap?>(wrap);
+            }
+        }
+
+        public IDalamudTextureWrap WrapFor(string url)
+        {
+            lock (this.gate)
+                return this.wraps[url];
+        }
+    }
+
+    private sealed class HybridLoader
+    {
+        private readonly HashSet<string> controlled;
+        private readonly ImmediateLoader immediate = new();
+        private readonly ControlledLoader controlledLoader = new();
+
+        public HybridLoader(IEnumerable<string> controlledUrls)
+            => this.controlled = new HashSet<string>(controlledUrls, StringComparer.Ordinal);
+
+        public IReadOnlyList<string> Started => this.controlledLoader.Started;
+
+        public IReadOnlyList<string> Cancelled => this.controlledLoader.Cancelled;
+
+        public Task<IDalamudTextureWrap?> Load(string url, CancellationToken ct)
+            => this.controlled.Contains(url)
+                ? this.controlledLoader.Load(url, ct)
+                : this.immediate.Load(url, ct);
+
+        public void Complete(string url, IDalamudTextureWrap? wrap = null) => this.controlledLoader.Complete(url, wrap);
+
+        public IDalamudTextureWrap WrapFor(string url) => this.immediate.WrapFor(url);
+    }
 
     private sealed class ControlledLoader
     {
