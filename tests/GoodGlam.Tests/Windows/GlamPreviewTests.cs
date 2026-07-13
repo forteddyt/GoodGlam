@@ -32,14 +32,15 @@ public class GlamPreviewTests
         var last = GlamPreviewHeader.Create(selectedIndex: 9, glamCount: 10);
         var single = GlamPreviewHeader.Create(selectedIndex: 0, glamCount: 1);
 
-        first.LeftHint.Text.Should().Be("← right click");
-        first.LeftHint.Enabled.Should().BeFalse();
+        first.LeftHint.Text.Should().Be("↓ left click");
+        first.LeftHint.Enabled.Should().BeTrue();
         first.RankLabel.Text.Should().Be("Rank #1");
-        first.RightHint.Text.Should().Be("left click →");
-        first.RightHint.Enabled.Should().BeTrue();
+        first.RightHint.Text.Should().Be("right click ↑");
+        first.RightHint.Enabled.Should().BeFalse();
 
         last.RankLabel.Text.Should().Be("Rank #10");
-        last.RightHint.Enabled.Should().BeFalse();
+        last.LeftHint.Enabled.Should().BeFalse();
+        last.RightHint.Enabled.Should().BeTrue();
 
         single.LeftHint.Enabled.Should().BeFalse();
         single.RightHint.Enabled.Should().BeFalse();
@@ -176,9 +177,9 @@ public class GlamPreviewTests
 
         canvas.Calls.Should().Equal("Background", "Header", "Header", "Header", "Image");
         canvas.HeaderSegments.Select(segment => (segment.Text, segment.Enabled)).Should().Equal(
-            ("← right click", false),
+            ("↓ left click", true),
             ("Rank #1", true),
-            ("left click →", true));
+            ("right click ↑", false));
         canvas.LastImageMin.Should().Be(box.BodyMin);
         canvas.LastImageMax.Should().Be(box.BodyMin + box.BodySize);
     }
@@ -220,9 +221,9 @@ public class GlamPreviewTests
         => new(
             Min: new Vector2(1, 2),
             Max: new Vector2(300, 400),
-            LeftHint: new GlamPreviewPlacedLabel("← right click", new Vector2(10, 20), false),
+            LeftHint: new GlamPreviewPlacedLabel("↓ left click", new Vector2(10, 20), true),
             RankLabel: new GlamPreviewPlacedLabel("Rank #1", new Vector2(100, 20), true),
-            RightHint: new GlamPreviewPlacedLabel("left click →", new Vector2(200, 20), true),
+            RightHint: new GlamPreviewPlacedLabel("right click ↑", new Vector2(200, 20), false),
             BodyMin: new Vector2(30, 60),
             BodySize: new Vector2(70, 80));
 

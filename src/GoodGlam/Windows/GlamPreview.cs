@@ -32,8 +32,8 @@ internal readonly record struct GlamPreviewHeaderModel(
 /// <summary>Builds the header chrome for the current selected glamour rank.</summary>
 internal static class GlamPreviewHeader
 {
-    internal const string LeftHintText = "← right click";
-    internal const string RightHintText = "left click →";
+    internal const string LeftHintText = "↓ left click";
+    internal const string RightHintText = "right click ↑";
 
     internal static GlamPreviewHeaderModel Create(int selectedIndex, int glamCount)
     {
@@ -43,9 +43,9 @@ internal static class GlamPreviewHeader
         var movable = glamCount > 1;
 
         return new GlamPreviewHeaderModel(
-            new GlamPreviewLabel(LeftHintText, movable && clampedIndex > 0),
+            new GlamPreviewLabel(LeftHintText, movable && clampedIndex < glamCount - 1),
             new GlamPreviewLabel($"Rank #{rank}", true),
-            new GlamPreviewLabel(RightHintText, movable && clampedIndex < glamCount - 1));
+            new GlamPreviewLabel(RightHintText, movable && clampedIndex > 0));
     }
 }
 
