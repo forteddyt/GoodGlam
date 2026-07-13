@@ -38,7 +38,7 @@ public sealed class HistoryNotifier : INotifier
         NotificationState notificationState,
         ITraceLogger<HistoryNotifier> log) : INotificationTarget
     {
-        public void NotifyPopular(DropItem drop, GlamPopularity popularity)
+        public void NotifyPopular(DropOccurrence drop, GlamPopularity popularity)
         {
             var landedOnActiveCharacter = store.AddTo(binding, new PopularDropRecord(
                 drop.ItemId,
@@ -47,7 +47,8 @@ public sealed class HistoryNotifier : INotifier
                 popularity.TopLoves,
                 popularity.TopGlamName,
                 popularity.TopGlamUrl,
-                DateTimeOffset.Now,
+                drop.DroppedAt,
+                drop.DutyName,
                 popularity.ListingUrl,
                 popularity.TopGlamImageUrl));
 

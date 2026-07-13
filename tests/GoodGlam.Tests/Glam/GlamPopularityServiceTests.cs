@@ -8,7 +8,10 @@ public class GlamPopularityServiceTests
 {
     public GlamPopularityServiceTests() => TestServices.EnsureLog();
 
-    private static DropItem Drop() => new(3610, "Cavalry Gauntlets", GlamSlot.Hands);
+    private static DropOccurrence Drop() => new(
+        new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands),
+        new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero),
+        "The Aurum Vale");
 
     [Fact]
     public async Task Notifies_when_loves_meet_threshold()
@@ -34,6 +37,19 @@ public class GlamPopularityServiceTests
         notifier.LastPopularity.Should().NotBeNull();
         notifier.LastPopularity!.TopGlamName.Should().Be("Nirvana");
         notifier.LastPopularity.ListingUrl.Should().Be("list");
+    }
+
+    [Fact]
+    public async Task Forwards_the_original_drop_context_unchanged()
+    {
+        var drop = Drop();
+        var notifier = new FakeNotifier();
+        var source = new FakeGlamSource { Popularity = new GlamPopularity(150, "u") };
+
+        await new GlamPopularityService(new Configuration { LovesThreshold = 100 }, source, notifier)
+            .ProcessAsync(drop);
+
+        notifier.LastOccurrence.Should().BeSameAs(drop);
     }
 
     [Fact]

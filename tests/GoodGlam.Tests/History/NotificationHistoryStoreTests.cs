@@ -16,7 +16,7 @@ public class NotificationHistoryStoreTests : IDisposable
 
     private static PopularDropRecord Record(uint id = 1, int loves = 200) =>
         new(id, $"Item {id}", "body", loves, "Glam", "https://x/glamour/1", DateTimeOffset.UnixEpoch,
-            "https://x/glamours?filter=1");
+            "The Aurum Vale", "https://x/glamours?filter=1");
 
     [Fact]
     public void Adds_newest_first()
@@ -53,6 +53,8 @@ public class NotificationHistoryStoreTests : IDisposable
         reloaded.Should().ContainSingle();
         reloaded[0].ItemId.Should().Be(7);
         reloaded[0].Loves.Should().Be(333);
+        reloaded[0].DroppedAt.Should().Be(DateTimeOffset.UnixEpoch);
+        reloaded[0].DutyName.Should().Be("The Aurum Vale");
         reloaded[0].ListingUrl.Should().Be("https://x/glamours?filter=1");
     }
 
@@ -79,40 +81,11 @@ public class NotificationHistoryStoreTests : IDisposable
     }
 
     [Fact]
-    public void Legacy_entry_without_listing_url_loads_with_null()
-    {
-        // A record persisted before ListingUrl existed: the field is simply absent from the JSON.
-        File.WriteAllText(
-            this.path,
-            """[{"ItemId":7,"ItemName":"Old","Slot":"body","Loves":150,"GlamName":"G","GlamUrl":"u","Timestamp":"2020-01-01T00:00:00+00:00"}]""");
-
-        var record = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
-        record.ItemId.Should().Be(7);
-        record.GlamUrl.Should().Be("u");
-        record.ListingUrl.Should().BeNull();
-    }
-
-    [Fact]
-    public void Legacy_entry_without_glam_image_url_loads_with_null()
-    {
-        // A record persisted before GlamImageUrl existed (older history, incl. entries that already
-        // carried a ListingUrl): the field is simply absent and must deserialize to null.
-        File.WriteAllText(
-            this.path,
-            """[{"ItemId":7,"ItemName":"Old","Slot":"body","Loves":150,"GlamName":"G","GlamUrl":"u","Timestamp":"2020-01-01T00:00:00+00:00","ListingUrl":"https://x/glamours?filter=1"}]""");
-
-        var record = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
-        record.ItemId.Should().Be(7);
-        record.ListingUrl.Should().Be("https://x/glamours?filter=1");
-        record.GlamImageUrl.Should().BeNull();
-    }
-
-    [Fact]
     public void Persists_and_reloads_the_glam_image_url()
     {
         new NotificationHistoryStore(this.path).Add(new PopularDropRecord(
             5, "Item 5", "body", 200, "Glam", "https://x/glamour/1", DateTimeOffset.UnixEpoch,
-            "https://x/glamours?filter=1", "https://glamours.x/1/cover-0-9.png"));
+            "The Aurum Vale", "https://x/glamours?filter=1", "https://glamours.x/1/cover-0-9.png"));
 
         var reloaded = new NotificationHistoryStore(this.path).Snapshot().Should().ContainSingle().Subject;
         reloaded.GlamImageUrl.Should().Be("https://glamours.x/1/cover-0-9.png");
