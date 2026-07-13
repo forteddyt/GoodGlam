@@ -66,20 +66,20 @@
 <div class="card">
 <div class="card-header">Branch coverage</div>
 <div class="card-body">
-<div class="large cardpercentagebar cardpercentagebar1">98%</div>
+<div class="large cardpercentagebar cardpercentagebar2">97%</div>
 <div class="table">
 <table>
 <tr>
 <th>Covered branches:</th>
-<td class="limit-width right" title="89">89</td>
-</tr>
-<tr>
-<th>Total branches:</th>
 <td class="limit-width right" title="90">90</td>
 </tr>
 <tr>
+<th>Total branches:</th>
+<td class="limit-width right" title="92">92</td>
+</tr>
+<tr>
 <th>Branch coverage:</th>
-<td class="limit-width right" title="89 of 90">98.8%</td>
+<td class="limit-width right" title="90 of 92">97.8%</td>
 </tr>
 </table>
 </div>
@@ -124,7 +124,7 @@
 <tr><td title="KeyOf(GoodGlam.Loot.LootEntry&amp;)"><a href="#file0_line313" class="navigatetohash">KeyOf(...)</a></td><td>100%</td><td>1</td><td>1</td><td>100%</td></tr>
 <tr><td title="DumpCurrentLoot()"><a href="#file0_line323" class="navigatetohash">DumpCurrentLoot()</a></td><td>100%</td><td>10</td><td>10</td><td>100%</td></tr>
 <tr><td title="SimulateDrop(System.UInt32)"><a href="#file0_line358" class="navigatetohash">SimulateDrop(...)</a></td><td>100%</td><td>4</td><td>4</td><td>100%</td></tr>
-<tr><td title="ReportSimulatedDropAsync()"><a href="#file0_line379" class="navigatetohash">ReportSimulatedDropAsync()</a></td><td>75%</td><td>4</td><td>4</td><td>100%</td></tr>
+<tr><td title="ReportSimulatedDropAsync()"><a href="#file0_line379" class="navigatetohash">ReportSimulatedDropAsync()</a></td><td>66.66%</td><td>6</td><td>6</td><td>100%</td></tr>
 <tr><td title="ResetDispatchedDrops()"><a href="#file0_line395" class="navigatetohash">ResetDispatchedDrops()</a></td><td>100%</td><td>1</td><td>1</td><td>100%</td></tr>
 <tr><td title="Dispose()"><a href="#file0_line404" class="navigatetohash">Dispose()</a></td><td>100%</td><td>1</td><td>1</td><td>100%</td></tr>
 </tbody>
@@ -517,9 +517,9 @@
 <tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line379"></a><code>379</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var&nbsp;popularity&nbsp;=&nbsp;await&nbsp;this.popularity.ProcessAsync(drop).ConfigureAwait(false);</code></td></tr>
 <tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line380"></a><code>380</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var&nbsp;threshold&nbsp;=&nbsp;this.config.EffectiveThreshold(drop.Slot);</code></td></tr>
 <tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line381"></a><code>381</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var&nbsp;passed&nbsp;=&nbsp;popularity.TopLoves&nbsp;&gt;=&nbsp;threshold;</code></td></tr>
-<tr class="coverableline" title="Partially covered (1 visits, 3 of 4 branches are covered)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'orange'}}"><td class="orange">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line382"></a><code>382</code></td><td class="percentagebar percentagebar70"><i class="icon-fork"></i></td><td class="lightorange"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.log.Information(</code></td></tr>
+<tr class="coverableline" title="Partially covered (1 visits, 4 of 6 branches are covered)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'orange'}}"><td class="orange">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line382"></a><code>382</code></td><td class="percentagebar percentagebar60"><i class="icon-fork"></i></td><td class="lightorange"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.log.Information(</code></td></tr>
 <tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line383"></a><code>383</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&quot;check:&nbsp;{drop.Name}&nbsp;-&gt;&nbsp;topLoves={popularity.TopLoves},&nbsp;&quot;&nbsp;+</code></td></tr>
-<tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line384"></a><code>384</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&quot;glam={popularity.TopGlamUrl&nbsp;??&nbsp;&quot;(none)&quot;},&nbsp;threshold={threshold}&nbsp;=&gt;&nbsp;&quot;&nbsp;+</code></td></tr>
+<tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line384"></a><code>384</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&quot;glam={popularity.Top?.Url&nbsp;??&nbsp;&quot;(none)&quot;},&nbsp;threshold={threshold}&nbsp;=&gt;&nbsp;&quot;&nbsp;+</code></td></tr>
 <tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line385"></a><code>385</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&quot;{(passed&nbsp;?&nbsp;&quot;POPULAR&nbsp;—&nbsp;logged&nbsp;to&nbsp;history&nbsp;(logo&nbsp;glow&nbsp;raised)&quot;&nbsp;:&nbsp;&quot;below&nbsp;threshold&nbsp;—&nbsp;not&nbsp;logged&quot;)}&quot;);</code></td></tr>
 <tr class="coverableline" title="Covered (1 visits)" data-coverage="{'AllTestMethods': {'VC': '1', 'LVS': 'green'}}"><td class="green">&nbsp;</td><td class="leftmargin rightmargin right">1</td><td class="rightmargin right"><a id="file0_line386"></a><code>386</code></td><td></td><td class="lightgreen"><code>&nbsp;&nbsp;&nbsp;&nbsp;}</code></td></tr>
 <tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line387"></a><code>387</code></td><td></td><td class="lightgray"><code></code></td></tr>
@@ -547,7 +547,7 @@
 </tbody>
 </table>
 </div>
-<div class="footer">Generated by: ReportGenerator 5.5.10.0<br />7/13/2026 - 3:54:03 AM<br /><a href="https://github.com/danielpalme/ReportGenerator">GitHub</a> | <a href="https://reportgenerator.io">reportgenerator.io</a></div></div>
+<div class="footer">Generated by: ReportGenerator 5.5.10.0<br />7/13/2026 - 2:41:06 PM<br /><a href="https://github.com/danielpalme/ReportGenerator">GitHub</a> | <a href="https://reportgenerator.io">reportgenerator.io</a></div></div>
 <div class="containerright">
 <div class="containerrightfixed">
 <h1>Methods/Properties</h1>
