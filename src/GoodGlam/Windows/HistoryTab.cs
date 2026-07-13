@@ -15,9 +15,9 @@ namespace GoodGlam.Windows;
 /// <summary>
 /// The History tab of the unified <see cref="MainWindow"/>: a browsable, persistent table of every
 /// qualifying drop. Each row shows its equipment piece, the selected glamour's loves count, the
-/// item, a hover preview with rank navigation, a clickable glamour name that opens the selected
-/// Eorzea Collection page, a link to all matching glamours, and an action that opens the captured
-/// drop time and duty details. (Formerly the standalone HistoryWindow.)
+/// item, a hover preview with rank navigation, the selected rank, a clickable glamour name that opens
+/// the selected Eorzea Collection page, a link to all matching glamours, and an action that opens the
+/// captured drop time and duty details. (Formerly the standalone HistoryWindow.)
 /// </summary>
 /// <remarks>
 /// Rendering only. The link-vs-text decision lives in the tested <see cref="HistoryLinkCell"/>, the
@@ -34,7 +34,7 @@ internal sealed class HistoryTab : IDisposable
     private const float PreviewMaxSide = 320f;
     private const string DetailsBackdropId = "##GoodGlamDropDetailsBackdrop";
     internal static readonly string[] ColumnOrder =
-        ["Piece", "Loves", "Item", "Preview", "Top Glam", "All Glams", "Details"];
+        ["Piece", "Loves", "Item", "Preview", "Rank", "Glam", "All Glams", "Details"];
 
     private static readonly HttpClient Http = CreateHttpClient();
 
@@ -137,7 +137,7 @@ internal sealed class HistoryTab : IDisposable
             const ImGuiTableFlags flags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
                 | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable;
 
-            if (!ImGui.BeginTable("##history", 7, flags))
+            if (!ImGui.BeginTable("##history", 8, flags))
                 return;
 
             tableOpen = true;
@@ -146,9 +146,10 @@ internal sealed class HistoryTab : IDisposable
             ImGui.TableSetupColumn(ColumnOrder[1], ImGuiTableColumnFlags.WidthFixed, 60);
             ImGui.TableSetupColumn(ColumnOrder[2], ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn(ColumnOrder[3], ImGuiTableColumnFlags.WidthFixed, 48);
-            ImGui.TableSetupColumn(ColumnOrder[4], ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn(ColumnOrder[5], ImGuiTableColumnFlags.WidthFixed, 80);
-            ImGui.TableSetupColumn(ColumnOrder[6], ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableSetupColumn(ColumnOrder[4], ImGuiTableColumnFlags.WidthFixed, 45);
+            ImGui.TableSetupColumn(ColumnOrder[5], ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn(ColumnOrder[6], ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn(ColumnOrder[7], ImGuiTableColumnFlags.WidthFixed, 60);
             ImGui.TableHeadersRow();
 
             for (var index = 0; index < records.Count; index++)
@@ -171,12 +172,15 @@ internal sealed class HistoryTab : IDisposable
                     this.DrawImageIndicator(record);
 
                     ImGui.TableSetColumnIndex(4);
-                    this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
+                    ImGui.TextUnformatted(HistoryRecordPresentation.SelectedRank(record));
 
                     ImGui.TableSetColumnIndex(5);
-                    this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+                    this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
 
                     ImGui.TableSetColumnIndex(6);
+                    this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+
+                    ImGui.TableSetColumnIndex(7);
                     if (ImGui.SmallButton("View"))
                         this.detailsWindow.Show(record);
                 }

@@ -74,14 +74,15 @@ internal readonly record struct GlamPreviewBox(
     Vector2 BodySize);
 
 /// <summary>
-/// Pure placement maths for the cover preview: anchors the box beside the hovered icon (preferring
-/// the icon's right side, flipping to its left when the box would overflow the display), reserves
-/// header width so the navigation hints don't overlap the rank label, and centers the image/note
-/// under the header when the body is narrower than the header chrome.
+/// Pure placement maths for the cover preview: anchors the box below and beside the hovered icon so
+/// the rest of its History row stays visible, flipping above or left when the preferred placement
+/// would overflow the display. It also reserves header width so the navigation hints don't overlap
+/// the rank label and centers the image/note when the body is narrower than the header chrome.
 /// </summary>
 internal static class GlamPreviewLayout
 {
     internal const float Gap = 8f;
+    internal const float VerticalGap = 3f;
     internal const float Padding = 6f;
     internal const float HeaderGap = 8f;
     internal const float HeaderBodyGap = 6f;
@@ -95,6 +96,7 @@ internal static class GlamPreviewLayout
         float scale)
     {
         var gap = Gap * scale;
+        var verticalGap = VerticalGap * scale;
         var padding = Padding * scale;
         var headerGap = HeaderGap * scale;
         var headerHeight = MathF.Max(measurements.LeftHintSize.Y, MathF.Max(measurements.RankLabelSize.Y, measurements.RightHintSize.Y));
@@ -107,9 +109,13 @@ internal static class GlamPreviewLayout
         if (x + boxSize.X > displaySize.X)
             x = iconMin.X - gap - boxSize.X;
 
+        var y = iconMax.Y + verticalGap;
+        if (y + boxSize.Y > displaySize.Y)
+            y = iconMin.Y - verticalGap - boxSize.Y;
+
         var min = new Vector2(
             Clamp(x, displaySize.X - boxSize.X),
-            Clamp(iconMin.Y, displaySize.Y - boxSize.Y));
+            Clamp(y, displaySize.Y - boxSize.Y));
         var contentMin = min + new Vector2(padding, padding);
         var leftPosition = contentMin;
         var rankPosition = new Vector2(contentMin.X + ((contentWidth - measurements.RankLabelSize.X) / 2f), contentMin.Y);

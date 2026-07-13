@@ -46,7 +46,7 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Layout_anchors_to_the_right_of_the_icon_with_scaled_padding()
+    public void Layout_anchors_below_and_to_the_right_of_the_icon()
     {
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(100, 200),
@@ -56,9 +56,9 @@ public class GlamPreviewTests
             displaySize: new Vector2(1920, 1080),
             scale: 1f);
 
-        box.Min.Should().Be(new Vector2(128, 200));
-        box.Max.Should().Be(new Vector2(128 + 312, 200 + 312));
-        box.BodyMin.Should().Be(new Vector2(128 + 6, 200 + 6));
+        box.Min.Should().Be(new Vector2(128, 223));
+        box.Max.Should().Be(new Vector2(128 + 312, 223 + 312));
+        box.BodyMin.Should().Be(new Vector2(128 + 6, 223 + 6));
         box.BodySize.Should().Be(new Vector2(300, 300));
     }
 
@@ -74,7 +74,7 @@ public class GlamPreviewTests
             scale: 1f);
 
         box.Min.X.Should().Be(1000 - 8 - 312);
-        box.Min.Y.Should().Be(100);
+        box.Min.Y.Should().Be(120 + 3);
         box.Max.X.Should().Be(1000 - 8);
     }
 
@@ -90,12 +90,12 @@ public class GlamPreviewTests
             scale: 2f);
 
         box.Min.X.Should().Be(20 + 16);
-        box.BodyMin.Should().Be(new Vector2(20 + 16 + 12, 0 + 12));
+        box.BodyMin.Should().Be(new Vector2(20 + 16 + 12, 20 + 6 + 12));
         box.Max.Should().Be(box.Min + new Vector2(100 + 24, 100 + 24));
     }
 
     [Fact]
-    public void Layout_clamps_vertically_so_a_bottom_row_preview_stays_on_screen()
+    public void Layout_flips_above_a_bottom_row_so_the_row_stays_visible()
     {
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(100, 1000),
@@ -105,8 +105,8 @@ public class GlamPreviewTests
             displaySize: new Vector2(1920, 1080),
             scale: 1f);
 
-        box.Max.Y.Should().BeLessThanOrEqualTo(1080);
-        box.Min.Y.Should().Be(1080 - 312);
+        box.Min.Y.Should().Be(1000 - 3 - 312);
+        box.Max.Y.Should().Be(1000 - 3);
     }
 
     [Fact]
@@ -156,10 +156,10 @@ public class GlamPreviewTests
         var contentWidth = box.Max.X - box.Min.X - (GlamPreviewLayout.Padding * 2f);
 
         contentWidth.Should().Be(226);
-        box.LeftHint.Position.Should().Be(new Vector2(134, 206));
-        box.RankLabel.Position.Should().Be(new Vector2(222, 206));
-        box.RightHint.Position.Should().Be(new Vector2(290, 206));
-        box.BodyMin.Should().Be(new Vector2(227, 222));
+        box.LeftHint.Position.Should().Be(new Vector2(134, 229));
+        box.RankLabel.Position.Should().Be(new Vector2(222, 229));
+        box.RightHint.Position.Should().Be(new Vector2(290, 229));
+        box.BodyMin.Should().Be(new Vector2(227, 245));
         box.BodySize.Should().Be(new Vector2(40, 20));
         (box.LeftHint.Position.X + measurements.LeftHintSize.X + GlamPreviewLayout.HeaderGap).Should().BeLessThanOrEqualTo(box.RankLabel.Position.X);
         (box.RankLabel.Position.X + measurements.RankLabelSize.X + GlamPreviewLayout.HeaderGap).Should().BeLessThanOrEqualTo(box.RightHint.Position.X);
