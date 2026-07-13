@@ -47,7 +47,10 @@ public sealed class EcPipelineTests
     public async Task Check_flow_reports_loves_and_notifies_for_popular_item()
     {
         var item = EcFixtures.ScionJacket;
-        var drop = new DropItem(item.GameItemId, item.Name, item.Slot);
+        var drop = new DropOccurrence(
+            new DropItem(item.GameItemId, item.Name, item.Slot),
+            DateTimeOffset.UtcNow,
+            "The Praetorium");
 
         CapturingNotifier notifier = null!;
         var popularity = await LiveEc.RetryAsync(

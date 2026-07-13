@@ -14,8 +14,10 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// The History tab of the unified <see cref="MainWindow"/>: a browsable, persistent table of every
-/// qualifying drop. Each row shows when it dropped, the item, the selected glamour's loves count,
-/// a clickable glamour name, and a hover preview with rank navigation for that row's ranked results.
+/// qualifying drop. Each row shows its equipment piece, the selected glamour's loves count, the
+/// item, a hover preview with rank navigation, a clickable glamour name that opens the selected
+/// Eorzea Collection page, a link to all matching glamours, and an action that opens the captured
+/// drop time and duty details. (Formerly the standalone HistoryWindow.)
 /// </summary>
 /// <remarks>
 /// Rendering only. The link-vs-text decision lives in the tested <see cref="HistoryLinkCell"/>, the
@@ -30,6 +32,9 @@ internal sealed class HistoryTab : IDisposable
 {
     /// <summary>Logical longest-edge cap of the cover preview thumbnail, scaled by GlobalScale.</summary>
     private const float PreviewMaxSide = 320f;
+    private const string DetailsBackdropId = "##GoodGlamDropDetailsBackdrop";
+    internal static readonly string[] ColumnOrder =
+        ["Piece", "Loves", "Item", "Preview", "Top Glam", "All Glams", "Details"];
 
     private static readonly HttpClient Http = CreateHttpClient();
 
@@ -60,22 +65,38 @@ internal sealed class HistoryTab : IDisposable
     private readonly GlamImageCache imageCache;
     private readonly GlamPreviewHoverState previewHover = new();
     private readonly IGlamPreviewCanvas previewCanvas = new ForegroundPreviewCanvas();
+    private readonly DropDetailsWindow detailsWindow;
 
     internal HistoryTab(NotificationHistoryStore store)
-        : this(store, new DalamudLinkOpener())
+        : this(store, new DalamudLinkOpener(), new GlamImageCache(LoadTextureAsync), new DropDetailsWindow())
+    {
+    }
+
+    internal HistoryTab(NotificationHistoryStore store, DropDetailsWindow detailsWindow)
+        : this(store, new DalamudLinkOpener(), new GlamImageCache(LoadTextureAsync), detailsWindow)
     {
     }
 
     internal HistoryTab(NotificationHistoryStore store, ILinkOpener linkOpener)
-        : this(store, linkOpener, new GlamImageCache(LoadTextureAsync))
+        : this(store, linkOpener, new GlamImageCache(LoadTextureAsync), new DropDetailsWindow())
     {
     }
 
     internal HistoryTab(NotificationHistoryStore store, ILinkOpener linkOpener, GlamImageCache imageCache)
+        : this(store, linkOpener, imageCache, new DropDetailsWindow())
+    {
+    }
+
+    internal HistoryTab(
+        NotificationHistoryStore store,
+        ILinkOpener linkOpener,
+        GlamImageCache imageCache,
+        DropDetailsWindow detailsWindow)
     {
         this.store = store;
         this.actions = new HistoryActions(linkOpener);
         this.imageCache = imageCache;
+        this.detailsWindow = detailsWindow;
     }
 
     /// <summary>The ImGui layer the cover preview is painted on; must be the foreground so it floats above the window.</summary>
@@ -84,8 +105,17 @@ internal sealed class HistoryTab : IDisposable
     internal void Draw()
     {
         var records = this.store.Snapshot();
-        var tableOpen = false;
+        if (this.detailsWindow.Selected is not null &&
+            !records.Any(record => ReferenceEquals(record, this.detailsWindow.Selected)))
+        {
+            this.detailsWindow.Close();
+        }
 
+        var overlayMin = ImGui.GetCursorScreenPos();
+        var overlaySize = ImGui.GetContentRegionAvail();
+        this.detailsWindow.SetHostBounds(overlayMin, overlaySize);
+
+        var tableOpen = false;
         try
         {
             ImGui.TextDisabled($"{records.Count} qualifying drop(s) logged.");
@@ -107,39 +137,53 @@ internal sealed class HistoryTab : IDisposable
             const ImGuiTableFlags flags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
                 | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable;
 
-            if (!ImGui.BeginTable("##history", 6, flags))
+            if (!ImGui.BeginTable("##history", 7, flags))
                 return;
 
             tableOpen = true;
             ImGui.TableSetupScrollFreeze(0, 1);
-            ImGui.TableSetupColumn("When", ImGuiTableColumnFlags.WidthFixed, 130);
-            ImGui.TableSetupColumn("Item", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Loves", ImGuiTableColumnFlags.WidthFixed, 60);
-            ImGui.TableSetupColumn("Glam", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Preview", ImGuiTableColumnFlags.WidthFixed, 48);
-            ImGui.TableSetupColumn("All Glams", ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn(ColumnOrder[0], ImGuiTableColumnFlags.WidthFixed, 70);
+            ImGui.TableSetupColumn(ColumnOrder[1], ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableSetupColumn(ColumnOrder[2], ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn(ColumnOrder[3], ImGuiTableColumnFlags.WidthFixed, 48);
+            ImGui.TableSetupColumn(ColumnOrder[4], ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn(ColumnOrder[5], ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn(ColumnOrder[6], ImGuiTableColumnFlags.WidthFixed, 60);
             ImGui.TableHeadersRow();
 
-            foreach (var record in records)
+            for (var index = 0; index < records.Count; index++)
             {
-                ImGui.TableNextRow();
-                ImGui.TableSetColumnIndex(0);
-                ImGui.TextUnformatted(record.Timestamp.ToLocalTime().ToString("g"));
+                var record = records[index];
+                ImGui.PushID(index);
+                try
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.TextUnformatted(HistoryRecordPresentation.PieceLabel(record.Slot));
 
-                ImGui.TableSetColumnIndex(1);
-                ImGui.TextUnformatted(record.ItemName);
+                    ImGui.TableSetColumnIndex(1);
+                    ImGui.TextUnformatted(record.Loves.ToString());
 
-                ImGui.TableSetColumnIndex(2);
-                ImGui.TextUnformatted(record.Loves.ToString());
+                    ImGui.TableSetColumnIndex(2);
+                    ImGui.TextUnformatted(record.ItemName);
 
-                ImGui.TableSetColumnIndex(3);
-                this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
+                    ImGui.TableSetColumnIndex(3);
+                    this.DrawImageIndicator(record);
 
-                ImGui.TableSetColumnIndex(4);
-                this.DrawImageIndicator(record);
+                    ImGui.TableSetColumnIndex(4);
+                    this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
 
-                ImGui.TableSetColumnIndex(5);
-                this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+                    ImGui.TableSetColumnIndex(5);
+                    this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+
+                    ImGui.TableSetColumnIndex(6);
+                    if (ImGui.SmallButton("View"))
+                        this.detailsWindow.Show(record);
+                }
+                finally
+                {
+                    ImGui.PopID();
+                }
             }
         }
         finally
@@ -147,8 +191,29 @@ internal sealed class HistoryTab : IDisposable
             if (tableOpen)
                 ImGui.EndTable();
 
+            this.DrawDetailsBackdrop(overlayMin, overlaySize);
             this.previewHover.EndFrame();
         }
+    }
+
+    internal void CloseDetails() => this.detailsWindow.Close();
+
+    private void DrawDetailsBackdrop(Vector2 overlayMin, Vector2 overlaySize)
+    {
+        if (!this.detailsWindow.IsOpen)
+            return;
+
+        ImGui.SetNextWindowPos(overlayMin, ImGuiCond.Always);
+        ImGui.SetNextWindowSize(overlaySize, ImGuiCond.Always);
+        const ImGuiWindowFlags flags = ImGuiWindowFlags.NoDecoration
+            | ImGuiWindowFlags.NoDocking
+            | ImGuiWindowFlags.NoMove
+            | ImGuiWindowFlags.NoSavedSettings
+            | ImGuiWindowFlags.NoNav;
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(0f, 0f, 0f, 0.55f));
+        ImGui.Begin(DetailsBackdropId, flags);
+        ImGui.PopStyleColor();
+        ImGui.End();
     }
 
     /// <summary>

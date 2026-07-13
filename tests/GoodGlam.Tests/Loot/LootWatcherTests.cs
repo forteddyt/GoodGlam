@@ -26,6 +26,10 @@ public class LootWatcherTests
     private readonly FakeGlamSource source = new();
     private readonly FakeNotifier notifier = new();
     private readonly Configuration config = new() { Filters = new() };
+    private readonly StubDropContextProvider dropContext = new(new DropOccurrence(
+        new DropItem(0, string.Empty, GlamSlot.Head),
+        new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero),
+        "The Aurum Vale"));
 
     public LootWatcherTests()
     {
@@ -54,7 +58,7 @@ public class LootWatcherTests
     private LootWatcher New(StubLootReader reader)
     {
         var popularity = new GlamPopularityService(this.config, this.source, this.notifier);
-        return new LootWatcher(this.resolver, popularity, this.config, reader);
+        return new LootWatcher(this.resolver, popularity, this.config, reader, this.dropContext);
     }
 
     private void Fire(AddonEvent evt) => this.handlers[evt].Invoke(evt, null!);
@@ -111,6 +115,24 @@ public class LootWatcherTests
 
         reader.ReadCalls.Should().Be(1);
         this.notifier.CaptureCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void Dispatch_captures_and_forwards_the_drop_time_and_duty()
+    {
+        A.CallTo(() => this.resolver.Resolve(3610u))
+            .Returns(new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands));
+        this.source.Popularity = new GlamPopularity([new GlamResult(150, "u")]);
+        this.New(new StubLootReader(Snapshot(Entry(3610, chestObjectId: 100))));
+
+        this.Fire(AddonEvent.PostSetup);
+
+        this.dropContext.CaptureCalls.Should().Be(1);
+        this.notifier.LastOccurrence.Should().NotBeNull();
+        this.notifier.LastOccurrence!.DroppedAt.Should()
+            .Be(new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero));
+        this.notifier.LastOccurrence.DutyName.Should().Be("The Aurum Vale");
+        this.notifier.LastOccurrence.ItemId.Should().Be(3610);
     }
 
     [Fact]
@@ -278,7 +300,7 @@ public class LootWatcherTests
 
         // Only the Legs drop is dispatched and notified; the disabled Hands drop is skipped.
         this.notifier.CaptureCalls.Should().Be(1);
-        this.notifier.LastDrop!.Slot.Should().Be(GlamSlot.Legs);
+        this.notifier.LastOccurrence!.Slot.Should().Be(GlamSlot.Legs);
     }
 
     [Fact]

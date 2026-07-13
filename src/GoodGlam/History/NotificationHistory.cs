@@ -11,7 +11,8 @@ namespace GoodGlam.History;
 /// <see cref="ListingUrl"/> is the EC glamours listing for the item with the filters that were
 /// active when the drop was logged, frozen so the row keeps linking to that same filtered view.
 /// <see cref="RankedGlams"/> stores up to ten ranked glamour candidates and <see cref="SelectedIndex"/>
-/// chooses which one the UI should currently present.
+/// chooses which one the UI should currently present. <see cref="DroppedAt"/> and <see cref="DutyName"/>
+/// are captured when the loot is detected rather than when the asynchronous popularity lookup finishes.
 /// </summary>
 public sealed record PopularDropRecord
 {
@@ -20,19 +21,21 @@ public sealed record PopularDropRecord
         string itemName,
         string slot,
         IReadOnlyList<GlamResult>? rankedGlams,
-        DateTimeOffset timestamp,
+        DateTimeOffset droppedAt,
+        string? dutyName,
         string? listingUrl = null,
         int selectedIndex = 0,
         Guid rowId = default)
     {
+        this.RowId = rowId == Guid.Empty ? Guid.NewGuid() : rowId;
         this.ItemId = itemId;
         this.ItemName = itemName;
         this.Slot = slot;
         this.RankedGlams = rankedGlams?.Take(10).ToArray() ?? [];
-        this.Timestamp = timestamp;
+        this.DroppedAt = droppedAt;
+        this.DutyName = dutyName;
         this.ListingUrl = listingUrl;
         this.SelectedIndex = selectedIndex;
-        this.RowId = rowId == Guid.Empty ? Guid.NewGuid() : rowId;
     }
 
     public Guid RowId { get; init; }
@@ -45,7 +48,9 @@ public sealed record PopularDropRecord
 
     public IReadOnlyList<GlamResult> RankedGlams { get; init; }
 
-    public DateTimeOffset Timestamp { get; init; }
+    public DateTimeOffset DroppedAt { get; init; }
+
+    public string? DutyName { get; init; }
 
     public string? ListingUrl { get; init; }
 

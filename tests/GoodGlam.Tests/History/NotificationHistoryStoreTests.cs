@@ -7,6 +7,9 @@ namespace GoodGlam.Tests.History;
 
 public class NotificationHistoryStoreTests : IDisposable
 {
+    private static readonly DateTimeOffset DroppedAt = new(2026, 7, 12, 21, 19, 32, TimeSpan.Zero);
+    private const string DutyName = "The Aurum Vale";
+
     private readonly string path;
 
     public NotificationHistoryStoreTests()
@@ -21,14 +24,15 @@ public class NotificationHistoryStoreTests : IDisposable
         int selectedIndex = 0,
         Guid rowId = default)
         => new(
-            id,
-            $"Item {id}",
-            "body",
-            rankedGlams ?? [new GlamResult(200, "https://x/glamour/1", "Glam", "https://glamours.x/1/cover-0-9.png")],
-            DateTimeOffset.UnixEpoch,
-            "https://x/glamours?filter=1",
-            selectedIndex,
-            rowId);
+            itemId: id,
+            itemName: $"Item {id}",
+            slot: "body",
+            rankedGlams: rankedGlams ?? [new GlamResult(200, "https://x/glamour/1", "Glam", "https://glamours.x/1/cover-0-9.png")],
+            droppedAt: DroppedAt,
+            dutyName: DutyName,
+            listingUrl: "https://x/glamours?filter=1",
+            selectedIndex: selectedIndex,
+            rowId: rowId);
 
     [Fact]
     public void Adds_newest_first()
@@ -72,6 +76,8 @@ public class NotificationHistoryStoreTests : IDisposable
             (333, "Winner", "https://glamours.x/7.png"),
             (111, "Runner Up", null));
         reloaded.ListingUrl.Should().Be("https://x/glamours?filter=1");
+        reloaded.DroppedAt.Should().Be(DroppedAt);
+        reloaded.DutyName.Should().Be(DutyName);
     }
 
     [Fact]

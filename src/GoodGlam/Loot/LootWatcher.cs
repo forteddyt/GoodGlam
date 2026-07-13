@@ -23,6 +23,7 @@ public sealed class LootWatcher : IDisposable
     private readonly GlamPopularityService popularity;
     private readonly Configuration config;
     private readonly ILootReader lootReader;
+    private readonly IDropContextProvider dropContextProvider;
     private readonly ITraceLogger<LootWatcher> log;
 
     // Identity of a single rollable drop, taken from the game's own bookkeeping: which coffer it came
@@ -42,7 +43,26 @@ public sealed class LootWatcher : IDisposable
     private bool wasBoundByDuty;
 
     public LootWatcher(IItemResolver resolver, GlamPopularityService popularity, Configuration config)
-        : this(resolver, popularity, config, new GameLootReader())
+        : this(
+            resolver,
+            popularity,
+            config,
+            new GameLootReader(),
+            new DropContextProvider(TimeProvider.System, new GameDutyNameProvider()))
+    {
+    }
+
+    internal LootWatcher(
+        IItemResolver resolver,
+        GlamPopularityService popularity,
+        Configuration config,
+        ILootReader lootReader)
+        : this(
+            resolver,
+            popularity,
+            config,
+            lootReader,
+            new DropContextProvider(TimeProvider.System, new GameDutyNameProvider()))
     {
     }
 
@@ -51,12 +71,14 @@ public sealed class LootWatcher : IDisposable
         GlamPopularityService popularity,
         Configuration config,
         ILootReader lootReader,
+        IDropContextProvider dropContextProvider,
         ITraceLogger<LootWatcher>? log = null)
     {
         this.resolver = resolver;
         this.popularity = popularity;
         this.config = config;
         this.lootReader = lootReader;
+        this.dropContextProvider = dropContextProvider;
         this.log = log ?? new TraceLogger<LootWatcher>();
 
         Services.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, AddonName, this.OnAddonEvent);
@@ -226,7 +248,7 @@ public sealed class LootWatcher : IDisposable
 
             this.log.Debug($"dispatching {drop.Name} ({drop.ItemId}) [slot={drop.Slot.Key}] for popularity check.");
             dispatched++;
-            _ = this.popularity.ProcessAsync(drop);
+            _ = this.popularity.ProcessAsync(this.dropContextProvider.Capture(drop));
         }
 
         if (!frameworkPoll || dispatched > 0)
@@ -349,10 +371,10 @@ public sealed class LootWatcher : IDisposable
             return;
         }
 
-        _ = this.ReportSimulatedDropAsync(drop);
+        _ = this.ReportSimulatedDropAsync(this.dropContextProvider.Capture(drop));
     }
 
-    private async Task ReportSimulatedDropAsync(DropItem drop)
+    private async Task ReportSimulatedDropAsync(DropOccurrence drop)
     {
         var popularity = await this.popularity.ProcessAsync(drop).ConfigureAwait(false);
         var threshold = this.config.EffectiveThreshold(drop.Slot);

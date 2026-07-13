@@ -20,7 +20,10 @@ public class HistoryNotifierTests : IDisposable
 
     private INotificationTarget Notifier() => new HistoryNotifier(this.store, this.notificationState).CaptureTarget();
 
-    private static DropItem Drop() => new(3610, "Cavalry Gauntlets", GlamSlot.Hands);
+    private static DropOccurrence Drop() => new(
+        new DropItem(3610, "Cavalry Gauntlets", GlamSlot.Hands),
+        new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero),
+        "The Aurum Vale");
 
     [Fact]
     public void Maps_the_ranked_result_onto_the_record()
@@ -42,9 +45,14 @@ public class HistoryNotifierTests : IDisposable
         record.SelectedIndex.Should().Be(0);
         record.ClampedSelectedIndex.Should().Be(0);
         record.SelectedGlam.Should().Be(popularity.Top);
+        record.Loves.Should().Be(250);
+        record.GlamName.Should().Be("Nirvana");
+        record.GlamUrl.Should().Be("https://ec/glamour/200");
+        record.GlamImageUrl.Should().Be("https://glamours.ec/200/cover-0-9.png");
         record.ListingUrl.Should().Be("https://ec/glamours?filter=1");
         record.RowId.Should().NotBe(Guid.Empty);
-        record.Timestamp.Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(1));
+        record.DroppedAt.Should().Be(new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero));
+        record.DutyName.Should().Be("The Aurum Vale");
     }
 
     [Fact]
@@ -55,7 +63,13 @@ public class HistoryNotifierTests : IDisposable
         var record = this.store.Snapshot().Single();
         record.RankedGlams.Should().BeEmpty();
         record.SelectedGlam.Should().BeNull();
+        record.Loves.Should().Be(0);
+        record.GlamName.Should().BeNull();
+        record.GlamUrl.Should().BeNull();
+        record.GlamImageUrl.Should().BeNull();
         record.ListingUrl.Should().BeNull();
+        record.DroppedAt.Should().Be(new DateTimeOffset(2026, 7, 12, 21, 19, 32, TimeSpan.Zero));
+        record.DutyName.Should().Be("The Aurum Vale");
     }
 
     [Fact]

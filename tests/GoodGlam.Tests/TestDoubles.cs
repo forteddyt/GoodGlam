@@ -40,7 +40,7 @@ internal sealed class FakeNotifier : INotifier, INotificationTarget
 {
     public int Count;
     public int CaptureCalls;
-    public DropItem? LastDrop;
+    public DropOccurrence? LastOccurrence;
     public GlamPopularity? LastPopularity;
 
     public INotificationTarget CaptureTarget()
@@ -49,11 +49,23 @@ internal sealed class FakeNotifier : INotifier, INotificationTarget
         return this;
     }
 
-    public void NotifyPopular(DropItem drop, GlamPopularity popularity)
+    public void NotifyPopular(DropOccurrence drop, GlamPopularity popularity)
     {
         this.Count++;
-        this.LastDrop = drop;
+        this.LastOccurrence = drop;
         this.LastPopularity = popularity;
+    }
+}
+
+/// <summary>Returns a deterministic drop occurrence so loot dispatch context is directly assertable.</summary>
+internal sealed class StubDropContextProvider(DropOccurrence occurrence) : IDropContextProvider
+{
+    public int CaptureCalls;
+
+    public DropOccurrence Capture(DropItem item)
+    {
+        this.CaptureCalls++;
+        return occurrence with { Item = item };
     }
 }
 

@@ -193,7 +193,8 @@ public class HistoryTabPreviewInteractionTests
                 Url: $"https://ec/glamour/{index + 1}",
                 Name: $"Rank {index + 1}",
                 ImageUrl: imageUrl)).ToArray(),
-            timestamp: DateTimeOffset.UnixEpoch,
+            droppedAt: DateTimeOffset.UnixEpoch,
+            dutyName: "The Aurum Vale",
             listingUrl: "https://ec/glamours?filter=1",
             selectedIndex: selectedIndex,
             rowId: rowId ?? Guid.NewGuid());

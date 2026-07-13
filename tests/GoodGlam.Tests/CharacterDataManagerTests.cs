@@ -36,7 +36,8 @@ public class CharacterDataManagerTests : IDisposable
             $"Item {id}",
             "body",
             [new GlamResult(200, "https://x/glamour/1", "Glam")],
-            DateTimeOffset.UnixEpoch);
+            DateTimeOffset.UnixEpoch,
+            "The Aurum Vale");
 
     [Fact]
     public void Activate_isolates_config_and_history_per_character()

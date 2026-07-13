@@ -44,6 +44,7 @@ public sealed class MainWindow : Window, IDisposable
     private readonly FiltersTab filtersTab;
     private readonly SettingsTab settingsTab;
     private readonly AboutTab aboutTab;
+    private readonly DropDetailsWindow detailsWindow;
     private readonly ITraceLogger<MainWindow> log = new TraceLogger<MainWindow>();
 
     /// <summary>
@@ -55,13 +56,19 @@ public sealed class MainWindow : Window, IDisposable
     /// </summary>
     private readonly HistoryTabFocus historyFocus = new();
 
-    public MainWindow(Configuration config, EcFilterCatalog filterCatalog, NotificationHistoryStore store, Action<bool> setLogoVisible)
+    internal MainWindow(
+        Configuration config,
+        EcFilterCatalog filterCatalog,
+        NotificationHistoryStore store,
+        Action<bool> setLogoVisible,
+        DropDetailsWindow detailsWindow)
         : base("GoodGlam###GoodGlamMain")
     {
         // One shared actions instance backs both the Settings and Filters tabs (config mutation,
         // clamping, restore/reset all live there); the logo callback is only relevant to Settings.
         var actions = new SettingsActions(config, setLogoVisible);
-        this.historyTab = new HistoryTab(store);
+        this.detailsWindow = detailsWindow;
+        this.historyTab = new HistoryTab(store, detailsWindow);
         this.filtersTab = new FiltersTab(config, filterCatalog, actions);
         this.settingsTab = new SettingsTab(config, actions);
         this.aboutTab = new AboutTab();
@@ -73,8 +80,13 @@ public sealed class MainWindow : Window, IDisposable
     public override void OnOpen()
     {
         this.log.Debug("window opened; forcing the History tab.");
+        this.historyTab.CloseDetails();
         this.historyFocus.OnOpen();
     }
+
+    public override void OnClose() => this.historyTab.CloseDetails();
+
+    public override void Update() => this.detailsWindow.BeginHostFrame();
 
     /// <summary>Releases the History tab's owned image textures when the plugin unloads.</summary>
     public void Dispose() => this.historyTab.Dispose();
@@ -87,6 +99,7 @@ public sealed class MainWindow : Window, IDisposable
         // character-select screen.
         if (!Services.ClientState.IsLoggedIn)
         {
+            this.historyTab.CloseDetails();
             ImGui.TextWrapped("Log in to a character to view or change GoodGlam. " +
                 "Each character keeps its own history, filters, and settings.");
             return;
@@ -108,18 +121,21 @@ public sealed class MainWindow : Window, IDisposable
 
         if (ImGui.BeginTabItem(TabOrder[1]))
         {
+            this.historyTab.CloseDetails();
             DrawTabBody(1, this.filtersTab.Draw);
             ImGui.EndTabItem();
         }
 
         if (ImGui.BeginTabItem(TabOrder[2]))
         {
+            this.historyTab.CloseDetails();
             DrawTabBody(2, this.settingsTab.Draw);
             ImGui.EndTabItem();
         }
 
         if (ImGui.BeginTabItem(TabOrder[3]))
         {
+            this.historyTab.CloseDetails();
             DrawTabBody(3, this.aboutTab.Draw);
             ImGui.EndTabItem();
         }
