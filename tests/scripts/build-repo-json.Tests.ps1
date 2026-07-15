@@ -59,6 +59,41 @@ Describe "build-repo-json.ps1" {
             $e.DownloadLinkUpdate   | Should -Match "^https://"
             $e.DownloadLinkTesting  | Should -Match "^https://"
         }
+
+        It "preserves installer presentation and feedback metadata from the built manifest" {
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.5"
+            $local = New-LocalManifest -AssemblyVersion "0.1.0.5"
+            $e = (Invoke-Generator -FixtureDir $fx -ManifestPath $local).Parsed[0]
+
+            $e.RepoUrl | Should -Be "https://github.com/forteddyt/GoodGlam"
+            @($e.CategoryTags) | Should -Be @("inventory", "utility")
+            $e.IconUrl | Should -Be "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
+            $e.AcceptsFeedback | Should -BeTrue
+            $e.FeedbackMessage | Should -Be "Use the About tab to report bugs or suggest features."
+        }
+
+        It "propagates preview image URLs when the built manifest defines them" {
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.5"
+            $imageUrls = @(
+                "https://example.com/image1.png",
+                "https://example.com/image2.png"
+            )
+            $local = New-LocalManifest -AssemblyVersion "0.1.0.5" -ImageUrls $imageUrls
+            $e = (Invoke-Generator -FixtureDir $fx -ManifestPath $local).Parsed[0]
+
+            @($e.ImageUrls) | Should -Be $imageUrls
+        }
+
+        It "omits preview image URLs when the built manifest does not define them" {
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.5"
+            $local = New-LocalManifest -AssemblyVersion "0.1.0.5"
+            $e = (Invoke-Generator -FixtureDir $fx -ManifestPath $local).Parsed[0]
+
+            $e.PSObject.Properties.Name | Should -Not -Contain "ImageUrls"
+        }
     }
 
     Context "full repo (stable + testing)" {

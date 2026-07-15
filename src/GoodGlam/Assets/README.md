@@ -6,7 +6,7 @@
 
 | File       | Purpose                                                              |
 | ---------- | ------------------------------------------------------------------- |
-| `Logo.png` | 512×512 transparent raster embedded in the plugin (`LogoWindow`). High-res so it stays crisp when ImGui downscales it at any DPI. |
+| `Logo.png` | 512×512 transparent raster embedded in the plugin (`LogoWindow`) and used as the source-hosted Dalamud installer icon. High-res so it stays crisp when ImGui downscales it at any DPI. |
 
 ImGui can only draw raster textures, so the SVG is rasterized to `Logo.png` at build-prep time rather than at runtime (no SVG decoder ships with Dalamud).
 

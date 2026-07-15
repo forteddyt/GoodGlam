@@ -3,9 +3,10 @@
   "Author": "forteddyt",
   "Punchline": "Know when a dungeon drop is glam-worthy before you roll.",
   "Description": "Watches the Need/Greed roll window and notifies you when a rollable item is used in a popular glamour on Eorzea Collection, so you can decide whether to roll Need/Greed.",
-  "RepoUrl": "https://github.com/forteddyt/goodglam",
+  "RepoUrl": "https://github.com/forteddyt/GoodGlam",
   "Tags": [ "glamour", "loot", "need", "greed", "eorzea collection" ],
-  "ApplicableVersion": "any",
-  "DalamudApiLevel": 15,
-  "IconUrl": ""
+  "CategoryTags": [ "inventory", "utility" ],
+  "IconUrl": "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png",
+  "AcceptsFeedback": true,
+  "FeedbackMessage": "Bug reports and feature requests are welcome. Use Report Bug or Suggest Feature in GoodGlam's About tab to open the matching GitHub form."
 }
