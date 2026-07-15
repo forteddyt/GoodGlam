@@ -156,11 +156,9 @@ $entry = [ordered]@{
     RepoUrl               = [string]$local.RepoUrl
     ApplicableVersion     = if ($local.PSObject.Properties.Name -contains "ApplicableVersion") { [string]$local.ApplicableVersion } else { "any" }
     Tags                  = @($local.Tags)
-    CategoryTags          = @($local.CategoryTags)
     DalamudApiLevel       = $stableApi
     IconUrl               = [string]$local.IconUrl
-    AcceptsFeedback       = [bool]$local.AcceptsFeedback
-    FeedbackMessage       = [string]$local.FeedbackMessage
+    AcceptsFeedback       = if (($local.PSObject.Properties.Name -contains "AcceptsFeedback") -and $null -ne $local.AcceptsFeedback) { [bool]$local.AcceptsFeedback } else { $true }
     AssemblyVersion       = $stableVersion
     TestingAssemblyVersion = $testingVersion
     TestingDalamudApiLevel = $testingApi
@@ -172,7 +170,13 @@ $entry = [ordered]@{
     DownloadLinkTesting   = $testingInstallUrl
 }
 
-if ($local.PSObject.Properties.Name -contains "ImageUrls") {
+if (($local.PSObject.Properties.Name -contains "CategoryTags") -and $null -ne $local.CategoryTags) {
+    $entry["CategoryTags"] = @($local.CategoryTags)
+}
+if (($local.PSObject.Properties.Name -contains "FeedbackMessage") -and $null -ne $local.FeedbackMessage) {
+    $entry["FeedbackMessage"] = [string]$local.FeedbackMessage
+}
+if (($local.PSObject.Properties.Name -contains "ImageUrls") -and $null -ne $local.ImageUrls) {
     $entry["ImageUrls"] = @($local.ImageUrls)
 }
 

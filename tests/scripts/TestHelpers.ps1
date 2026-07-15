@@ -121,18 +121,21 @@ function New-LocalManifest {
     param(
         [string]$AssemblyVersion = "0.1.0.0",
         [int]$ApiLevel = 15,
-        [string[]]$ImageUrls
+        [string[]]$ImageUrls,
+        [switch]$OmitOptionalInstallerMetadata
     )
     $path = Join-Path ([System.IO.Path]::GetTempPath()) "gg-local-$([guid]::NewGuid()).json"
     $manifest = [ordered]@{
         Name = "GoodGlam"; Author = "forteddyt"; Punchline = "P"; Description = "D"
         RepoUrl = "https://github.com/forteddyt/GoodGlam"; Tags = @("glamour", "loot")
-        CategoryTags = @("inventory", "utility")
         ApplicableVersion = "any"; DalamudApiLevel = $ApiLevel
         IconUrl = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
-        AcceptsFeedback = $true
-        FeedbackMessage = "Use the About tab to report bugs or suggest features."
         InternalName = "GoodGlam"; AssemblyVersion = $AssemblyVersion
+    }
+    if (-not $OmitOptionalInstallerMetadata) {
+        $manifest["CategoryTags"] = @("inventory", "utility")
+        $manifest["AcceptsFeedback"] = $true
+        $manifest["FeedbackMessage"] = "Use the About tab to report bugs or suggest features."
     }
     if ($null -ne $ImageUrls) {
         $manifest["ImageUrls"] = @($ImageUrls)

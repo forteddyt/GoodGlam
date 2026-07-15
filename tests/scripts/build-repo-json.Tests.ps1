@@ -73,6 +73,21 @@ Describe "build-repo-json.ps1" {
             $e.FeedbackMessage | Should -Be "Use the About tab to report bugs or suggest features."
         }
 
+        It "uses safe defaults when optional installer metadata is absent" {
+            $fx = New-GhFixture
+            Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.5"
+            $local = New-LocalManifest -AssemblyVersion "0.1.0.5" -OmitOptionalInstallerMetadata
+            $r = Invoke-Generator -FixtureDir $fx -ManifestPath $local
+
+            $r.ExitCode | Should -Be 0
+            if ($r.ExitCode -eq 0) {
+                $e = $r.Parsed[0]
+                $e.AcceptsFeedback | Should -BeTrue
+                $e.PSObject.Properties.Name | Should -Not -Contain "CategoryTags"
+                $e.PSObject.Properties.Name | Should -Not -Contain "FeedbackMessage"
+            }
+        }
+
         It "propagates preview image URLs when the built manifest defines them" {
             $fx = New-GhFixture
             Add-FakeRelease -FixtureDir $fx -Tag "testing" -AssemblyVersion "0.1.0.5"
