@@ -158,6 +158,7 @@ $entry = [ordered]@{
     Tags                  = @($local.Tags)
     DalamudApiLevel       = $stableApi
     IconUrl               = [string]$local.IconUrl
+    AcceptsFeedback       = if (($local.PSObject.Properties.Name -contains "AcceptsFeedback") -and $null -ne $local.AcceptsFeedback) { [bool]$local.AcceptsFeedback } else { $true }
     AssemblyVersion       = $stableVersion
     TestingAssemblyVersion = $testingVersion
     TestingDalamudApiLevel = $testingApi
@@ -167,6 +168,16 @@ $entry = [ordered]@{
     DownloadLinkInstall   = $stableInstallUrl
     DownloadLinkUpdate    = $stableInstallUrl
     DownloadLinkTesting   = $testingInstallUrl
+}
+
+if (($local.PSObject.Properties.Name -contains "CategoryTags") -and $null -ne $local.CategoryTags) {
+    $entry["CategoryTags"] = @($local.CategoryTags)
+}
+if (($local.PSObject.Properties.Name -contains "FeedbackMessage") -and $null -ne $local.FeedbackMessage) {
+    $entry["FeedbackMessage"] = [string]$local.FeedbackMessage
+}
+if (($local.PSObject.Properties.Name -contains "ImageUrls") -and $null -ne $local.ImageUrls) {
+    $entry["ImageUrls"] = @($local.ImageUrls)
 }
 
 # -AsArray guarantees a JSON array even with a single entry; without it a one-element array is

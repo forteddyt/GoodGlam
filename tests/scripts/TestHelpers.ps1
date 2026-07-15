@@ -97,11 +97,14 @@ function Add-FakeRelease {
         Author          = "forteddyt"
         Punchline       = "P"
         Description     = "D"
-        RepoUrl         = "https://github.com/forteddyt/goodglam"
+        RepoUrl         = "https://github.com/forteddyt/GoodGlam"
         Tags            = @("glamour")
+        CategoryTags    = @("inventory", "utility")
         ApplicableVersion = "any"
         DalamudApiLevel = $ApiLevel
-        IconUrl         = ""
+        IconUrl         = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
+        AcceptsFeedback = $true
+        FeedbackMessage = "Use the About tab to report bugs or suggest features."
         InternalName    = "GoodGlam"
         AssemblyVersion = $AssemblyVersion
     }
@@ -115,13 +118,27 @@ function Add-FakeRelease {
 
 # Write a fake built manifest (the -ManifestPath input for build-repo-json.ps1).
 function New-LocalManifest {
-    param([string]$AssemblyVersion = "0.1.0.0", [int]$ApiLevel = 15)
+    param(
+        [string]$AssemblyVersion = "0.1.0.0",
+        [int]$ApiLevel = 15,
+        [string[]]$ImageUrls,
+        [switch]$OmitOptionalInstallerMetadata
+    )
     $path = Join-Path ([System.IO.Path]::GetTempPath()) "gg-local-$([guid]::NewGuid()).json"
     $manifest = [ordered]@{
         Name = "GoodGlam"; Author = "forteddyt"; Punchline = "P"; Description = "D"
-        RepoUrl = "https://github.com/forteddyt/goodglam"; Tags = @("glamour", "loot")
-        ApplicableVersion = "any"; DalamudApiLevel = $ApiLevel; IconUrl = ""
+        RepoUrl = "https://github.com/forteddyt/GoodGlam"; Tags = @("glamour", "loot")
+        ApplicableVersion = "any"; DalamudApiLevel = $ApiLevel
+        IconUrl = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
         InternalName = "GoodGlam"; AssemblyVersion = $AssemblyVersion
+    }
+    if (-not $OmitOptionalInstallerMetadata) {
+        $manifest["CategoryTags"] = @("inventory", "utility")
+        $manifest["AcceptsFeedback"] = $true
+        $manifest["FeedbackMessage"] = "Use the About tab to report bugs or suggest features."
+    }
+    if ($null -ne $ImageUrls) {
+        $manifest["ImageUrls"] = @($ImageUrls)
     }
     [System.IO.File]::WriteAllText($path, (ConvertTo-Json $manifest -Depth 5), [System.Text.UTF8Encoding]::new($false))
     return $path
