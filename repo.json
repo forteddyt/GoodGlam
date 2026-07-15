@@ -5,7 +5,7 @@
     "InternalName": "GoodGlam",
     "Punchline": "Know when a dungeon drop is glam-worthy before you roll.",
     "Description": "Watches the Need/Greed roll window and notifies you when a rollable item is used in a popular glamour on Eorzea Collection, so you can decide whether to roll Need/Greed.",
-    "RepoUrl": "https://github.com/forteddyt/goodglam",
+    "RepoUrl": "https://github.com/forteddyt/GoodGlam",
     "ApplicableVersion": "any",
     "Tags": [
       "glamour",
@@ -15,15 +15,21 @@
       "eorzea collection"
     ],
     "DalamudApiLevel": 15,
-    "IconUrl": "",
+    "IconUrl": "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png",
+    "AcceptsFeedback": true,
     "AssemblyVersion": "0.3.0.0",
-    "TestingAssemblyVersion": "0.3.0.16",
+    "TestingAssemblyVersion": "0.3.0.17",
     "TestingDalamudApiLevel": 15,
     "IsTestingExclusive": false,
     "IsHide": false,
-    "LastUpdate": 1783959277,
+    "LastUpdate": 1784081816,
     "DownloadLinkInstall": "https://github.com/forteddyt/GoodGlam/releases/latest/download/latest.zip",
     "DownloadLinkUpdate": "https://github.com/forteddyt/GoodGlam/releases/latest/download/latest.zip",
-    "DownloadLinkTesting": "https://github.com/forteddyt/GoodGlam/releases/download/testing/latest.zip"
+    "DownloadLinkTesting": "https://github.com/forteddyt/GoodGlam/releases/download/testing/latest.zip",
+    "CategoryTags": [
+      "inventory",
+      "utility"
+    ],
+    "FeedbackMessage": "Bug reports and feature requests are welcome. Use Report Bug or Suggest Feature in GoodGlam's About tab to open the matching GitHub form."
   }
 ]
