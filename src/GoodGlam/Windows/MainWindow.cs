@@ -11,8 +11,8 @@ namespace GoodGlam.Windows;
 /// <summary>
 /// The single GoodGlam window. It hosts four tabs — History, Filters, Settings, and About — so the
 /// plugin presents one consolidated panel instead of several independently-positioned windows. Every
-/// entry point (the floating logo, the Dalamud config gear, and the slash command) opens this window
-/// on the History tab; the other tabs are reached via the tab bar.
+/// entry point chooses an explicit destination: ordinary Open/history actions land on History, while
+/// Dalamud Settings and settings/config slash commands land on Settings.
 /// </summary>
 /// <remarks>
 /// The tab bar is pinned as a fixed header: each tab body (except History) draws into its own
@@ -23,9 +23,9 @@ namespace GoodGlam.Windows;
 public sealed class MainWindow : Window, IDisposable
 {
     /// <summary>
-    /// The tab labels in display order. History is first (and force-selected on open); the rest —
-    /// Filters, Settings, About — follow. Exposed so the ordering contract is unit-testable without a
-    /// live ImGui context, and used to label the tab items in <see cref="Draw"/>.
+    /// The tab labels in display order. History is first; direct entry points can request History or
+    /// Settings for the next frame. Exposed so the ordering contract is unit-testable without a live
+    /// ImGui context, and used to label the tab items in <see cref="Draw"/>.
     /// </summary>
     internal static readonly string[] TabOrder = ["History", "Filters", "Settings", "About"];
 
@@ -48,13 +48,9 @@ public sealed class MainWindow : Window, IDisposable
     private readonly ITraceLogger<MainWindow> log = new TraceLogger<MainWindow>();
 
     /// <summary>
-    /// Drives force-selecting the History tab on each open (see <see cref="HistoryTabFocus"/>).
-    /// ImGui persists a tab bar's active tab in its own state, which Dalamud does not reset when the
-    /// window is hidden — so without this, reopening after a visit to another tab would land back
-    /// there, breaking the "always open on History" contract (and letting the glow be acknowledged
-    /// without the new drop ever being seen).
+    /// Drives a one-shot History or Settings destination request for direct entry points.
     /// </summary>
-    private readonly HistoryTabFocus historyFocus = new();
+    private readonly MainTabFocus tabFocus = new();
 
     internal MainWindow(
         Configuration config,
@@ -76,12 +72,20 @@ public sealed class MainWindow : Window, IDisposable
         this.SizeCondition = ImGuiCond.FirstUseEver;
     }
 
-    /// <summary>Land on the History tab every time the window opens (see <see cref="HistoryTabFocus"/>).</summary>
+    internal MainTab? PendingTab => this.tabFocus.Pending;
+
+    internal void OpenTab(MainTab tab)
+    {
+        this.log.Debug($"opening the window on the {tab} tab.");
+        this.detailsWindow.Close();
+        this.tabFocus.Request(tab);
+        this.IsOpen = true;
+    }
+
     public override void OnOpen()
     {
-        this.log.Debug("window opened; forcing the History tab.");
+        this.log.Debug("window opened.");
         this.historyTab.CloseDetails();
-        this.historyFocus.OnOpen();
     }
 
     public override void OnClose() => this.historyTab.CloseDetails();
@@ -108,32 +112,27 @@ public sealed class MainWindow : Window, IDisposable
         if (!ImGui.BeginTabBar("##GoodGlamTabs"))
             return;
 
-        // History is listed first and force-selected on each open so it is the default landing tab.
-        var historyFlags = this.historyFocus.ConsumeForceSelect()
-            ? ImGuiTabItemFlags.SetSelected
-            : ImGuiTabItemFlags.None;
-
-        if (ImGui.BeginTabItem(TabOrder[0], historyFlags))
+        if (ImGui.BeginTabItem(TabOrder[0], this.TabFlags(MainTab.History)))
         {
             DrawTabBody(0, this.historyTab.Draw);
             ImGui.EndTabItem();
         }
 
-        if (ImGui.BeginTabItem(TabOrder[1]))
+        if (ImGui.BeginTabItem(TabOrder[1], this.TabFlags(MainTab.Filters)))
         {
             this.historyTab.CloseDetails();
             DrawTabBody(1, this.filtersTab.Draw);
             ImGui.EndTabItem();
         }
 
-        if (ImGui.BeginTabItem(TabOrder[2]))
+        if (ImGui.BeginTabItem(TabOrder[2], this.TabFlags(MainTab.Settings)))
         {
             this.historyTab.CloseDetails();
             DrawTabBody(2, this.settingsTab.Draw);
             ImGui.EndTabItem();
         }
 
-        if (ImGui.BeginTabItem(TabOrder[3]))
+        if (ImGui.BeginTabItem(TabOrder[3], this.TabFlags(MainTab.About)))
         {
             this.historyTab.CloseDetails();
             DrawTabBody(3, this.aboutTab.Draw);
@@ -142,6 +141,9 @@ public sealed class MainWindow : Window, IDisposable
 
         ImGui.EndTabBar();
     }
+
+    private ImGuiTabItemFlags TabFlags(MainTab tab)
+        => this.tabFocus.Consume(tab) ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
 
     /// <summary>
     /// Renders one tab's body beneath the fixed tab bar. Tabs with a <see cref="TabScrollRegions"/>

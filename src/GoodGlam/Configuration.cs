@@ -21,7 +21,7 @@ public sealed class Configuration : IPluginConfiguration
     /// A dropped item counts as "popular" when at least one glamour using it has
     /// this many loves (or more) on Eorzea Collection.
     /// </summary>
-    public int LovesThreshold { get; set; } = 100;
+    public int LovesThreshold { get; set; } = 50;
 
     /// <summary>
     /// When true, each gear slot uses its own loves threshold (see <see cref="Slots"/>) and the

@@ -15,7 +15,7 @@ namespace GoodGlam.Windows;
 /// The buttons live in the "Feedback" section of the About tab (<see cref="AboutTab"/>). Each URL and
 /// open action lives here (not inline in the draw call) so they can be unit-tested without a running
 /// ImGui context, mirroring the pure-logic split used by <see cref="LogoInteraction"/> and
-/// <see cref="HistoryTabFocus"/>.
+/// <see cref="MainTabFocus"/>.
 /// </remarks>
 internal sealed class Feedback
 {

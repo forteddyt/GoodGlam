@@ -62,6 +62,14 @@ public class ConfigurationStoreTests : IDisposable
     }
 
     [Fact]
+    public void Existing_saved_threshold_is_not_replaced_by_the_new_default()
+    {
+        File.WriteAllText(this.path, """{ "Version": 3, "LovesThreshold": 100 }""");
+
+        new ConfigurationStore(this.path).Load().LovesThreshold.Should().Be(100);
+    }
+
+    [Fact]
     public void Null_slots_field_loads_as_empty()
     {
         File.WriteAllText(this.path, """{ "Version": 3, "Slots": null }""");

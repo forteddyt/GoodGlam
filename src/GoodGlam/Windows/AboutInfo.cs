@@ -2,14 +2,20 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// The pure, ImGui-free logic behind the About tab (<see cref="AboutTab"/>): turn the plugin's
-/// assembly <see cref="Version"/> into a friendly <c>v</c>-prefixed string, and open the repository
-/// URL through the shared <see cref="ILinkOpener"/> seam. Split out so the "what the user sees" and
-/// "which URL opens" decisions are unit-testable without a live ImGui context, matching the pure-logic
-/// split used by <see cref="Feedback"/> and <see cref="HistoryTabFocus"/>.
+/// assembly <see cref="Version"/> into a friendly <c>v</c>-prefixed string, provide the ordered
+/// in-plugin tutorial copy, and open the repository URL through the shared <see cref="ILinkOpener"/>
+/// seam. Split out so the display decisions are unit-testable without a live ImGui context.
 /// </summary>
 internal static class AboutInfo
 {
     private static readonly Version LocalBuildSentinelVersion = new(0, 0, 0, 0);
+
+    internal static readonly IReadOnlyList<string> HowItWorksSteps =
+    [
+        "GoodGlam watches items in the Need/Greed/Pass roll window.",
+        "It checks Eorzea Collection for popular glam outfits that use each item, using your threshold and filters.",
+        "Qualifying drops light the floating logo and are saved in History, where you can preview and open matching glams.",
+    ];
 
     /// <summary>
     /// Formats the plugin version for display as <c>v</c> followed by the full version, keeping every

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Dalamud.Bindings.ImGui;
 using GoodGlam.Glam;
 using GoodGlam.History;
 using GoodGlam.Windows;
@@ -8,10 +9,7 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// The unified <see cref="MainWindow"/> is almost entirely ImGui (excluded from coverage), but its
-/// constructor, <see cref="MainWindow.OnOpen"/>, and the declared <see cref="MainWindow.TabOrder"/>
-/// are framework-free: OnOpen arms the History-tab force-select via the pure
-/// <see cref="HistoryTabFocus"/>, and TabOrder pins the four tabs (History first). These cover that
-/// non-UI surface.
+/// constructor, destination methods, and declared table/tab contracts are framework-free.
 /// </summary>
 public class MainWindowTests
 {
@@ -72,14 +70,30 @@ public class MainWindowTests
     }
 
     [Fact]
-    public void OnOpen_arms_history_focus_each_time_without_throwing()
+    public void OpenTab_keeps_the_window_open_and_requests_the_destination()
     {
         var window = NewWindow();
 
-        window.Invoking(w =>
-        {
-            w.OnOpen();
-            w.OnOpen();
-        }).Should().NotThrow();
+        window.OpenTab(MainTab.Settings);
+        window.IsOpen.Should().BeTrue();
+        window.PendingTab.Should().Be(MainTab.Settings);
+
+        window.OpenTab(MainTab.History);
+        window.IsOpen.Should().BeTrue();
+        window.PendingTab.Should().Be(MainTab.History);
     }
+
+    [Fact]
+    public void History_columns_default_to_fixed_fit_and_remain_resizable()
+    {
+        HistoryTab.TableFlags.Should().HaveFlag(ImGuiTableFlags.SizingFixedFit);
+        HistoryTab.TableFlags.Should().HaveFlag(ImGuiTableFlags.Resizable);
+        HistoryTab.ColumnFlags.Should().HaveSameCount(HistoryTab.ColumnOrder);
+        HistoryTab.ColumnFlags.Should().OnlyContain(flags => flags.HasFlag(ImGuiTableColumnFlags.WidthFixed));
+    }
+
+    [Fact]
+    public void Mog_station_filter_uses_the_requested_explanatory_label()
+        => FiltersTab.MogStationLabel.Should().Be(
+            "Ignore glam outfits that use any Mog Station (cash shop) items.");
 }
