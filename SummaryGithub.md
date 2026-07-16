@@ -3,17 +3,17 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/15/2026 - 2:18:54 AM |
-| Coverage date: | 7/15/2026 - 2:18:43 AM - 7/15/2026 - 2:18:50 AM |
+| Generated on: | 7/16/2026 - 3:54:42 AM |
+| Coverage date: | 7/16/2026 - 3:54:27 AM - 7/16/2026 - 3:54:38 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
 | Classes: | 64 |
 | Files: | 41 |
-| **Line coverage:** | 94% (1512 of 1608) |
-| Covered lines: | 1512 |
+| **Line coverage:** | 94% (1513 of 1609) |
+| Covered lines: | 1513 |
 | Uncovered lines: | 96 |
-| Coverable lines: | 1608 |
-| Total lines: | 5239 |
+| Coverable lines: | 1609 |
+| Total lines: | 5252 |
 | **Branch coverage:** | 91.5% (614 of 671) |
 | Covered branches: | 614 |
 | Total branches: | 671 |
@@ -87,7 +87,7 @@
 |GoodGlam.Windows.ImageSharpDecoder|100%|100%|
 |GoodGlam.Windows.LogoInteraction|100%|100%|
 |GoodGlam.Windows.LogoVisibilityGate|100%|100%|
-|GoodGlam.Windows.LogoWindow|97.4%|90%|
+|GoodGlam.Windows.LogoWindow|97.5%|90%|
 |GoodGlam.Windows.MainWindow|90.9%||
 |GoodGlam.Windows.NotificationGlow|100%|100%|
 |GoodGlam.Windows.SettingsActions|100%|100%|
