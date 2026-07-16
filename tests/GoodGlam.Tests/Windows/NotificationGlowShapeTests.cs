@@ -7,7 +7,7 @@ namespace GoodGlam.Tests.Windows;
 
 /// <summary>
 /// Proves the notification glow is derived from the logo art rather than hardcoded geometry: two
-/// genuinely different SVG silhouettes are rasterized to alpha masks, baked through
+/// genuinely different synthetic silhouettes are rasterized to alpha masks, baked through
 /// <see cref="NotificationGlow.BuildGoldSilhouette"/>, and the resulting gold halo sprite is asserted
 /// to match each shape exactly (and to differ between shapes). So if the logo ever changes shape,
 /// the glow follows it — these tests would catch a regression that re-hardcoded a single silhouette.
@@ -16,15 +16,15 @@ public class NotificationGlowShapeTests
 {
     private const int Size = 64;
 
-    /// <summary>The real logo: a split pyramid of two triangles (mirrors <c>Logo.svg</c>'s polygons).</summary>
-    private static readonly Vector2[][] SplitPyramidSvg =
+    /// <summary>A synthetic split pyramid made from two triangles.</summary>
+    private static readonly Vector2[][] SplitPyramid =
     {
         new[] { new Vector2(48, 16), new Vector2(12, 82), new Vector2(44, 82) },
         new[] { new Vector2(52, 16), new Vector2(88, 82), new Vector2(56, 82) },
     };
 
-    /// <summary>A hypothetical reshaped logo: a single centred diamond — a clearly different silhouette.</summary>
-    private static readonly Vector2[][] DiamondSvg =
+    /// <summary>A single centered diamond with a clearly different silhouette.</summary>
+    private static readonly Vector2[][] Diamond =
     {
         new[] { new Vector2(50, 10), new Vector2(90, 50), new Vector2(50, 90), new Vector2(10, 50) },
     };
@@ -32,20 +32,20 @@ public class NotificationGlowShapeTests
     [Fact]
     public void Glow_sprite_matches_the_split_pyramid_silhouette()
     {
-        AssertGlowMatchesShape(SplitPyramidSvg);
+        AssertGlowMatchesShape(SplitPyramid);
     }
 
     [Fact]
     public void Glow_sprite_matches_the_diamond_silhouette()
     {
-        AssertGlowMatchesShape(DiamondSvg);
+        AssertGlowMatchesShape(Diamond);
     }
 
     [Fact]
-    public void Glow_sprite_differs_between_two_different_svg_shapes()
+    public void Glow_sprite_differs_between_two_different_shapes()
     {
-        var pyramid = BakeGlowAlpha(SplitPyramidSvg);
-        var diamond = BakeGlowAlpha(DiamondSvg);
+        var pyramid = BakeGlowAlpha(SplitPyramid);
+        var diamond = BakeGlowAlpha(Diamond);
 
         // Both shapes actually cover some pixels...
         pyramid.Should().Contain((byte)255);
@@ -89,9 +89,9 @@ public class NotificationGlowShapeTests
     /// Bakes the glow sprite for a shape and asserts every pixel is gold with alpha exactly equal to
     /// the shape's own coverage mask — i.e. the halo silhouette is the logo silhouette.
     /// </summary>
-    private static void AssertGlowMatchesShape(Vector2[][] svgPolygons)
+    private static void AssertGlowMatchesShape(Vector2[][] polygons)
     {
-        var mask = Rasterize(svgPolygons);
+        var mask = Rasterize(polygons);
         var source = ToRgba(mask, coveredColor: (R: 251, G: 75, B: 78)); // arbitrary EC-coral fill
 
         var baked = NotificationGlow.BuildGoldSilhouette(Size, Size, Size * 4, source);
@@ -114,9 +114,9 @@ public class NotificationGlowShapeTests
     }
 
     /// <summary>Bakes a shape and returns just the glow sprite's alpha channel (its visible silhouette).</summary>
-    private static byte[] BakeGlowAlpha(Vector2[][] svgPolygons)
+    private static byte[] BakeGlowAlpha(Vector2[][] polygons)
     {
-        var source = ToRgba(Rasterize(svgPolygons), coveredColor: (255, 255, 255));
+        var source = ToRgba(Rasterize(polygons), coveredColor: (255, 255, 255));
         var baked = NotificationGlow.BuildGoldSilhouette(Size, Size, Size * 4, source);
 
         var alpha = new byte[Size * Size];
@@ -145,9 +145,9 @@ public class NotificationGlowShapeTests
     }
 
     /// <summary>
-    /// Tiny SVG-polygon rasterizer: maps the 100×100 viewBox onto a <see cref="Size"/>² grid and marks
-    /// a pixel covered if its centre falls inside any polygon (even-odd rule). Enough to turn the
-    /// shape definitions above into the alpha masks the real pipeline would get from a rasterized PNG.
+    /// Tiny polygon rasterizer: maps a 100x100 coordinate space onto a <see cref="Size"/>-square grid
+    /// and marks a pixel covered if its center falls inside any polygon (even-odd rule). Enough to turn
+    /// the synthetic shape definitions above into representative PNG alpha masks.
     /// </summary>
     private static bool[] Rasterize(Vector2[][] polygons)
     {
