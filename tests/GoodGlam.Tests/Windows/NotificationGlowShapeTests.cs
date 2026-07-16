@@ -6,7 +6,7 @@ using Xunit;
 namespace GoodGlam.Tests.Windows;
 
 /// <summary>
-/// Proves the notification glow is derived from the logo art rather than hardcoded geometry: two
+/// Proves the notification glow is derived from the input art's alpha mask rather than hardcoded geometry: two
 /// genuinely different synthetic silhouettes are rasterized to alpha masks, baked through
 /// <see cref="NotificationGlow.BuildGoldSilhouette"/>, and the resulting gold halo sprite is asserted
 /// to match each shape exactly (and to differ between shapes). So if the logo ever changes shape,
