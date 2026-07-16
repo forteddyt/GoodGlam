@@ -19,8 +19,8 @@ namespace GoodGlam.Windows;
 /// loading screen (see <see cref="DrawConditions"/>), so it enters alongside the native HUD.
 /// Clicking it opens the GoodGlam window. The logo is drawn from an embedded high-resolution PNG,
 /// scaled by the current UI/DPI factor so it stays crisp and correctly sized on any monitor. The
-/// window is draggable; ImGui persists its position by window id. A right-click context menu
-/// exposes opening the window and a hide option.
+/// window starts centered on first use and is draggable; ImGui persists its position by window id.
+/// A right-click context menu exposes opening the window and a hide option.
 /// </summary>
 public sealed class LogoWindow : Window, IDisposable
 {
@@ -87,6 +87,9 @@ public sealed class LogoWindow : Window, IDisposable
         this.DisableWindowSounds = true;
     }
 
+    internal static (Vector2 Position, Vector2 Pivot, ImGuiCond Condition) DefaultPlacement(Vector2 viewportSize)
+        => (viewportSize / 2f, new Vector2(0.5f, 0.5f), ImGuiCond.FirstUseEver);
+
     /// <summary>
     /// Draws only after the logged-in, non-loading game UI has remained visible for a short settle
     /// interval. The interval absorbs the final native HUD fade after Dalamud's loading conditions
@@ -99,6 +102,16 @@ public sealed class LogoWindow : Window, IDisposable
             && !Services.Condition[ConditionFlag.BetweenAreas51]
             && !Services.GameGui.GameUiHidden;
         return this.visibilityGate.ShouldDraw(gameplayReady);
+    }
+
+    [ExcludeFromCodeCoverage(Justification = "Thin ImGui positioning call; the placement calculation is unit-tested.")]
+    public override void PreDraw()
+    {
+        var placement = DefaultPlacement(ImGuiHelpers.MainViewport.Size);
+        ImGuiHelpers.SetNextWindowPosRelativeMainViewport(
+            placement.Position,
+            placement.Condition,
+            placement.Pivot);
     }
 
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the drag/click/tooltip decisions live in the tested LogoInteraction and the menu actions (ToggleLock/Hide) are tested. Needs a live ImGui context that can't run in CI.")]

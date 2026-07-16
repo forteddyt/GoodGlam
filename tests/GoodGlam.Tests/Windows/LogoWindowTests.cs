@@ -1,3 +1,5 @@
+using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -36,6 +38,16 @@ public class LogoWindowTests
             openMain: () => { },
             new GoodGlam.History.NotificationState(),
             new LogoVisibilityGate(TimeProvider.System, TimeSpan.Zero));
+
+    [Fact]
+    public void DefaultPlacement_centers_the_window_and_its_pivot()
+    {
+        var placement = LogoWindow.DefaultPlacement(new Vector2(2560f, 1440f));
+
+        placement.Position.Should().Be(new Vector2(1280f, 720f));
+        placement.Pivot.Should().Be(new Vector2(0.5f, 0.5f));
+        placement.Condition.Should().Be(ImGuiCond.FirstUseEver);
+    }
 
     [Fact]
     public void ToggleLock_locks_then_unlocks_and_persists_each_time()
