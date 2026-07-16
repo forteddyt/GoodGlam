@@ -1,21 +1,21 @@
 # GoodGlam brand assets
 
-`Logo.svg` is the **canonical source** for the plugin's logo (a minimal split-pyramid mark adapted from Eorzea Collection's logo, in EC coral `#fb4b4e`). Every other logo artifact is generated from it — do not hand-edit the generated files.
+`Logo.png` is the **canonical source** for the plugin's logo. It is embedded in the plugin for the
+in-game floating button and About tab, and its repository URL is used as the Dalamud installer icon.
 
-## Generated artifacts
+## Requirements
 
-| File       | Purpose                                                              |
-| ---------- | ------------------------------------------------------------------- |
-| `Logo.png` | 512×512 transparent raster embedded in the plugin (`LogoWindow`) and used as the source-hosted Dalamud installer icon. High-res so it stays crisp when ImGui downscales it at any DPI. |
+- PNG with an RGBA color model.
+- Exactly 512x512 pixels. Dalamud requires installer icons to be square and no larger than 512x512.
+- Transparent around the artwork. The in-game notification glow is generated from the PNG's alpha
+  channel, so an opaque background would produce a square halo.
+- Artwork must retain its intended proportions; fit and center non-square source art on the transparent
+  canvas rather than stretching or cropping it.
 
-ImGui can only draw raster textures, so the SVG is rasterized to `Logo.png` at build-prep time rather than at runtime (no SVG decoder ships with Dalamud).
+The high-resolution source stays crisp when ImGui downscales it for different UI/DPI scales.
 
-## Regenerating
+## Updating
 
-Requires [ImageMagick](https://imagemagick.org/) (`magick`). From the repo root:
-
-```bash
-./src/GoodGlam/Assets/regenerate-logo.sh
-```
-
-After editing `Logo.svg`, re-run the script and commit both the SVG and the regenerated PNG.
+Export a prepared PNG from the external design source, replace `Logo.png`, and verify it still meets
+the requirements above. There is no generated raster artifact or vector source to keep in sync in this
+repository.
