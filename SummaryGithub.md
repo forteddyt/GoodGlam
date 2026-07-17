@@ -3,17 +3,17 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/17/2026 - 2:18:10 AM |
-| Coverage date: | 7/17/2026 - 2:17:57 AM - 7/17/2026 - 2:18:06 AM |
+| Generated on: | 7/17/2026 - 2:46:54 AM |
+| Coverage date: | 7/17/2026 - 2:46:42 AM - 7/17/2026 - 2:46:50 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 65 |
-| Files: | 41 |
-| **Line coverage:** | 93.6% (1531 of 1635) |
-| Covered lines: | 1531 |
+| Classes: | 66 |
+| Files: | 42 |
+| **Line coverage:** | 93.6% (1532 of 1636) |
+| Covered lines: | 1532 |
 | Uncovered lines: | 104 |
-| Coverable lines: | 1635 |
-| Total lines: | 5304 |
+| Coverable lines: | 1636 |
+| Total lines: | 5327 |
 | **Branch coverage:** | 91.2% (616 of 675) |
 | Covered branches: | 616 |
 | Total branches: | 675 |
@@ -58,6 +58,7 @@
 |GoodGlam.Loot.LootWatcher|98%|97.8%|
 |GoodGlam.Plugin|96.8%|94.2%|
 |GoodGlam.Services|100%||
+|GoodGlam.StrictJsonStringEnumConverter`1|100%||
 |GoodGlam.Windows.AboutInfo|100%|100%|
 |GoodGlam.Windows.AboutTab|85.7%||
 |GoodGlam.Windows.ClickAwayDismissal|100%|83.3%|
