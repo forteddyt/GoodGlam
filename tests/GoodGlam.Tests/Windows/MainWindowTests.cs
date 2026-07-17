@@ -93,7 +93,7 @@ public class MainWindowTests
     }
 
     [Fact]
-    public void Mog_station_filter_uses_the_requested_explanatory_label()
-        => FiltersTab.MogStationLabel.Should().Be(
+    public void Mog_station_filter_help_uses_the_requested_explanatory_text()
+        => FiltersTab.MogStationHelp.Should().Be(
             "Ignore glam outfits that use any Mog Station (cash shop) items.");
 }

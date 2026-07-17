@@ -23,7 +23,7 @@ namespace GoodGlam.Windows;
 [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the control effects are extracted into the tested SettingsActions, and a live ImGui context can't run in CI.")]
 internal sealed class FiltersTab
 {
-    internal const string MogStationLabel = "Ignore glam outfits that use any Mog Station (cash shop) items.";
+    internal const string MogStationHelp = "Ignore glam outfits that use any Mog Station (cash shop) items.";
 
     private readonly Configuration config;
     private readonly EcFilterCatalog filterCatalog;
@@ -65,11 +65,13 @@ internal sealed class FiltersTab
             "EC dominant color tag.");
 
         var noMog = filters.ExcludeMogstation;
-        if (ImGui.Checkbox(MogStationLabel, ref noMog))
+        if (ImGui.Checkbox("Exclude Mog Station", ref noMog))
         {
             this.log.Debug($"filter changed: ExcludeMogstation = {noMog}.");
             this.actions.SetExcludeMogstation(noMog);
         }
+
+        Help(MogStationHelp);
 
         var noSeasonal = filters.ExcludeSeasonal;
         if (ImGui.Checkbox("Exclude seasonal", ref noSeasonal))
