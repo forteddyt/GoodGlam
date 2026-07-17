@@ -33,4 +33,8 @@ Enable **Get plugin testing builds** in the same Experimental settings to opt in
 
 See the **[project wiki](https://github.com/forteddyt/GoodGlam/wiki)** for installation, usage, configuration, and developer documentation.
 
+## Credits
+
+- **Art:** Jasmine Senesombath
+
 > ℹ️ This plugin was developed with AI assistance.
