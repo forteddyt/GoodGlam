@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace GoodGlam.Windows;
 
 /// <summary>
 /// The destination tabs supported by direct window entry points.
 /// </summary>
+[JsonConverter(typeof(StrictJsonStringEnumConverter<MainTab>))]
 internal enum MainTab
 {
     History,
