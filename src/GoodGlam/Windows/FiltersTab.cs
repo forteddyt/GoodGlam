@@ -9,7 +9,7 @@ namespace GoodGlam.Windows;
 /// <summary>
 /// The Filters tab of the unified <see cref="MainWindow"/>: the full Eorzea Collection filter set
 /// (Gender, Race, Intended for, Date submitted, Min/Max level, Classification, Style, Theme, Color,
-/// Exclude Mog Station, Exclude seasonal) at the top, then a dedicated <b>Popularity thresholds</b>
+/// Mog Station/seasonal exclusions) at the top, then a dedicated <b>Popularity thresholds</b>
 /// subsection below it (the master loves threshold and the per-slot <b>Gear slots</b> grid), and a
 /// tab-wide <b>Reset filters</b> at the bottom. Split out of <see cref="SettingsTab"/> so plugin
 /// config and the large EC filter set are each single-purpose.
@@ -23,6 +23,8 @@ namespace GoodGlam.Windows;
 [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the control effects are extracted into the tested SettingsActions, and a live ImGui context can't run in CI.")]
 internal sealed class FiltersTab
 {
+    internal const string MogStationHelp = "Ignore glam outfits that use any Mog Station (cash shop) items.";
+
     private readonly Configuration config;
     private readonly EcFilterCatalog filterCatalog;
     private readonly SettingsActions actions;
@@ -69,7 +71,7 @@ internal sealed class FiltersTab
             this.actions.SetExcludeMogstation(noMog);
         }
 
-        Help("Ignore glamours that use Mog Station (cash-shop) items.");
+        Help(MogStationHelp);
 
         var noSeasonal = filters.ExcludeSeasonal;
         if (ImGui.Checkbox("Exclude seasonal", ref noSeasonal))
@@ -121,7 +123,8 @@ internal sealed class FiltersTab
             this.log.Debug($"filter changed: LovesThreshold = {this.config.LovesThreshold}.");
         }
 
-        Help("Minimum 'loves' a glamour must have for a drop to count as popular. Higher = pickier.");
+        Help("Loves are Eorzea Collection users' likes. Lower values find more glamours; higher values " +
+            "only flag more widely loved outfits.");
     }
 
     /// <summary>

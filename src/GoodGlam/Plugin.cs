@@ -64,8 +64,8 @@ public sealed class Plugin : IDalamudPlugin
         this.windowSystem.AddWindow(this.logoWindow);
 
         Services.PluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
-        Services.PluginInterface.UiBuilder.OpenConfigUi += this.ToggleMain;
-        Services.PluginInterface.UiBuilder.OpenMainUi += this.ToggleMain;
+        Services.PluginInterface.UiBuilder.OpenConfigUi += this.OpenSettings;
+        Services.PluginInterface.UiBuilder.OpenMainUi += this.OpenHistory;
 
         Services.ClientState.Login += this.OnLogin;
         Services.ClientState.Logout += this.OnLogout;
@@ -168,8 +168,11 @@ public sealed class Plugin : IDalamudPlugin
         {
             case "config":
             case "settings":
+                this.OpenSettings();
+                break;
+
             case "history":
-                this.ToggleMain();
+                this.OpenHistory();
                 break;
 
             case "dump":
@@ -204,14 +207,28 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ToggleMain()
     {
-        // Opening the window lands on the History tab, which acknowledges any pending popular drop,
-        // so clear the logo glow.
-        var opening = !this.mainWindow.IsOpen;
-        this.log.Debug(opening
-            ? "opening the GoodGlam window (History tab) and clearing the logo glow."
-            : "closing the GoodGlam window.");
+        if (!this.mainWindow.IsOpen)
+        {
+            this.OpenHistory();
+            return;
+        }
+
+        this.log.Debug("closing the GoodGlam window.");
         this.notificationState.Clear();
-        this.mainWindow.Toggle();
+        this.mainWindow.IsOpen = false;
+    }
+
+    private void OpenHistory()
+    {
+        this.log.Debug("opening the GoodGlam window on History and clearing the logo glow.");
+        this.notificationState.Clear();
+        this.mainWindow.OpenTab(MainTab.History);
+    }
+
+    private void OpenSettings()
+    {
+        this.log.Debug("opening the GoodGlam window on Settings.");
+        this.mainWindow.OpenTab(MainTab.Settings);
     }
 
     private void SetLogoVisible(bool visible)
@@ -231,8 +248,8 @@ public sealed class Plugin : IDalamudPlugin
         Services.Framework.Update -= this.AwaitContentId;
 
         Services.PluginInterface.UiBuilder.Draw -= this.windowSystem.Draw;
-        Services.PluginInterface.UiBuilder.OpenConfigUi -= this.ToggleMain;
-        Services.PluginInterface.UiBuilder.OpenMainUi -= this.ToggleMain;
+        Services.PluginInterface.UiBuilder.OpenConfigUi -= this.OpenSettings;
+        Services.PluginInterface.UiBuilder.OpenMainUi -= this.OpenHistory;
         this.windowSystem.RemoveAllWindows();
 
         this.mainWindow.Dispose();

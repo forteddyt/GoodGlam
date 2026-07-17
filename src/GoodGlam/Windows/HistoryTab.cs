@@ -35,6 +35,19 @@ internal sealed class HistoryTab : IDisposable
     private const string DetailsBackdropId = "##GoodGlamDropDetailsBackdrop";
     internal static readonly string[] ColumnOrder =
         ["Piece", "Loves", "Item", "Preview", "Rank", "Glam", "All Glams", "Details"];
+    internal const ImGuiTableFlags TableFlags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
+        | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable | ImGuiTableFlags.SizingFixedFit;
+    internal static readonly ImGuiTableColumnFlags[] ColumnFlags =
+    [
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+        ImGuiTableColumnFlags.WidthFixed,
+    ];
 
     private static readonly HttpClient Http = CreateHttpClient();
 
@@ -134,22 +147,13 @@ internal sealed class HistoryTab : IDisposable
                 return;
             }
 
-            const ImGuiTableFlags flags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
-                | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable;
-
-            if (!ImGui.BeginTable("##history", 8, flags))
+            if (!ImGui.BeginTable("##history", ColumnOrder.Length, TableFlags))
                 return;
 
             tableOpen = true;
             ImGui.TableSetupScrollFreeze(0, 1);
-            ImGui.TableSetupColumn(ColumnOrder[0], ImGuiTableColumnFlags.WidthFixed, 70);
-            ImGui.TableSetupColumn(ColumnOrder[1], ImGuiTableColumnFlags.WidthFixed, 60);
-            ImGui.TableSetupColumn(ColumnOrder[2], ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn(ColumnOrder[3], ImGuiTableColumnFlags.WidthFixed, 48);
-            ImGui.TableSetupColumn(ColumnOrder[4], ImGuiTableColumnFlags.WidthFixed, 45);
-            ImGui.TableSetupColumn(ColumnOrder[5], ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn(ColumnOrder[6], ImGuiTableColumnFlags.WidthFixed, 80);
-            ImGui.TableSetupColumn(ColumnOrder[7], ImGuiTableColumnFlags.WidthFixed, 60);
+            for (var column = 0; column < ColumnOrder.Length; column++)
+                ImGui.TableSetupColumn(ColumnOrder[column], ColumnFlags[column], 0f);
             ImGui.TableHeadersRow();
 
             for (var index = 0; index < records.Count; index++)
@@ -310,8 +314,8 @@ internal sealed class HistoryTab : IDisposable
         var bodySize = ready ? PreviewSize(image.Texture!) : ImGui.CalcTextSize(note);
         var measurements = new GlamPreviewMeasurements(
             bodySize,
-            ImGui.CalcTextSize(header.Text),
-            ImGui.CalcTextSize(GlamPreviewFooter.Text));
+            GlamPreviewNavigation.ScaleMeasurement(ImGui.CalcTextSize(GlamPreviewNavigation.Text)),
+            ImGui.CalcTextSize(header.Text));
         var box = GlamPreviewLayout.Compute(
             iconMin,
             iconMax,

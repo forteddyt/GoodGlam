@@ -10,11 +10,8 @@ namespace GoodGlam.Windows;
 
 /// <summary>
 /// The About tab of the unified <see cref="MainWindow"/>: the plugin <b>version</b>, the GoodGlam
-/// <b>logo</b>, a clickable link to the <b>GitHub repository</b>, and the <b>Report Bug</b> /
-/// <b>Suggest Feature</b> feedback buttons. Version and repository URL are sourced from the Dalamud
-/// plugin manifest (<see cref="Dalamud.Plugin.IDalamudPluginInterface.Manifest"/>), the single source
-/// of truth for both (the packaged <c>GoodGlam.json</c>), so nothing here has to be kept in sync by
-/// hand.
+/// <b>logo</b>, a concise <b>How it works</b> tutorial, a clickable link to the <b>GitHub
+/// repository</b>, and feedback buttons.
 /// </summary>
 /// <remarks>
 /// Rendering only. The version string and the "open repo" effect live in the pure, unit-tested
@@ -61,6 +58,16 @@ internal sealed class AboutTab
 
         if (!string.IsNullOrWhiteSpace(manifest.Punchline))
             ImGui.TextWrapped(manifest.Punchline);
+
+        ImGui.Separator();
+
+        ImGui.TextUnformatted("How it works");
+        foreach (var step in AboutInfo.HowItWorksSteps)
+        {
+            ImGui.Bullet();
+            ImGui.SameLine();
+            ImGui.TextWrapped(step);
+        }
 
         ImGui.Separator();
 

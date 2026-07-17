@@ -7,6 +7,8 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FakeItEasy;
 using FluentAssertions;
+using GoodGlam.History;
+using GoodGlam.Windows;
 using Xunit;
 
 namespace GoodGlam.Tests;
@@ -80,6 +82,13 @@ public class PluginTests : IDisposable
         var m = target.GetType().GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance);
         m.Should().NotBeNull($"Plugin should declare a private {method} method");
         m!.Invoke(target, args);
+    }
+
+    private static T GetPrivateField<T>(object target, string field)
+    {
+        var f = target.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
+        f.Should().NotBeNull($"{target.GetType().Name} should declare a private {field} field");
+        return (T)f!.GetValue(target)!;
     }
 
     [Fact]
@@ -203,6 +212,53 @@ public class PluginTests : IDisposable
         this.command.Should().NotBeNull();
 
         this.command!.Handler.Invoking(h => h.Invoke("/goodglam", args)).Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("settings", "Settings")]
+    [InlineData("config", "Settings")]
+    [InlineData("history", "History")]
+    public void Named_window_commands_open_their_destination_without_toggling_closed(
+        string args,
+        string expected)
+    {
+        using var plugin = this.NewPlugin();
+        var window = GetPrivateField<MainWindow>(plugin, "mainWindow");
+        window.IsOpen = true;
+
+        this.command!.Handler.Invoke("/goodglam", args);
+
+        window.IsOpen.Should().BeTrue();
+        window.PendingTab.Should().Be(Enum.Parse<MainTab>(expected));
+    }
+
+    [Fact]
+    public void Dalamud_open_and_settings_actions_target_distinct_tabs()
+    {
+        using var plugin = this.NewPlugin();
+        var window = GetPrivateField<MainWindow>(plugin, "mainWindow");
+
+        this.uiBuilder.OpenConfigUi += Raise.FreeForm.With();
+        window.IsOpen.Should().BeTrue();
+        window.PendingTab.Should().Be(MainTab.Settings);
+
+        this.uiBuilder.OpenMainUi += Raise.FreeForm.With();
+        window.IsOpen.Should().BeTrue();
+        window.PendingTab.Should().Be(MainTab.History);
+    }
+
+    [Fact]
+    public void Settings_does_not_acknowledge_an_unseen_drop_but_open_history_does()
+    {
+        using var plugin = this.NewPlugin();
+        var state = GetPrivateField<NotificationState>(plugin, "notificationState");
+        state.Raise();
+
+        this.uiBuilder.OpenConfigUi += Raise.FreeForm.With();
+        state.HasUnseen.Should().BeTrue();
+
+        this.uiBuilder.OpenMainUi += Raise.FreeForm.With();
+        state.HasUnseen.Should().BeFalse();
     }
 
     [Fact]

@@ -8,6 +8,10 @@ namespace GoodGlam.Tests;
 public class ConfigurationTests
 {
     [Fact]
+    public void Popularity_threshold_defaults_to_fifty_loves()
+        => new Configuration().LovesThreshold.Should().Be(50);
+
+    [Fact]
     public void Logo_flags_default_to_shown_and_unlocked()
     {
         var config = new Configuration();
@@ -144,4 +148,3 @@ public class ConfigurationTests
         act.Should().NotThrow();
     }
 }
-

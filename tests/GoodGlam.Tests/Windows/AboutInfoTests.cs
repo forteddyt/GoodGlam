@@ -51,4 +51,13 @@ public class AboutInfoTests
 
         opener.Opened.Should().ContainSingle().Which.Should().Be("https://github.com/forteddyt/goodglam");
     }
+
+    [Fact]
+    public void How_it_works_gives_a_concise_ordered_in_plugin_tutorial()
+    {
+        AboutInfo.HowItWorksSteps.Should().Equal(
+            "GoodGlam watches items in the Need/Greed/Pass roll window.",
+            "It checks Eorzea Collection for popular glam outfits that use each item, using your threshold and filters.",
+            "Qualifying drops light the floating logo and are saved in History, where you can preview and open matching glams.");
+    }
 }

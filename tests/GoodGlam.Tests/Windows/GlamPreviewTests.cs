@@ -26,8 +26,17 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Footer_uses_the_concise_navigation_label()
-        => GlamPreviewFooter.Text.Should().Be("Navigation: Left/Right Click");
+    public void Navigation_uses_the_concise_label()
+        => GlamPreviewNavigation.Text.Should().Be("Left/Right Click to Navigate");
+
+    [Fact]
+    public void Navigation_is_rendered_smaller_than_the_body_font()
+        => GlamPreviewNavigation.FontScale.Should().BeGreaterThan(0f).And.BeLessThan(1f);
+
+    [Fact]
+    public void Navigation_measurement_scales_by_the_font_scale()
+        => GlamPreviewNavigation.ScaleMeasurement(new Vector2(150, 20))
+            .Should().Be(new Vector2(150f * GlamPreviewNavigation.FontScale, 20f * GlamPreviewNavigation.FontScale));
 
     [Fact]
     public void Header_labels_the_current_rank()
@@ -129,12 +138,12 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Layout_reserves_footer_width_and_centers_it_below_a_short_body()
+    public void Layout_places_navigation_below_the_rank_header()
     {
         var measurements = new GlamPreviewMeasurements(
             BodySize: new Vector2(40, 20),
-            RankLabelSize: new Vector2(50, 10),
-            FooterSize: new Vector2(150, 10));
+            NavigationSize: new Vector2(150, 10),
+            RankLabelSize: new Vector2(50, 10));
         var box = GlamPreviewLayout.Compute(
             iconMin: new Vector2(100, 200),
             iconMax: new Vector2(120, 220),
@@ -146,16 +155,17 @@ public class GlamPreviewTests
         var contentWidth = box.Max.X - box.Min.X - (GlamPreviewLayout.Padding * 2f);
 
         contentWidth.Should().Be(150);
+        // Rank sits at the top; the navigation guidance is directly beneath it, above the body.
         box.RankLabel.Text.Should().Be("Rank #5");
         box.RankLabel.Position.Should().Be(new Vector2(184, 229));
-        box.BodyMin.Should().Be(new Vector2(189, 245));
+        box.Navigation.Text.Should().Be("Left/Right Click to Navigate");
+        box.Navigation.Position.Should().Be(new Vector2(134, 242));
+        box.BodyMin.Should().Be(new Vector2(189, 258));
         box.BodySize.Should().Be(new Vector2(40, 20));
-        box.Footer.Text.Should().Be("Navigation: Left/Right Click");
-        box.Footer.Position.Should().Be(new Vector2(134, 271));
     }
 
     [Fact]
-    public void Renderer_draws_background_header_image_then_footer_when_ready()
+    public void Renderer_draws_background_header_navigation_then_image_when_ready()
     {
         var canvas = new RecordingCanvas();
         var box = Box();
@@ -163,19 +173,19 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, box, image, "unused");
 
-        canvas.Calls.Should().Equal("Background", "Header", "Image", "Footer");
+        canvas.Calls.Should().Equal("Background", "Header", "Navigation", "Image");
+        canvas.LastNavigation.Should().Be(box.Navigation);
         canvas.LastHeader.Should().Be(box.RankLabel);
-        canvas.LastFooter.Should().Be(box.Footer);
         canvas.LastImageMin.Should().Be(box.BodyMin);
         canvas.LastImageMax.Should().Be(box.BodyMin + box.BodySize);
     }
 
     [Fact]
-    public void Renderer_draws_background_header_note_then_footer_when_loading()
+    public void Renderer_draws_background_header_navigation_then_note_when_loading()
         => this.AssertNoteRendered(GlamImageState.Loading);
 
     [Fact]
-    public void Renderer_draws_background_header_note_then_footer_when_failed()
+    public void Renderer_draws_background_header_navigation_then_note_when_failed()
         => this.AssertNoteRendered(GlamImageState.Failed);
 
     private void AssertNoteRendered(GlamImageState state)
@@ -185,11 +195,11 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, box, new GlamImage(state, null), "the note");
 
-        canvas.Calls.Should().Equal("Background", "Header", "Note", "Footer");
+        canvas.Calls.Should().Equal("Background", "Header", "Navigation", "Note");
+        canvas.LastNavigation.Should().Be(box.Navigation);
         canvas.LastHeader.Should().Be(box.RankLabel);
         canvas.LastNotePos.Should().Be(box.BodyMin);
         canvas.LastNoteText.Should().Be("the note");
-        canvas.LastFooter.Should().Be(box.Footer);
     }
 
     [Fact]
@@ -199,7 +209,7 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, Box(), new GlamImage(GlamImageState.Ready, null), "note");
 
-        canvas.Calls.Should().Equal("Background", "Header", "Note", "Footer");
+        canvas.Calls.Should().Equal("Background", "Header", "Navigation", "Note");
     }
 
     private static GlamPreviewMeasurements BodyOnly(Vector2 bodySize)
@@ -209,19 +219,19 @@ public class GlamPreviewTests
         => new(
             Min: new Vector2(1, 2),
             Max: new Vector2(300, 400),
+            Navigation: new GlamPreviewPlacedLabel(
+                "Left/Right Click to Navigate",
+                new Vector2(20, 10),
+                true),
             RankLabel: new GlamPreviewPlacedLabel("Rank #1", new Vector2(100, 20), true),
             BodyMin: new Vector2(30, 60),
-            BodySize: new Vector2(70, 80),
-            Footer: new GlamPreviewPlacedLabel(
-                "Navigation: Left/Right Click",
-                new Vector2(20, 150),
-                true));
+            BodySize: new Vector2(70, 80));
 
     private sealed class RecordingCanvas : IGlamPreviewCanvas
     {
         public List<string> Calls { get; } = [];
 
-        public GlamPreviewPlacedLabel LastFooter { get; private set; }
+        public GlamPreviewPlacedLabel LastNavigation { get; private set; }
 
         public GlamPreviewPlacedLabel LastHeader { get; private set; }
 
@@ -243,10 +253,10 @@ public class GlamPreviewTests
             this.LastHeader = header;
         }
 
-        public void Footer(GlamPreviewPlacedLabel footer)
+        public void Navigation(GlamPreviewPlacedLabel navigation)
         {
-            this.Calls.Add("Footer");
-            this.LastFooter = footer;
+            this.Calls.Add("Navigation");
+            this.LastNavigation = navigation;
         }
 
         public void Image(ImTextureID handle, Vector2 min, Vector2 max)
