@@ -3,30 +3,30 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/16/2026 - 4:22:06 AM |
-| Coverage date: | 7/16/2026 - 4:21:52 AM - 7/16/2026 - 4:22:02 AM |
+| Generated on: | 7/17/2026 - 2:18:10 AM |
+| Coverage date: | 7/17/2026 - 2:17:57 AM - 7/17/2026 - 2:18:06 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 64 |
+| Classes: | 65 |
 | Files: | 41 |
-| **Line coverage:** | 94% (1513 of 1609) |
-| Covered lines: | 1513 |
-| Uncovered lines: | 96 |
-| Coverable lines: | 1609 |
-| Total lines: | 5252 |
-| **Branch coverage:** | 91.5% (614 of 671) |
-| Covered branches: | 614 |
-| Total branches: | 671 |
+| **Line coverage:** | 93.6% (1531 of 1635) |
+| Covered lines: | 1531 |
+| Uncovered lines: | 104 |
+| Coverable lines: | 1635 |
+| Total lines: | 5304 |
+| **Branch coverage:** | 91.2% (616 of 675) |
+| Covered branches: | 616 |
+| Total branches: | 675 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 94%</summary>
+<details><summary>GoodGlam - 93.6%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**94%**|**91.5%**|
+|**GoodGlam**|**93.6%**|**91.2%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
@@ -56,7 +56,7 @@
 |GoodGlam.Loot.LootEntry|100%||
 |GoodGlam.Loot.LootSnapshot|100%||
 |GoodGlam.Loot.LootWatcher|98%|97.8%|
-|GoodGlam.Plugin|100%|94.2%|
+|GoodGlam.Plugin|96.8%|94.2%|
 |GoodGlam.Services|100%||
 |GoodGlam.Windows.AboutInfo|100%|100%|
 |GoodGlam.Windows.AboutTab|85.7%||
@@ -74,6 +74,7 @@
 |GoodGlam.Windows.GlamPreviewLabel|100%||
 |GoodGlam.Windows.GlamPreviewLayout|100%|100%|
 |GoodGlam.Windows.GlamPreviewMeasurements|100%||
+|GoodGlam.Windows.GlamPreviewNavigation|100%||
 |GoodGlam.Windows.GlamPreviewPlacedLabel|100%||
 |GoodGlam.Windows.GlamPreviewPreloadPolicy|88.8%|87.5%|
 |GoodGlam.Windows.GlamPreviewRenderer|100%|100%|
@@ -83,12 +84,12 @@
 |GoodGlam.Windows.HistoryDetailsState|100%||
 |GoodGlam.Windows.HistoryLinkCell|100%|100%|
 |GoodGlam.Windows.HistoryRecordPresentation|100%|75%|
-|GoodGlam.Windows.HistoryTabFocus|100%||
 |GoodGlam.Windows.ImageSharpDecoder|100%|100%|
 |GoodGlam.Windows.LogoInteraction|100%|100%|
 |GoodGlam.Windows.LogoVisibilityGate|100%|100%|
 |GoodGlam.Windows.LogoWindow|97.5%|90%|
-|GoodGlam.Windows.MainWindow|90.9%||
+|GoodGlam.Windows.MainTabFocus|100%|100%|
+|GoodGlam.Windows.MainWindow|78.5%|0%|
 |GoodGlam.Windows.NotificationGlow|100%|100%|
 |GoodGlam.Windows.SettingsActions|100%|100%|
 
