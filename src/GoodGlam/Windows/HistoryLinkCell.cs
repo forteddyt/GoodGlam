@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
+
 namespace GoodGlam.Windows;
 
 /// <summary>How a history table link cell should render, decided without any ImGui dependency.</summary>
+[JsonConverter(typeof(StrictJsonStringEnumConverter<HistoryLinkKind>))]
 internal enum HistoryLinkKind
 {
     /// <summary>No URL and no label: show the disabled fallback text.</summary>

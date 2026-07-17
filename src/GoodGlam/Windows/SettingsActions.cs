@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
 using GoodGlam.Glam;
 
 namespace GoodGlam.Windows;
 
 /// <summary>Identifies a single-select Eorzea Collection combo filter, so both reading the current
 /// value and writing a new one map through one tested switch instead of an opaque setter delegate.</summary>
+[JsonConverter(typeof(StrictJsonStringEnumConverter<FilterField>))]
 internal enum FilterField
 {
     Gender,

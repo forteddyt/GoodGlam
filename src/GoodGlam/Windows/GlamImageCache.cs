@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
 using Dalamud.Interface.Textures.TextureWraps;
 using GoodGlam.Diagnostics;
 
 namespace GoodGlam.Windows;
 
 /// <summary>The load state of a glamour cover image for one URL.</summary>
+[JsonConverter(typeof(StrictJsonStringEnumConverter<GlamImageState>))]
 internal enum GlamImageState
 {
     /// <summary>The image is still queued/downloading/decoding (or hasn't been requested yet).</summary>
@@ -275,6 +277,7 @@ internal sealed class GlamImageCache : IDisposable
             texture.Dispose();
     }
 
+    [JsonConverter(typeof(StrictJsonStringEnumConverter<EntryState>))]
     private enum EntryState
     {
         Pending,

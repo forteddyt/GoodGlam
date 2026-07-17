@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -11,6 +12,7 @@ namespace GoodGlam.Windows;
 /// window-local draw list) renders <em>behind</em> the focused main window, which is the exact
 /// regression this type exists to pin down.
 /// </summary>
+[JsonConverter(typeof(StrictJsonStringEnumConverter<PreviewLayer>))]
 internal enum PreviewLayer
 {
     /// <summary>The per-window draw list — renders behind other, higher windows. Do not use for the preview.</summary>

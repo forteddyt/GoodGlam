@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Numerics;
+using System.Text.Json.Serialization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
@@ -357,6 +358,7 @@ internal sealed class HistoryTab : IDisposable
     public void Dispose() => this.imageCache.Dispose();
 }
 
+[JsonConverter(typeof(StrictJsonStringEnumConverter<GlamSelectionDirection>))]
 internal enum GlamSelectionDirection
 {
     Previous = -1,
