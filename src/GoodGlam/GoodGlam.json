@@ -6,7 +6,7 @@
   "RepoUrl": "https://github.com/forteddyt/GoodGlam",
   "Tags": [ "glamour", "loot", "need", "greed", "eorzea collection" ],
   "CategoryTags": [ "inventory", "utility" ],
-  "IconUrl": "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png",
+  "IconUrl": "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/icon.png",
   "AcceptsFeedback": true,
   "FeedbackMessage": "Bug reports and feature requests are welcome. Use Report Bug or Suggest Feature in GoodGlam's About tab to open the matching GitHub form."
 }

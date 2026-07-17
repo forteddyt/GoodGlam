@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/GoodGlam/Assets/Logo.png" alt="GoodGlam logo" width="120" height="120" />
+  <img src="src/GoodGlam/Assets/icon.png" alt="GoodGlam logo" width="120" height="120" />
 </p>
 
 # GoodGlam

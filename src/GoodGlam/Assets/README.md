@@ -1,6 +1,6 @@
 # GoodGlam brand assets
 
-`Logo.png` is the **canonical source** for the plugin's logo. It is embedded in the plugin for the
+`icon.png` is the **canonical source** for the plugin's logo. It is embedded in the plugin for the
 in-game floating button and About tab, and its repository URL is used as the Dalamud installer icon.
 
 ## Requirements
@@ -16,6 +16,6 @@ The high-resolution source stays crisp when ImGui downscales it for different UI
 
 ## Updating
 
-Export a prepared PNG from the external design source, replace `Logo.png`, and verify it still meets
+Export a prepared PNG from the external design source, replace `icon.png`, and verify it still meets
 the requirements above. There is no generated raster artifact or vector source to keep in sync in this
 repository.

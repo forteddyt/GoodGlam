@@ -26,7 +26,7 @@
 
   <ItemGroup>
     <!-- Brand logo drawn by LogoWindow; loaded at runtime via ITextureProvider.GetFromManifestResource. -->
-    <EmbeddedResource Include="Assets/Logo.png" LogicalName="GoodGlam.Assets.Logo.png" />
+    <EmbeddedResource Include="Assets/icon.png" LogicalName="GoodGlam.Assets.icon.png" />
     <!-- EC filter option lists; loaded at runtime via EcFilterCatalog.LoadEmbedded(). -->
     <EmbeddedResource Include="Glam/EcFilterOptions.json" LogicalName="GoodGlam.Glam.EcFilterOptions.json" />
   </ItemGroup>

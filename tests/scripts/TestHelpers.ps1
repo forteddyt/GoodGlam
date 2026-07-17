@@ -102,7 +102,7 @@ function Add-FakeRelease {
         CategoryTags    = @("inventory", "utility")
         ApplicableVersion = "any"
         DalamudApiLevel = $ApiLevel
-        IconUrl         = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
+        IconUrl         = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/icon.png"
         AcceptsFeedback = $true
         FeedbackMessage = "Use the About tab to report bugs or suggest features."
         InternalName    = "GoodGlam"
@@ -129,7 +129,7 @@ function New-LocalManifest {
         Name = "GoodGlam"; Author = "forteddyt"; Punchline = "P"; Description = "D"
         RepoUrl = "https://github.com/forteddyt/GoodGlam"; Tags = @("glamour", "loot")
         ApplicableVersion = "any"; DalamudApiLevel = $ApiLevel
-        IconUrl = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
+        IconUrl = "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/icon.png"
         InternalName = "GoodGlam"; AssemblyVersion = $AssemblyVersion
     }
     if (-not $OmitOptionalInstallerMetadata) {
