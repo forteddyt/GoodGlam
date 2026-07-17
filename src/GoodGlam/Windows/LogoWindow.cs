@@ -24,7 +24,7 @@ namespace GoodGlam.Windows;
 /// </summary>
 public sealed class LogoWindow : Window, IDisposable
 {
-    internal const string LogoResourceName = "GoodGlam.Assets.Logo.png";
+    internal const string LogoResourceName = "GoodGlam.Assets.icon.png";
 
     /// <summary>Logical (unscaled) edge length of the button, in pixels. Scaled by GlobalScale.</summary>
     private const float BaseButtonSize = 32f;

@@ -68,7 +68,7 @@ Describe "build-repo-json.ps1" {
 
             $e.RepoUrl | Should -Be "https://github.com/forteddyt/GoodGlam"
             @($e.CategoryTags) | Should -Be @("inventory", "utility")
-            $e.IconUrl | Should -Be "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/Logo.png"
+            $e.IconUrl | Should -Be "https://raw.githubusercontent.com/forteddyt/GoodGlam/main/src/GoodGlam/Assets/icon.png"
             $e.AcceptsFeedback | Should -BeTrue
             $e.FeedbackMessage | Should -Be "Use the About tab to report bugs or suggest features."
         }
