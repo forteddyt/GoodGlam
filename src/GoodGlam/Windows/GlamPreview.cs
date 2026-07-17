@@ -35,10 +35,19 @@ internal static class GlamPreviewHeader
     }
 }
 
-/// <summary>The centered navigation guidance shown at the top of the preview.</summary>
+/// <summary>The centered navigation guidance shown directly below the rank header.</summary>
 internal static class GlamPreviewNavigation
 {
-    internal const string Text = "Navigation: Left/Right Click";
+    internal const string Text = "Left/Right Click to Navigate";
+
+    /// <summary>
+    /// Fraction of the body font the hint is drawn at. It's a secondary hint, so it reads smaller than
+    /// the rank header and the cover; the layout measures and the canvas renders at this same scale.
+    /// </summary>
+    internal const float FontScale = 0.8f;
+
+    /// <summary>Scales a full-size text measurement to the smaller font the hint is rendered at.</summary>
+    internal static Vector2 ScaleMeasurement(Vector2 fullSize) => fullSize * FontScale;
 }
 
 /// <summary>Measured navigation/header/body sizes for a preview frame.</summary>
@@ -52,8 +61,8 @@ internal readonly record struct GlamPreviewPlacedLabel(string Text, Vector2 Posi
 
 /// <summary>
 /// The resolved on-screen rectangle for a glam cover preview: the outer box (background/border), the
-/// navigation guidance and rank header above the body, followed by the image/note body.
-/// Pure geometry, so it's unit-testable without a live ImGui context.
+/// rank header at the top with the navigation guidance directly beneath it, followed by the
+/// image/note body. Pure geometry, so it's unit-testable without a live ImGui context.
 /// </summary>
 internal readonly record struct GlamPreviewBox(
     Vector2 Min,
@@ -66,7 +75,7 @@ internal readonly record struct GlamPreviewBox(
 /// <summary>
 /// Pure placement maths for the cover preview: anchors the box below and beside the hovered icon so
 /// the rest of its History row stays visible, flipping above or left when the preferred placement
-/// would overflow the display. It centers the navigation guidance, rank header, and body within the
+/// would overflow the display. It centers the rank header, navigation guidance, and body within the
 /// widest content element.
 /// </summary>
 internal static class GlamPreviewLayout
@@ -74,8 +83,8 @@ internal static class GlamPreviewLayout
     internal const float Gap = 8f;
     internal const float VerticalGap = 3f;
     internal const float Padding = 6f;
-    internal const float NavigationRankGap = 3f;
-    internal const float HeaderBodyGap = 6f;
+    internal const float RankNavigationGap = 3f;
+    internal const float NavigationBodyGap = 6f;
 
     internal static GlamPreviewBox Compute(
         Vector2 iconMin,
@@ -89,13 +98,13 @@ internal static class GlamPreviewLayout
         var verticalGap = VerticalGap * scale;
         var padding = Padding * scale;
         var navigationHeight = measurements.NavigationSize.Y;
-        var headerHeight = measurements.RankLabelSize.Y;
-        var navigationGap = navigationHeight > 0f && headerHeight > 0f ? NavigationRankGap * scale : 0f;
-        var headerGap = headerHeight > 0f && measurements.BodySize.Y > 0f ? HeaderBodyGap * scale : 0f;
+        var rankHeight = measurements.RankLabelSize.Y;
+        var rankNavigationGap = rankHeight > 0f && navigationHeight > 0f ? RankNavigationGap * scale : 0f;
+        var navigationBodyGap = navigationHeight > 0f && measurements.BodySize.Y > 0f ? NavigationBodyGap * scale : 0f;
         var contentWidth = MathF.Max(
             measurements.BodySize.X,
             MathF.Max(measurements.NavigationSize.X, measurements.RankLabelSize.X));
-        var contentHeight = navigationHeight + navigationGap + headerHeight + headerGap + measurements.BodySize.Y;
+        var contentHeight = rankHeight + rankNavigationGap + navigationHeight + navigationBodyGap + measurements.BodySize.Y;
         var boxSize = new Vector2(contentWidth + (padding * 2f), contentHeight + (padding * 2f));
 
         var x = iconMax.X + gap;
@@ -110,15 +119,15 @@ internal static class GlamPreviewLayout
             Clamp(x, displaySize.X - boxSize.X),
             Clamp(y, displaySize.Y - boxSize.Y));
         var contentMin = min + new Vector2(padding, padding);
-        var navigationPosition = new Vector2(
-            contentMin.X + ((contentWidth - measurements.NavigationSize.X) / 2f),
-            contentMin.Y);
         var rankPosition = new Vector2(
             contentMin.X + ((contentWidth - measurements.RankLabelSize.X) / 2f),
-            contentMin.Y + navigationHeight + navigationGap);
+            contentMin.Y);
+        var navigationPosition = new Vector2(
+            contentMin.X + ((contentWidth - measurements.NavigationSize.X) / 2f),
+            rankPosition.Y + rankHeight + rankNavigationGap);
         var bodyMin = new Vector2(
             contentMin.X + ((contentWidth - measurements.BodySize.X) / 2f),
-            rankPosition.Y + headerHeight + headerGap);
+            navigationPosition.Y + navigationHeight + navigationBodyGap);
 
         return new GlamPreviewBox(
             min,
@@ -134,7 +143,7 @@ internal static class GlamPreviewLayout
 
 /// <summary>
 /// The surface the preview paints onto, abstracted so the render flow (which layer, background,
-/// top navigation guidance, rank header, and image-vs-note body) is testable with a fake, while the
+/// rank header, navigation guidance, and image-vs-note body) is testable with a fake, while the
 /// real ImGui submission stays in
 /// <see cref="ForegroundPreviewCanvas"/>. <see cref="Layer"/> declares which ImGui layer the canvas
 /// draws to, so a test can assert the preview is on the foreground.
@@ -155,7 +164,7 @@ internal interface IGlamPreviewCanvas
 }
 
 /// <summary>
-/// Chooses what to paint for a preview: background/border, navigation guidance, rank header, then the
+/// Chooses what to paint for a preview: background/border, rank header, navigation guidance, then the
 /// image/loading body. Pure decision flow over an <see cref="IGlamPreviewCanvas"/>.
 /// </summary>
 internal static class GlamPreviewRenderer
@@ -163,8 +172,8 @@ internal static class GlamPreviewRenderer
     internal static void Render(IGlamPreviewCanvas canvas, GlamPreviewBox box, GlamImage image, string note)
     {
         canvas.Background(box);
-        canvas.Navigation(box.Navigation);
         canvas.Header(box.RankLabel);
+        canvas.Navigation(box.Navigation);
 
         if (image is { State: GlamImageState.Ready, Texture: { } texture })
             canvas.Image(texture.Handle, box.BodyMin, box.BodyMin + box.BodySize);
@@ -193,9 +202,12 @@ internal sealed class ForegroundPreviewCanvas : IGlamPreviewCanvas
 
     public void Navigation(GlamPreviewPlacedLabel navigation)
         => ImGui.GetForegroundDrawList().AddText(
+            ImGui.GetFont(),
+            ImGui.GetFontSize() * GlamPreviewNavigation.FontScale,
             navigation.Position,
             ImGui.GetColorU32(navigation.Enabled ? ImGuiCol.Text : ImGuiCol.TextDisabled),
-            navigation.Text);
+            navigation.Text,
+            0f);
 
     public void Header(GlamPreviewPlacedLabel segment)
         => ImGui.GetForegroundDrawList().AddText(

@@ -27,7 +27,16 @@ public class GlamPreviewTests
 
     [Fact]
     public void Navigation_uses_the_concise_label()
-        => GlamPreviewNavigation.Text.Should().Be("Navigation: Left/Right Click");
+        => GlamPreviewNavigation.Text.Should().Be("Left/Right Click to Navigate");
+
+    [Fact]
+    public void Navigation_is_rendered_smaller_than_the_body_font()
+        => GlamPreviewNavigation.FontScale.Should().BeGreaterThan(0f).And.BeLessThan(1f);
+
+    [Fact]
+    public void Navigation_measurement_scales_by_the_font_scale()
+        => GlamPreviewNavigation.ScaleMeasurement(new Vector2(150, 20))
+            .Should().Be(new Vector2(150f * GlamPreviewNavigation.FontScale, 20f * GlamPreviewNavigation.FontScale));
 
     [Fact]
     public void Header_labels_the_current_rank()
@@ -129,7 +138,7 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Layout_reserves_navigation_width_and_places_it_above_rank_and_body()
+    public void Layout_places_navigation_below_the_rank_header()
     {
         var measurements = new GlamPreviewMeasurements(
             BodySize: new Vector2(40, 20),
@@ -146,16 +155,17 @@ public class GlamPreviewTests
         var contentWidth = box.Max.X - box.Min.X - (GlamPreviewLayout.Padding * 2f);
 
         contentWidth.Should().Be(150);
-        box.Navigation.Text.Should().Be("Navigation: Left/Right Click");
-        box.Navigation.Position.Should().Be(new Vector2(134, 229));
+        // Rank sits at the top; the navigation guidance is directly beneath it, above the body.
         box.RankLabel.Text.Should().Be("Rank #5");
-        box.RankLabel.Position.Should().Be(new Vector2(184, 242));
+        box.RankLabel.Position.Should().Be(new Vector2(184, 229));
+        box.Navigation.Text.Should().Be("Left/Right Click to Navigate");
+        box.Navigation.Position.Should().Be(new Vector2(134, 242));
         box.BodyMin.Should().Be(new Vector2(189, 258));
         box.BodySize.Should().Be(new Vector2(40, 20));
     }
 
     [Fact]
-    public void Renderer_draws_background_navigation_header_then_image_when_ready()
+    public void Renderer_draws_background_header_navigation_then_image_when_ready()
     {
         var canvas = new RecordingCanvas();
         var box = Box();
@@ -163,7 +173,7 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, box, image, "unused");
 
-        canvas.Calls.Should().Equal("Background", "Navigation", "Header", "Image");
+        canvas.Calls.Should().Equal("Background", "Header", "Navigation", "Image");
         canvas.LastNavigation.Should().Be(box.Navigation);
         canvas.LastHeader.Should().Be(box.RankLabel);
         canvas.LastImageMin.Should().Be(box.BodyMin);
@@ -171,11 +181,11 @@ public class GlamPreviewTests
     }
 
     [Fact]
-    public void Renderer_draws_background_navigation_header_then_note_when_loading()
+    public void Renderer_draws_background_header_navigation_then_note_when_loading()
         => this.AssertNoteRendered(GlamImageState.Loading);
 
     [Fact]
-    public void Renderer_draws_background_navigation_header_then_note_when_failed()
+    public void Renderer_draws_background_header_navigation_then_note_when_failed()
         => this.AssertNoteRendered(GlamImageState.Failed);
 
     private void AssertNoteRendered(GlamImageState state)
@@ -185,7 +195,7 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, box, new GlamImage(state, null), "the note");
 
-        canvas.Calls.Should().Equal("Background", "Navigation", "Header", "Note");
+        canvas.Calls.Should().Equal("Background", "Header", "Navigation", "Note");
         canvas.LastNavigation.Should().Be(box.Navigation);
         canvas.LastHeader.Should().Be(box.RankLabel);
         canvas.LastNotePos.Should().Be(box.BodyMin);
@@ -199,7 +209,7 @@ public class GlamPreviewTests
 
         GlamPreviewRenderer.Render(canvas, Box(), new GlamImage(GlamImageState.Ready, null), "note");
 
-        canvas.Calls.Should().Equal("Background", "Navigation", "Header", "Note");
+        canvas.Calls.Should().Equal("Background", "Header", "Navigation", "Note");
     }
 
     private static GlamPreviewMeasurements BodyOnly(Vector2 bodySize)
@@ -210,7 +220,7 @@ public class GlamPreviewTests
             Min: new Vector2(1, 2),
             Max: new Vector2(300, 400),
             Navigation: new GlamPreviewPlacedLabel(
-                "Navigation: Left/Right Click",
+                "Left/Right Click to Navigate",
                 new Vector2(20, 10),
                 true),
             RankLabel: new GlamPreviewPlacedLabel("Rank #1", new Vector2(100, 20), true),

@@ -314,7 +314,7 @@ internal sealed class HistoryTab : IDisposable
         var bodySize = ready ? PreviewSize(image.Texture!) : ImGui.CalcTextSize(note);
         var measurements = new GlamPreviewMeasurements(
             bodySize,
-            ImGui.CalcTextSize(GlamPreviewNavigation.Text),
+            GlamPreviewNavigation.ScaleMeasurement(ImGui.CalcTextSize(GlamPreviewNavigation.Text)),
             ImGui.CalcTextSize(header.Text));
         var box = GlamPreviewLayout.Compute(
             iconMin,
