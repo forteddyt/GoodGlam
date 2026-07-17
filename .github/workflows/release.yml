@@ -1,5 +1,15 @@
 name: Release
 
+# Run title shown in the Actions UI. run-name is evaluated once when the run is created - before any
+# job runs - so it can only use dispatch-time context (github/inputs). The exact stable X.Y.Z is
+# computed later inside the stable job (compute-version.ps1), so it can't appear here; the chosen
+# bump component (patch/minor/major) is the closest deterministic label. Push runs cut the rolling
+# testing build, which has no bump input.
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch'
+      && format('Release stable ({0} bump)', inputs.bump)
+      || 'Release testing (auto)' }}
+
 # Two distribution channels served by one custom-repo URL (repo.json on gh-pages):
 #
 #   * testing - published automatically on every push to main. Lands in the repo.json TESTING channel,
