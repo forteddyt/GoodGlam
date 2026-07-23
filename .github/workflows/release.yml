@@ -38,7 +38,7 @@ on:
         default: patch
 
 # Serialize all writes to the gh-pages branch (this workflow's repo.json publish and ci.yml's
-# coverage publish both push to gh-pages on push->main). Keyed by ref so PR CI isn't affected; the
+# coverage publish on main push/schedule runs). Keyed by ref so PR CI isn't affected; the
 # shared group name (matched in ci.yml) also keeps two releases on the same ref from racing.
 concurrency:
   group: gh-pages-${{ github.ref }}

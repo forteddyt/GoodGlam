@@ -5,8 +5,10 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request:
+  schedule:
+    - cron: "0 0,12 * * *"
 
-# Serialize gh-pages writes with release.yml (both publish to gh-pages on push->main). The group
+# Serialize gh-pages writes with release.yml (CI publishes on main push/schedule runs). The group
 # name and key match release.yml so a main-branch CI run and a release run can't push concurrently;
 # PR runs get a distinct group (their ref) and are unaffected.
 concurrency:
