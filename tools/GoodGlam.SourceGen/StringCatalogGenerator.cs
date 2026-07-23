@@ -100,13 +100,23 @@ public sealed class StringCatalogGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {Namespace};");
         sb.AppendLine();
 
-        EmitType(sb, RootTypeName, root, isRoot: true, pathPascal: string.Empty);
+        // Tracks every generated type name so two different template paths that Pascalize to the same
+        // type (e.g. a root key "fooBar" and a nested "foo"->"bar", both -> FooBarStrings) fail with a
+        // clear diagnostic instead of emitting two same-named classes that don't compile.
+        var typeNames = new HashSet<string> { RootTypeName };
+
+        EmitType(sb, RootTypeName, root, isRoot: true, pathPascal: string.Empty, typeNames);
         return sb.ToString();
     }
 
-    private static void EmitType(StringBuilder sb, string typeName, JsonObject obj, bool isRoot, string pathPascal)
+    private static void EmitType(
+        StringBuilder sb, string typeName, JsonObject obj, bool isRoot, string pathPascal, HashSet<string> typeNames)
     {
         var nested = new List<(string TypeName, JsonObject Obj)>();
+
+        // Tracks member names within this one object so two keys that Pascalize to the same C# member
+        // (e.g. "foo" and "Foo") fail with a clear diagnostic instead of emitting a duplicate property.
+        var memberNames = new HashSet<string>();
 
         sb.AppendLine("/// <summary>Generated from Strings.en.jsonc. Do not edit; edit the template instead.</summary>");
         sb.AppendLine(isRoot
@@ -132,6 +142,13 @@ public sealed class StringCatalogGenerator : IIncrementalGenerator
                     "Template keys must form valid C# identifiers (letters, digits, and underscore; not " +
                     "starting with a digit).");
 
+            // Two keys in the same object that Pascalize to the same member (e.g. "foo" and "Foo") would
+            // emit a duplicate property; fail here naming the collision instead.
+            if (!memberNames.Add(propName))
+                throw new InvalidTemplateException(
+                    $"Key '{key}' maps to C# member '{propName}', which collides with another key in the " +
+                    "same object. Template keys must Pascalize to distinct C# members.");
+
             switch (member.Value)
             {
                 case JsonValue when IsString(member.Value):
@@ -147,6 +164,10 @@ public sealed class StringCatalogGenerator : IIncrementalGenerator
 
                 case JsonObject childObject:
                     var childTypeName = pathPascal + propName + "Strings";
+                    if (!typeNames.Add(childTypeName))
+                        throw new InvalidTemplateException(
+                            $"Key '{key}' produces generated type '{childTypeName}', which collides with " +
+                            "another generated type. Rename one of the colliding template keys.");
                     sb.AppendLine($"    public {childTypeName} {propName} {{ get; init; }} = new();");
                     nested.Add((childTypeName, childObject));
                     break;
@@ -161,7 +182,7 @@ public sealed class StringCatalogGenerator : IIncrementalGenerator
         sb.AppendLine();
 
         foreach (var child in nested)
-            EmitType(sb, child.TypeName, child.Obj, isRoot: false, pathPascal: TypeToPath(child.TypeName));
+            EmitType(sb, child.TypeName, child.Obj, isRoot: false, pathPascal: TypeToPath(child.TypeName), typeNames);
     }
 
     private static void EnsureStringArray(string key, JsonArray array)
