@@ -35,6 +35,6 @@ See the **[project wiki](https://github.com/forteddyt/GoodGlam/wiki)** for insta
 
 ## Credits
 
-- **Art:** Jasmine Senesombath
+- **Art:** [Jasmine Senesombath](https://github.com/jsenes)
 
 > ℹ️ This plugin was developed with AI assistance.
