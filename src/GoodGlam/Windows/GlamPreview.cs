@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -33,14 +34,14 @@ internal static class GlamPreviewHeader
         var hasSelection = glamCount > 0;
         var clampedIndex = hasSelection ? Math.Clamp(selectedIndex, 0, glamCount - 1) : 0;
         var rank = hasSelection ? clampedIndex + 1 : 0;
-        return new GlamPreviewLabel($"Rank #{rank}", true);
+        return new GlamPreviewLabel(string.Format(Loc.Strings.GlamPreview.RankFormat, rank), true);
     }
 }
 
 /// <summary>The centered navigation guidance shown directly below the rank header.</summary>
 internal static class GlamPreviewNavigation
 {
-    internal const string Text = "Left/Right Click to Navigate";
+    internal static string Text => Loc.Strings.GlamPreview.Navigation;
 
     /// <summary>
     /// Fraction of the body font the hint is drawn at. It's a secondary hint, so it reads smaller than

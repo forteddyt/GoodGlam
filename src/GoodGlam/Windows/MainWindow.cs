@@ -5,6 +5,7 @@ using Dalamud.Interface.Windowing;
 using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 using GoodGlam.History;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -23,11 +24,13 @@ namespace GoodGlam.Windows;
 public sealed class MainWindow : Window, IDisposable
 {
     /// <summary>
-    /// The tab labels in display order. History is first; direct entry points can request History or
-    /// Settings for the next frame. Exposed so the ordering contract is unit-testable without a live
-    /// ImGui context, and used to label the tab items in <see cref="Draw"/>.
+    /// The tab labels in display order, sourced from the string catalog. History is first; direct
+    /// entry points can request History or Settings for the next frame. Exposed so the ordering
+    /// contract is unit-testable without a live ImGui context, and used to label the tab items in
+    /// <see cref="Draw"/>.
     /// </summary>
-    internal static readonly string[] TabOrder = ["History", "Filters", "Settings", "About"];
+    internal static string[] TabOrder =>
+        [Loc.Strings.Tabs.History, Loc.Strings.Tabs.Filters, Loc.Strings.Tabs.Settings, Loc.Strings.Tabs.About];
 
     /// <summary>
     /// The ImGui child-region IDs that give each tab its own scroll region beneath the fixed tab bar,
@@ -58,7 +61,7 @@ public sealed class MainWindow : Window, IDisposable
         NotificationHistoryStore store,
         Action<bool> setLogoVisible,
         DropDetailsWindow detailsWindow)
-        : base("GoodGlam###GoodGlamMain")
+        : base($"{Loc.Strings.Common.AppName}###GoodGlamMain")
     {
         // One shared actions instance backs both the Settings and Filters tabs (config mutation,
         // clamping, restore/reset all live there); the logo callback is only relevant to Settings.
@@ -104,35 +107,35 @@ public sealed class MainWindow : Window, IDisposable
         if (!Services.ClientState.IsLoggedIn)
         {
             this.historyTab.CloseDetails();
-            ImGui.TextWrapped("Log in to a character to view or change GoodGlam. " +
-                "Each character keeps its own history, filters, and settings.");
+            ImGui.TextWrapped(Loc.Strings.MainWindow.LoginPrompt);
             return;
         }
 
         if (!ImGui.BeginTabBar("##GoodGlamTabs"))
             return;
 
-        if (ImGui.BeginTabItem(TabOrder[0], this.TabFlags(MainTab.History)))
+        var tabs = TabOrder;
+        if (ImGui.BeginTabItem(tabs[0], this.TabFlags(MainTab.History)))
         {
             DrawTabBody(0, this.historyTab.Draw);
             ImGui.EndTabItem();
         }
 
-        if (ImGui.BeginTabItem(TabOrder[1], this.TabFlags(MainTab.Filters)))
+        if (ImGui.BeginTabItem(tabs[1], this.TabFlags(MainTab.Filters)))
         {
             this.historyTab.CloseDetails();
             DrawTabBody(1, this.filtersTab.Draw);
             ImGui.EndTabItem();
         }
 
-        if (ImGui.BeginTabItem(TabOrder[2], this.TabFlags(MainTab.Settings)))
+        if (ImGui.BeginTabItem(tabs[2], this.TabFlags(MainTab.Settings)))
         {
             this.historyTab.CloseDetails();
             DrawTabBody(2, this.settingsTab.Draw);
             ImGui.EndTabItem();
         }
 
-        if (ImGui.BeginTabItem(TabOrder[3], this.TabFlags(MainTab.About)))
+        if (ImGui.BeginTabItem(tabs[3], this.TabFlags(MainTab.About)))
         {
             this.historyTab.CloseDetails();
             DrawTabBody(3, this.aboutTab.Draw);

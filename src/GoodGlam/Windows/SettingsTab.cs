@@ -2,6 +2,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -34,55 +35,55 @@ internal sealed class SettingsTab
 
     internal void Draw()
     {
+        var settings = Loc.Strings.Settings;
+
         var showLogo = this.config.ShowLogo;
-        if (ImGui.Checkbox("Show floating logo button", ref showLogo))
+        if (ImGui.Checkbox(settings.ShowLogo, ref showLogo))
             this.actions.SetShowLogo(showLogo); // logged in Plugin.SetLogoVisible
-        Help("Shows a small draggable GoodGlam logo in-game; click it to open the GoodGlam window.");
+        Help(settings.ShowLogoHelp);
 
         ImGui.Separator();
 
         var enabled = this.config.Enabled;
-        if (ImGui.Checkbox("Enable drop notifications", ref enabled))
+        if (ImGui.Checkbox(settings.EnableNotifications, ref enabled))
         {
             this.log.Debug($"setting changed: Enabled = {enabled}.");
             this.actions.SetEnabled(enabled);
         }
 
-        Help("Master switch. When off, GoodGlam never checks dropped items or logs popular drops.");
+        Help(settings.EnableNotificationsHelp);
 
         ImGui.Separator();
 
         var perSlot = this.config.PerSlotThresholds;
-        if (ImGui.Checkbox("Per-slot loves thresholds", ref perSlot))
+        if (ImGui.Checkbox(settings.PerSlotThresholds, ref perSlot))
         {
             this.log.Debug($"setting changed: PerSlotThresholds = {perSlot}.");
             this.actions.SetPerSlotThresholds(perSlot);
         }
 
-        Help("Give each gear slot its own loves threshold instead of one shared value. " +
-            "When on, the single Loves threshold is replaced by a per-slot threshold.");
+        Help(settings.PerSlotThresholdsHelp);
 
         ImGui.Separator();
 
         var ttl = this.config.CacheTtlHours;
-        if (ImGui.InputInt("Cache lifetime (hours)", ref ttl, 1, 6, default))
+        if (ImGui.InputInt(settings.CacheLifetime, ref ttl, 1, 6, default))
         {
             this.actions.SetCacheTtlHours(ttl);
             this.log.Debug($"setting changed: CacheTtlHours = {this.config.CacheTtlHours}.");
         }
 
-        Help("How long a popularity result is reused before re-checking Eorzea Collection. " +
-            "Longer = fewer requests, but slower to reflect new glamours. Clamped to 1-72 hours.");
+        Help(settings.CacheLifetimeHelp);
 
         ImGui.Separator();
         ImGui.Spacing();
-        if (ImGui.Button("Reset Settings"))
+        if (ImGui.Button(settings.ResetButton))
         {
             this.log.Debug("Reset Settings clicked; resetting the Settings-tab controls.");
             this.actions.ResetSettings();
         }
 
-        Help("Resets the Settings to their default values.");
+        Help(settings.ResetHelp);
     }
 
     /// <summary>Draws Dalamud's standard info "(?)" icon on the same line, with a hover tooltip.</summary>

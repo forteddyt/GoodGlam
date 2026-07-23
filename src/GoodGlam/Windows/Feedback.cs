@@ -1,6 +1,7 @@
 using Dalamud.Bindings.ImGui;
 using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -73,14 +74,14 @@ internal sealed class Feedback
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the URL + open effect are extracted into the tested BuildBugReportUrl/OpenBugReport.")]
     internal static void DrawReportBugButton(ILinkOpener linkOpener, Version? version)
     {
-        if (ImGui.Button("Report Bug"))
+        if (ImGui.Button(Loc.Strings.Feedback.ReportBug))
         {
             Log.Debug("Report Bug clicked; opening the GitHub issue form.");
             OpenBugReport(linkOpener, version);
         }
 
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Opens GitHub's new-issue page with the bug-report form pre-selected.");
+            ImGui.SetTooltip(Loc.Strings.Feedback.ReportBugTooltip);
     }
 
     /// <summary>
@@ -91,13 +92,13 @@ internal sealed class Feedback
     [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering; the URL + open effect are extracted into the tested OpenSuggestFeature.")]
     internal static void DrawSuggestFeatureButton(ILinkOpener linkOpener)
     {
-        if (ImGui.Button("Suggest Feature"))
+        if (ImGui.Button(Loc.Strings.Feedback.SuggestFeature))
         {
             Log.Debug("Suggest Feature clicked; opening the GitHub issue form.");
             OpenSuggestFeature(linkOpener);
         }
 
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Opens GitHub's new-issue page with the feature-request form pre-selected.");
+            ImGui.SetTooltip(Loc.Strings.Feedback.SuggestFeatureTooltip);
     }
 }

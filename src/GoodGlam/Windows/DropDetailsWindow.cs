@@ -4,6 +4,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using GoodGlam.History;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -49,7 +50,7 @@ internal sealed class DropDetailsWindow : Window
     private bool hostVisible;
 
     internal DropDetailsWindow()
-        : base("Drop Details###GoodGlamDropDetails")
+        : base($"{Loc.Strings.DropDetails.Title}###GoodGlamDropDetails")
     {
         this.Flags = ImGuiWindowFlags.NoDecoration
             | ImGuiWindowFlags.NoDocking
@@ -132,21 +133,21 @@ internal sealed class DropDetailsWindow : Window
             return;
         }
 
-        ImGui.TextUnformatted("Drop Details");
+        ImGui.TextUnformatted(Loc.Strings.DropDetails.Title);
         ImGui.Separator();
         ImGui.TextUnformatted(record.ItemName);
         ImGui.Spacing();
 
-        ImGui.TextDisabled("Dropped");
+        ImGui.TextDisabled(Loc.Strings.DropDetails.Dropped);
         ImGui.SameLine(90f * ImGuiHelpers.GlobalScale);
         ImGui.TextUnformatted(HistoryRecordPresentation.DroppedAt(record.DroppedAt));
 
-        ImGui.TextDisabled("Duty");
+        ImGui.TextDisabled(Loc.Strings.DropDetails.Duty);
         ImGui.SameLine(90f * ImGuiHelpers.GlobalScale);
         ImGui.TextUnformatted(HistoryRecordPresentation.Duty(record.DutyName));
 
         ImGui.Spacing();
-        if (ImGui.Button("Close"))
+        if (ImGui.Button(Loc.Strings.DropDetails.Close))
             this.Close();
     }
 }

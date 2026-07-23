@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Roslyn incremental source generator that turns the embedded user-facing string template
+    (src/GoodGlam/Localization/Strings.en.jsonc) into the strongly-typed StringCatalog tree at build
+    time. This is what lets contributors edit only the JSON: the typed accessors (Loc.Strings.*)
+    regenerate on every build, so a missing/mistyped key is a compile error rather than an in-game
+    surprise (the plugin's ImGui UI can't run in CI).
+
+    Design notes:
+    - Targets netstandard2.0 (the required TFM for Roslyn analyzers/generators).
+    - Parses the template with the built-in System.Text.Json DOM (System.Text.Json.Nodes). netstandard2.0
+      has no in-box System.Text.Json, so it's referenced as a package (PrivateAssets=all); at generator
+      *execution* time the analyzer load context resolves System.Text.Json from the .NET host's shared
+      framework (it's a framework assembly on .NET 8+, so it is NOT bundled next to the analyzer and this
+      works on the .NET 10 SDK that Plogon builds with - verified). Trade-off vs. a hand-rolled reader:
+      this adds System.Text.Json + System.Text.Encodings.Web + Microsoft.Bcl.AsyncInterfaces to the
+      build-time lockfile (three ubiquitous first-party packages, each staged/reviewed by Plogon as a
+      "need"), in exchange for a battle-tested parser for contributor-edited i18n content and less code.
+    - A committed packages.lock.json is REQUIRED for the official build, not just nice-to-have: Plogon
+      recursively discovers every packages.lock.json in the repo and pre-downloads each locked package
+      into the offline cache used by its network-disabled build (Plogon BuildProcessor.cs -
+      RestoreAllPackages; see AGENTS.md > "Official (D17/Plogon) build constraints"). Regenerate it
+      (build with RestorePackagesWithLockFile) whenever this project's package refs change.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- RS2008 (analyzer release tracking) only matters for published analyzer NuGet packages; this
+         generator ships only as an in-repo build component, so the tracking files add no value. -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

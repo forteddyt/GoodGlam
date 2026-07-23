@@ -27,8 +27,30 @@
   <ItemGroup>
     <!-- Brand logo drawn by LogoWindow; loaded at runtime via ITextureProvider.GetFromManifestResource. -->
     <EmbeddedResource Include="Assets/icon.png" LogicalName="GoodGlam.Assets.icon.png" />
-    <!-- EC filter option lists; loaded at runtime via EcFilterCatalog.LoadEmbedded(). -->
+    <!-- EC filter option values (fixed API tokens); loaded at runtime via EcFilterCatalog.LoadEmbedded(). -->
     <EmbeddedResource Include="Glam/EcFilterOptions.json" LogicalName="GoodGlam.Glam.EcFilterOptions.json" />
+    <!-- User-facing string catalog (per language, JSONC); loaded at runtime via StringCatalog.LoadEmbedded().
+         WithCulture=false stops MSBuild's AssignCulture task from reading the ".en." in the filename as
+         a satellite-resource culture (which would drop it from the main assembly and rename it).
+         Also fed to the source generator (as AdditionalFiles below) as the single source of truth for
+         the generated StringCatalog typed tree. -->
+    <EmbeddedResource Include="Localization/Strings.en.jsonc" WithCulture="false" LogicalName="GoodGlam.Localization.Strings.en.jsonc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The GoodGlam.SourceGen Roslyn generator turns Strings.en.jsonc into the strongly-typed
+      StringCatalog tree at build time (so contributors edit only the template, with compile-time-safe
+      Loc.Strings.* access). Referenced as an analyzer only: ReferenceOutputAssembly=false keeps the
+      generator assembly out of the plugin's references and out of latest.zip, and the template is
+      exposed to it via AdditionalFiles. It is not a runtime dependency, so THIS project's
+      packages.lock.json is unaffected; the generator's own committed lockfile is what the offline
+      Plogon build pre-stages (see AGENTS.md > "Official (D17/Plogon) build constraints").
+    -->
+    <ProjectReference Include="..\..\tools\GoodGlam.SourceGen\GoodGlam.SourceGen.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="Localization/Strings.en.jsonc" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,6 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src/GoodGlam/GoodGlam.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/GoodGlam.SourceGen/GoodGlam.SourceGen.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GoodGlam.Tests/GoodGlam.Tests.csproj" />
     <Project Path="tests/GoodGlam.IntegrationTests/GoodGlam.IntegrationTests.csproj" />
