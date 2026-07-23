@@ -347,7 +347,19 @@ internal sealed class HistoryTab : IDisposable
     private static HttpClient CreateHttpClient()
     {
         var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
-        var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+        var http = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(20),
+
+            // Eorzea Collection's Cloudflare edge 403s the .NET client's default HTTP/1.1 requests but
+            // serves HTTP/2 — the same reason browsers and curl (both HTTP/2) succeed while a bare
+            // HttpClient is blocked. Prefer HTTP/2 so the cover-image download from
+            // glamours.eorzeacollection.com isn't rejected. Verified against the live CDN: HTTP/1.1 -> 403,
+            // HTTP/2 -> 200, independent of request headers. OrLower degrades gracefully where HTTP/2
+            // can't be negotiated rather than throwing.
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
+        };
         http.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
