@@ -136,6 +136,17 @@ internal sealed class ManagedHttpTransport : IEcTransport
 
     private async Task<string?> SendAsync(HttpRequestMessage req, CancellationToken ct)
     {
+        // Eorzea Collection's Cloudflare edge 403s the .NET client's HTTP/1.1 requests but serves
+        // HTTP/2 — the same reason browsers and curl (both HTTP/2) succeed while a default HttpClient is
+        // rejected. Request HTTP/2 for every in-process call. Set on the request itself so it applies
+        // regardless of the shared client's defaults. Verified against the live edge: HTTP/1.1 -> 403,
+        // HTTP/2 -> 200.
+        req.Version = HttpVersion.Version20;
+        // OrLower (not OrHigher): negotiate HTTP/2 via ALPN on the real HTTPS edge (verified: EC serves
+        // HTTP/2 -> 200), but degrade to HTTP/1.1 where HTTP/2 can't be negotiated — e.g. a plaintext
+        // loopback, which has no TLS/ALPN — instead of throwing.
+        req.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+
         var sw = Stopwatch.StartNew();
         try
         {
@@ -191,7 +202,8 @@ internal sealed class CurlTransport : IEcTransport
     {
         var args = new List<string>
         {
-            "-s", "--compressed", "--max-time", "20",
+            // Force HTTP/2: EC's Cloudflare edge 403s HTTP/1.1 (see ManagedHttpTransport.SendAsync).
+            "-s", "--http2", "--compressed", "--max-time", "20",
             "-X", "POST", url,
             "-H", $"User-Agent: {this.userAgent}",
             "-H", "Accept: application/json, text/plain, */*",
@@ -210,7 +222,8 @@ internal sealed class CurlTransport : IEcTransport
     {
         var args = new List<string>
         {
-            "-s", "--compressed", "--max-time", "20",
+            // Force HTTP/2: EC's Cloudflare edge 403s HTTP/1.1 (see ManagedHttpTransport.SendAsync).
+            "-s", "--http2", "--compressed", "--max-time", "20",
             url,
             "-H", $"User-Agent: {this.userAgent}",
             "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
