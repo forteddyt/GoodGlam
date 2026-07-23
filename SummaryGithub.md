@@ -3,35 +3,35 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/17/2026 - 3:37:12 AM |
-| Coverage date: | 7/17/2026 - 3:36:58 AM - 7/17/2026 - 3:37:08 AM |
+| Generated on: | 7/23/2026 - 5:14:12 AM |
+| Coverage date: | 7/23/2026 - 5:13:58 AM - 7/23/2026 - 5:14:09 AM |
 | Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
-| Classes: | 66 |
-| Files: | 42 |
-| **Line coverage:** | 93.6% (1532 of 1636) |
-| Covered lines: | 1532 |
-| Uncovered lines: | 104 |
-| Coverable lines: | 1636 |
-| Total lines: | 5327 |
-| **Branch coverage:** | 91.2% (616 of 675) |
-| Covered branches: | 616 |
+| Classes: | 67 |
+| Files: | 43 |
+| **Line coverage:** | 96.1% (1594 of 1657) |
+| Covered lines: | 1594 |
+| Uncovered lines: | 63 |
+| Coverable lines: | 1657 |
+| Total lines: | 5370 |
+| **Branch coverage:** | 92.1% (622 of 675) |
+| Covered branches: | 622 |
 | Total branches: | 675 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 93.6%</summary>
+<details><summary>GoodGlam - 96.1%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**93.6%**|**91.2%**|
+|**GoodGlam**|**96.1%**|**92.1%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
 |GoodGlam.Diagnostics.TraceLogger`1|100%||
-|GoodGlam.Glam.CurlTransport|5.1%|14.2%|
+|GoodGlam.Glam.CurlTransport|58.7%|57.1%|
 |GoodGlam.Glam.DropItem|100%||
 |GoodGlam.Glam.DropOccurrence|100%||
 |GoodGlam.Glam.EcFilterCatalog|100%|50%|
@@ -67,6 +67,7 @@
 |GoodGlam.Windows.Feedback|50%||
 |GoodGlam.Windows.GlamImage|100%||
 |GoodGlam.Windows.GlamImageCache|99.2%|98.7%|
+|GoodGlam.Windows.GlamImageHttpClientFactory|100%||
 |GoodGlam.Windows.GlamImageLoader|100%|100%|
 |GoodGlam.Windows.GlamPreviewBox|100%||
 |GoodGlam.Windows.GlamPreviewHeader|100%|50%|
