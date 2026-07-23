@@ -3,6 +3,7 @@ using Dalamud.Interface.Components;
 using System.Diagnostics.CodeAnalysis;
 using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -23,7 +24,7 @@ namespace GoodGlam.Windows;
 [ExcludeFromCodeCoverage(Justification = "Pure ImGui rendering + thin wiring; the control effects are extracted into the tested SettingsActions, and a live ImGui context can't run in CI.")]
 internal sealed class FiltersTab
 {
-    internal const string MogStationHelp = "Ignore glam outfits that use any Mog Station (cash shop) items.";
+    internal static string MogStationHelp => Loc.Strings.Filters.ExcludeMogStationHelp;
 
     private readonly Configuration config;
     private readonly EcFilterCatalog filterCatalog;
@@ -39,55 +40,48 @@ internal sealed class FiltersTab
 
     internal void Draw()
     {
+        var strings = Loc.Strings.Filters;
+
         // Eorzea Collection filters come first: they narrow which glamours are considered.
-        ImGui.TextWrapped(
-            "Filters mirror Eorzea Collection and apply to every popularity check. With everything " +
-            "left at its default, lookups behave exactly as if unfiltered.");
+        ImGui.TextWrapped(strings.Intro);
 
         var filters = this.config.Filters;
 
-        this.DrawCombo("Gender", this.filterCatalog.Genders, FilterField.Gender,
-            "Only count glamours shown for this character gender.");
+        this.DrawCombo(strings.Gender, this.filterCatalog.Genders, FilterField.Gender, strings.GenderHelp);
         this.DrawRacePicker(filters);
-        this.DrawCombo("Intended for", this.filterCatalog.Jobs, FilterField.Job,
-            "Only count glamours tagged for this role or job.");
-        this.DrawCombo("Date submitted", this.filterCatalog.DatePeriods, FilterField.DatePeriod,
-            "Only count glamours submitted within this time window.");
+        this.DrawCombo(strings.Job, this.filterCatalog.Jobs, FilterField.Job, strings.JobHelp);
+        this.DrawCombo(strings.DatePeriod, this.filterCatalog.DatePeriods, FilterField.DatePeriod, strings.DatePeriodHelp);
         this.DrawLevelRange(filters);
 
-        this.DrawCombo("Classification", this.filterCatalog.Classifications, FilterField.Classification,
-            "EC overall vibe tag (e.g. Cute, Cool, Sexy).");
-        this.DrawCombo("Style", this.filterCatalog.Styles, FilterField.Style,
-            "EC style tag (e.g. Casual, Fantasy, Modern).");
-        this.DrawCombo("Theme", this.filterCatalog.Themes, FilterField.Theme,
-            "EC theme tag (e.g. Swimwear, Battle Gear, Royalty).");
-        this.DrawCombo("Color", this.filterCatalog.Colors, FilterField.Color,
-            "EC dominant color tag.");
+        this.DrawCombo(strings.Classification, this.filterCatalog.Classifications, FilterField.Classification,
+            strings.ClassificationHelp);
+        this.DrawCombo(strings.Style, this.filterCatalog.Styles, FilterField.Style, strings.StyleHelp);
+        this.DrawCombo(strings.Theme, this.filterCatalog.Themes, FilterField.Theme, strings.ThemeHelp);
+        this.DrawCombo(strings.Color, this.filterCatalog.Colors, FilterField.Color, strings.ColorHelp);
 
         var noMog = filters.ExcludeMogstation;
-        if (ImGui.Checkbox("Exclude Mog Station", ref noMog))
+        if (ImGui.Checkbox(strings.ExcludeMogStation, ref noMog))
         {
             this.log.Debug($"filter changed: ExcludeMogstation = {noMog}.");
             this.actions.SetExcludeMogstation(noMog);
         }
 
-        Help(MogStationHelp);
+        Help(strings.ExcludeMogStationHelp);
 
         var noSeasonal = filters.ExcludeSeasonal;
-        if (ImGui.Checkbox("Exclude seasonal", ref noSeasonal))
+        if (ImGui.Checkbox(strings.ExcludeSeasonal, ref noSeasonal))
         {
             this.log.Debug($"filter changed: ExcludeSeasonal = {noSeasonal}.");
             this.actions.SetExcludeSeasonal(noSeasonal);
         }
 
-        Help("Ignore glamours that use limited seasonal event gear.");
+        Help(strings.ExcludeSeasonalHelp);
 
         // Dedicated subsection below the filters: what counts as popular — the loves threshold and
         // the per-slot gear controls.
         ImGui.Separator();
-        ImGui.TextUnformatted("Popularity thresholds");
-        Help("How many 'loves' a glamour needs for a drop to count as popular, and which gear slots " +
-            "are analysed.");
+        ImGui.TextUnformatted(strings.PopularityThresholds);
+        Help(strings.PopularityThresholdsHelp);
         this.DrawThreshold();
         this.DrawGearSlots();
 
@@ -95,13 +89,13 @@ internal sealed class FiltersTab
         // the loves threshold, and the gear-slot settings) but leaves the Settings-tab toggle alone.
         ImGui.Separator();
         ImGui.Spacing();
-        if (ImGui.Button("Reset filters"))
+        if (ImGui.Button(strings.ResetButton))
         {
             this.log.Debug("Reset filters clicked; clearing filters, loves threshold, and slot settings.");
             this.actions.ResetFilters();
         }
 
-        Help("Resets the Filters to their default values.");
+        Help(strings.ResetHelp);
     }
 
     /// <summary>
@@ -113,18 +107,16 @@ internal sealed class FiltersTab
         if (this.config.PerSlotThresholds)
             return;
 
-        ImGui.TextWrapped(
-            "Notify when a dropped item is used in a glamour with at least this many loves on Eorzea Collection:");
+        ImGui.TextWrapped(Loc.Strings.Filters.ThresholdPrompt);
 
         var threshold = this.config.LovesThreshold;
-        if (ImGui.InputInt("Loves", ref threshold, 10, 100, default))
+        if (ImGui.InputInt(Loc.Strings.Filters.Loves, ref threshold, 10, 100, default))
         {
             this.actions.SetLovesThreshold(threshold);
             this.log.Debug($"filter changed: LovesThreshold = {this.config.LovesThreshold}.");
         }
 
-        Help("Loves are Eorzea Collection users' likes. Lower values find more glamours; higher values " +
-            "only flag more widely loved outfits.");
+        Help(Loc.Strings.Filters.LovesHelp);
     }
 
     /// <summary>
@@ -136,8 +128,8 @@ internal sealed class FiltersTab
     /// </summary>
     private void DrawGearSlots()
     {
-        ImGui.TextUnformatted("Gear slots");
-        Help("Which gear slots to check glamours for. Uncheck a slot to ignore any associated dropped items.");
+        ImGui.TextUnformatted(Loc.Strings.Filters.GearSlots);
+        Help(Loc.Strings.Filters.GearSlotsHelp);
 
         if (!ImGui.BeginTable("##gearslots", 2, ImGuiTableFlags.SizingStretchSame))
             return;
@@ -172,7 +164,7 @@ internal sealed class FiltersTab
             ImGui.SameLine();
             ImGui.SetNextItemWidth(150f);
             var slotThreshold = this.actions.GetSlotThreshold(slot);
-            if (ImGui.InputInt($"Loves##threshold-{slot.Key}", ref slotThreshold, 10, 100, default))
+            if (ImGui.InputInt($"{Loc.Strings.Filters.Loves}##threshold-{slot.Key}", ref slotThreshold, 10, 100, default))
             {
                 this.actions.SetSlotThreshold(slot, slotThreshold);
                 this.log.Debug($"filter changed: slot '{slot.Key}' threshold = {this.actions.GetSlotThreshold(slot)}.");
@@ -211,10 +203,10 @@ internal sealed class FiltersTab
     private void DrawRacePicker(PopularityFilters filters)
     {
         var preview = filters.Races.Count == 0
-            ? "All races"
+            ? Loc.Strings.Filters.AllRaces
             : string.Join(", ", this.filterCatalog.Races.Where(r => filters.Races.Contains(r.Value)).Select(r => r.Label));
 
-        if (ImGui.BeginCombo("Race", preview))
+        if (ImGui.BeginCombo(Loc.Strings.Filters.Race, preview))
         {
             foreach (var race in this.filterCatalog.Races)
             {
@@ -229,27 +221,27 @@ internal sealed class FiltersTab
             ImGui.EndCombo();
         }
 
-        Help("Only count glamours for the selected races; pick several or none for all.");
+        Help(Loc.Strings.Filters.RaceHelp);
     }
 
     private void DrawLevelRange(PopularityFilters filters)
     {
         var min = filters.MinLevel;
         var max = filters.MaxLevel;
-        if (ImGui.InputInt("Min level to equip", ref min, 1, 5, default))
+        if (ImGui.InputInt(Loc.Strings.Filters.MinLevel, ref min, 1, 5, default))
         {
             this.actions.SetMinLevel(min);
             this.log.Debug($"filter changed: level range = {filters.MinLevel}-{filters.MaxLevel}.");
         }
 
-        Help("Lowest item equip level to include. Stays at or below the max.");
+        Help(Loc.Strings.Filters.MinLevelHelp);
 
-        if (ImGui.InputInt("Max level to equip", ref max, 1, 5, default))
+        if (ImGui.InputInt(Loc.Strings.Filters.MaxLevel, ref max, 1, 5, default))
         {
             this.actions.SetMaxLevel(max);
             this.log.Debug($"filter changed: level range = {filters.MinLevel}-{filters.MaxLevel}.");
         }
 
-        Help("Highest item equip level to include. Stays at or above the min.");
+        Help(Loc.Strings.Filters.MaxLevelHelp);
     }
 }

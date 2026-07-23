@@ -5,6 +5,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using GoodGlam.Diagnostics;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -52,7 +53,7 @@ internal sealed class AboutTab
         ImGui.Image(wrap.Handle, size);
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("GoodGlam");
+        ImGui.TextUnformatted(Loc.Strings.Common.AppName);
         ImGui.SameLine();
         ImGui.TextDisabled(AboutInfo.FormatVersion(manifest.AssemblyVersion));
 
@@ -61,7 +62,7 @@ internal sealed class AboutTab
 
         ImGui.Separator();
 
-        ImGui.TextUnformatted("How it works");
+        ImGui.TextUnformatted(Loc.Strings.About.HowItWorks);
         foreach (var step in AboutInfo.HowItWorksSteps)
         {
             ImGui.Bullet();
@@ -74,7 +75,7 @@ internal sealed class AboutTab
         this.DrawRepoLink(manifest.RepoUrl);
 
         ImGui.Spacing();
-        ImGui.TextDisabled("Feedback");
+        ImGui.TextDisabled(Loc.Strings.About.FeedbackLabel);
         Feedback.DrawReportBugButton(this.linkOpener, manifest.AssemblyVersion);
         ImGui.SameLine();
         Feedback.DrawSuggestFeatureButton(this.linkOpener);
@@ -91,7 +92,7 @@ internal sealed class AboutTab
         if (string.IsNullOrWhiteSpace(repoUrl))
             return;
 
-        ImGui.TextUnformatted("GitHub:");
+        ImGui.TextUnformatted(Loc.Strings.About.GithubLabel);
         ImGui.SameLine();
 
         ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudViolet);
@@ -101,7 +102,7 @@ internal sealed class AboutTab
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip("Open the GoodGlam repository on GitHub.");
+            ImGui.SetTooltip(Loc.Strings.About.GithubTooltip);
         }
 
         if (ImGui.IsItemClicked())

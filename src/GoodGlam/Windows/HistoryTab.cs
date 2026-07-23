@@ -9,6 +9,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using GoodGlam.Diagnostics;
 using GoodGlam.History;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -33,8 +34,17 @@ internal sealed class HistoryTab : IDisposable
     /// <summary>Logical longest-edge cap of the cover preview thumbnail, scaled by GlobalScale.</summary>
     private const float PreviewMaxSide = 320f;
     private const string DetailsBackdropId = "##GoodGlamDropDetailsBackdrop";
-    internal static readonly string[] ColumnOrder =
-        ["Piece", "Loves", "Item", "Preview", "Rank", "Glam", "All Glams", "Details"];
+    internal static string[] ColumnOrder =>
+    [
+        Loc.Strings.History.Columns.Piece,
+        Loc.Strings.History.Columns.Loves,
+        Loc.Strings.History.Columns.Item,
+        Loc.Strings.History.Columns.Preview,
+        Loc.Strings.History.Columns.Rank,
+        Loc.Strings.History.Columns.Glam,
+        Loc.Strings.History.Columns.AllGlams,
+        Loc.Strings.History.Columns.Details,
+    ];
     internal const ImGuiTableFlags TableFlags = ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders
         | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable | ImGuiTableFlags.SizingFixedFit;
     internal static readonly ImGuiTableColumnFlags[] ColumnFlags =
@@ -131,9 +141,9 @@ internal sealed class HistoryTab : IDisposable
         var tableOpen = false;
         try
         {
-            ImGui.TextDisabled($"{records.Count} qualifying drop(s) logged.");
+            ImGui.TextDisabled(string.Format(Loc.Strings.History.DropsLogged, records.Count));
             ImGui.SameLine();
-            if (ImGui.Button("Clear"))
+            if (ImGui.Button(Loc.Strings.History.ClearButton))
             {
                 this.log.Debug($"history Clear clicked ({records.Count} entries).");
                 this.store.Clear();
@@ -143,17 +153,18 @@ internal sealed class HistoryTab : IDisposable
 
             if (records.Count == 0)
             {
-                ImGui.TextWrapped("No popular drops yet. Qualifying drops appear here, and persist across sessions.");
+                ImGui.TextWrapped(Loc.Strings.History.EmptyState);
                 return;
             }
 
-            if (!ImGui.BeginTable("##history", ColumnOrder.Length, TableFlags))
+            var columns = ColumnOrder;
+            if (!ImGui.BeginTable("##history", columns.Length, TableFlags))
                 return;
 
             tableOpen = true;
             ImGui.TableSetupScrollFreeze(0, 1);
-            for (var column = 0; column < ColumnOrder.Length; column++)
-                ImGui.TableSetupColumn(ColumnOrder[column], ColumnFlags[column], 0f);
+            for (var column = 0; column < columns.Length; column++)
+                ImGui.TableSetupColumn(columns[column], ColumnFlags[column], 0f);
             ImGui.TableHeadersRow();
 
             for (var index = 0; index < records.Count; index++)
@@ -179,13 +190,13 @@ internal sealed class HistoryTab : IDisposable
                     ImGui.TextUnformatted(HistoryRecordPresentation.SelectedRank(record));
 
                     ImGui.TableSetColumnIndex(5);
-                    this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, "(unknown)");
+                    this.DrawLinkCell(record.GlamName ?? record.GlamUrl, record.GlamUrl, Loc.Strings.History.GlamFallback);
 
                     ImGui.TableSetColumnIndex(6);
-                    this.DrawLinkCell("Browse", record.ListingUrl, "(n/a)");
+                    this.DrawLinkCell(Loc.Strings.History.BrowseLink, record.ListingUrl, Loc.Strings.History.ListingFallback);
 
                     ImGui.TableSetColumnIndex(7);
-                    if (ImGui.SmallButton("View"))
+                    if (ImGui.SmallButton(Loc.Strings.History.ViewButton))
                         this.detailsWindow.Show(record);
                 }
                 finally
@@ -308,8 +319,8 @@ internal sealed class HistoryTab : IDisposable
         var image = this.imageCache.Get(record.GlamImageUrl);
         var ready = image is { State: GlamImageState.Ready, Texture: not null };
         var note = image.State == GlamImageState.Loading && !string.IsNullOrEmpty(record.GlamImageUrl)
-            ? "Loading preview…"
-            : "No preview available.";
+            ? Loc.Strings.History.LoadingPreview
+            : Loc.Strings.History.NoPreview;
         var header = GlamPreviewHeader.Create(record.ClampedSelectedIndex, record.RankedGlams.Count);
         var bodySize = ready ? PreviewSize(image.Texture!) : ImGui.CalcTextSize(note);
         var measurements = new GlamPreviewMeasurements(

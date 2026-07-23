@@ -25,7 +25,35 @@ dotnet test    GoodGlam.slnx -c Release --no-build --settings coverlet.runsettin
 The plugin alone builds via `dotnet build src/GoodGlam/GoodGlam.csproj -c Release`. A **Release** build
 runs DalamudPackager and emits the plugin **manifest** (`GoodGlam.json`) plus **`GoodGlam/latest.zip`**
 under `src/GoodGlam/bin/Release/`; a Debug build emits the manifest only. `src/GoodGlam/packages.lock.json`
-is committed so the no-internet official (Plogon/D17) build can restore.
+(and `tools/GoodGlam.SourceGen/packages.lock.json`) are committed for the official (Plogon/D17) build —
+see the constraints below.
+
+### Official (D17/Plogon) build constraints
+
+GoodGlam currently distributes via its own custom repo (see **Releases & distribution**), **not** yet the
+official [DalamudPluginsD17](https://github.com/goatcorp/DalamudPluginsD17) repository — but the project
+stays buildable under its rules. The official build system ([Plogon](https://github.com/goatcorp/Plogon))
+compiles each submission in a **network-disabled Docker container** whose only NuGet feed is a cache
+pre-staged *before* the sealed build. Plogon fills that cache by recursively discovering **every**
+`packages.lock.json` in the repo and downloading each locked package (it errors if there are none).
+Concretely:
+
+- **Commit a `packages.lock.json` for every project** (the plugin *and* the `tools/` source generator).
+- **No build-time network or external services.** (This is why ImageSharp is pinned to 3.1.x — 4.x wants a
+  build-time license-key check.)
+- **Reproducible version**: the assembly version must derive from the commit, not a run number/timestamp
+  (a current gap — the custom-repo pipeline uses run-number versions; tracked as a separate issue).
+- Extra *build-time* dependencies (like the Roslyn source generator) are **fine** — Plogon pre-stages them
+  from their lockfile. The rule is "lockfile + offline build", **not** "no build-time deps".
+
+Sources to cross-check: Plogon
+[`BuildProcessor.cs`](https://github.com/goatcorp/Plogon/blob/master/Plogon/BuildProcessor.cs)
+(`NetworkDisabled = true`; `RestoreAllPackages` does `GetFiles("packages.lock.json", SearchOption.AllDirectories)`
+and throws if none; `WriteNugetConfig` writes `<clear/>` + a single local `/packages` source),
+dalamud.dev [approval-process](https://dalamud.dev/plugin-publishing/approval-process/) ("The build system
+has no direct internet access…") and [restrictions](https://dalamud.dev/plugin-publishing/restrictions/),
+and the [DalamudPluginsD17](https://github.com/goatcorp/DalamudPluginsD17) README **Technical criteria**
+(reproducible version, DalamudPackager, icon 64–512px square).
 
 ## Releases & distribution
 
@@ -56,6 +84,7 @@ Honor these interfaces when adding data sources or transports. The component ove
 - Use the **`Dalamud.Bindings.ImGui`** bindings, **not** `ImGuiNET`.
 - Reach Dalamud services through the `Services` locator.
 - There is no `.editorconfig` - match the formatting and naming of nearby files.
+- **User-facing text is templatized.** All UI copy + the slash-command help live in `src/GoodGlam/Localization/Strings.en.jsonc`, read at runtime via `Loc.Strings.*`. That typed tree is **generated** from the template by the `tools/GoodGlam.SourceGen` Roslyn generator, so to add/change copy you edit **only the template** (a mistyped key is then a compile error). Values sent to Eorzea Collection (filter values, slot keys) are fixed API tokens and stay in code, never in the template.
 
 ## Testing
 

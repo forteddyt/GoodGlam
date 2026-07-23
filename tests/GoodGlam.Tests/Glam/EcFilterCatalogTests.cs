@@ -1,5 +1,6 @@
 using FluentAssertions;
 using GoodGlam.Glam;
+using GoodGlam.Localization;
 using Xunit;
 
 namespace GoodGlam.Tests.Glam;
@@ -54,5 +55,20 @@ public class EcFilterCatalogTests
         Catalog.Styles.Should().Contain(new EcFilterOption("84", "Fantasy"));
         Catalog.Colors.Should().Contain(new EcFilterOption("41", "Black"));
         Catalog.Jobs.Should().Contain(new EcFilterOption("pct", "Pictomancer"));
+    }
+
+    [Fact]
+    public void LoadEmbedded_throws_when_labels_are_not_aligned_with_values()
+    {
+        // The fixed EC API values and their display labels live in two files; a count mismatch must fail
+        // loudly rather than silently mispair a label with the wrong value.
+        var misaligned = new StringCatalog
+        {
+            FilterOptions = new FilterOptionsStrings { Genders = ["only one label"] },
+        };
+
+        var act = () => EcFilterCatalog.LoadEmbedded(misaligned);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*genders*");
     }
 }

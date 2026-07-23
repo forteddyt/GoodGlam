@@ -10,6 +10,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using GoodGlam.Diagnostics;
 using GoodGlam.History;
+using GoodGlam.Localization;
 
 namespace GoodGlam.Windows;
 
@@ -72,7 +73,7 @@ public sealed class LogoWindow : Window, IDisposable
         Action openMain,
         NotificationState notificationState,
         LogoVisibilityGate visibilityGate)
-        : base("GoodGlam###GoodGlamLogo",
+        : base($"{Loc.Strings.Common.AppName}###GoodGlamLogo",
             ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar
             | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoBackground
             | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoMove)
@@ -166,7 +167,7 @@ public sealed class LogoWindow : Window, IDisposable
         }
 
         if (outcome.AllowTooltip && ImGui.IsItemHovered())
-            ImGui.SetTooltip("GoodGlam — open window (right-click for more)");
+            ImGui.SetTooltip(Loc.Strings.Logo.Tooltip);
 
         if (outcome.OpenWindow)
         {
@@ -176,7 +177,7 @@ public sealed class LogoWindow : Window, IDisposable
 
         if (ImGui.BeginPopupContextItem("##GoodGlamLogoContext"))
         {
-            if (ImGui.MenuItem("Open GoodGlam"))
+            if (ImGui.MenuItem(Loc.Strings.Logo.OpenWindow))
             {
                 this.log.Debug("logo context menu: 'Open GoodGlam' selected.");
                 this.openMain();
@@ -185,12 +186,12 @@ public sealed class LogoWindow : Window, IDisposable
             ImGui.Separator();
 
             // Checkable: fixed label with a check shown when the position is locked.
-            if (ImGui.MenuItem("Lock position", string.Empty, this.config.LockLogo))
+            if (ImGui.MenuItem(Loc.Strings.Logo.LockPosition, string.Empty, this.config.LockLogo))
                 this.ToggleLock();
 
             ImGui.Separator();
 
-            if (ImGui.MenuItem("Hide this button"))
+            if (ImGui.MenuItem(Loc.Strings.Logo.HideButton))
                 this.Hide();
 
             ImGui.EndPopup();

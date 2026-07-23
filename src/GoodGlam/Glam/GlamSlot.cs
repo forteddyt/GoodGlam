@@ -58,26 +58,14 @@ public sealed record GlamSlot(string Key)
     public string FilterParam => $"{Key}Piece";
 
     /// <summary>
-    /// Human-friendly slot name for the UI. Six slots read differently from their EC
-    /// <see cref="Key"/> (Main Hand, Off Hand, Ears, Neck, Wrists, Rings); the rest are the
-    /// title-cased key. Expression-bodied on purpose so it stays out of the record's value
-    /// equality — two slots are still equal iff their <see cref="Key"/> matches.
+    /// Human-friendly slot name for the UI, sourced from the active string catalog
+    /// (<see cref="Localization.Loc.Strings"/>). Six slots read differently from their EC
+    /// <see cref="Key"/> (Main Hand, Off Hand, Ears, Neck, Wrists, Rings); the catalog falls back to
+    /// the raw <see cref="Key"/> for any slot it has no label for. Expression-bodied on purpose so it
+    /// stays out of the record's value equality — two slots are still equal iff their <see cref="Key"/>
+    /// matches.
     /// </summary>
-    public string Label => this.Key switch
-    {
-        "weapon" => "Main Hand",
-        "offhand" => "Off Hand",
-        "head" => "Head",
-        "body" => "Body",
-        "hands" => "Hands",
-        "legs" => "Legs",
-        "feet" => "Feet",
-        "earrings" => "Ears",
-        "necklace" => "Neck",
-        "bracelets" => "Wrists",
-        "ring" => "Rings",
-        _ => this.Key,
-    };
+    public string Label => Localization.Loc.Strings.SlotLabel(this.Key);
 
     /// <summary>
     /// Resolves a game item's <see cref="EquipSlotCategory"/> to the matching Eorzea

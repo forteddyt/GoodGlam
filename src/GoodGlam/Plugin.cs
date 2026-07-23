@@ -5,6 +5,7 @@ using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 using GoodGlam.History;
 using GoodGlam.Loot;
+using GoodGlam.Localization;
 using GoodGlam.Windows;
 
 namespace GoodGlam;
@@ -33,6 +34,10 @@ public sealed class Plugin : IDalamudPlugin
     internal Plugin(IDalamudPluginInterface pluginInterface, ILootReader lootReader)
     {
         pluginInterface.Create<Services>();
+
+        // Load the user-facing string catalog up front so a missing/invalid template surfaces on load
+        // (rather than at first draw), and so every window/service below can read its copy from it.
+        Loc.Initialize();
 
         // The live config + history start neutral (defaults, no backing file); CharacterDataManager
         // binds them to the logged-in character's own files on login. Every window/service below
@@ -77,7 +82,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Services.Commands.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
-            HelpMessage = "Open the GoodGlam window (History, Filters, Settings, About tabs). Debug: /goodglam dump, /goodglam check <itemId>, /goodglam glow, /goodglam reset.",
+            HelpMessage = Loc.Strings.Command.HelpMessage,
         });
 
         this.log.Information("GoodGlam loaded.");
