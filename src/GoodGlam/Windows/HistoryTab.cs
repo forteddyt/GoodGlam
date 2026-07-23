@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using System.Numerics;
 using System.Text.Json.Serialization;
 using Dalamud.Bindings.ImGui;
@@ -50,7 +49,7 @@ internal sealed class HistoryTab : IDisposable
         ImGuiTableColumnFlags.WidthFixed,
     ];
 
-    private static readonly HttpClient Http = CreateHttpClient();
+    private static readonly HttpClient Http = GlamImageHttpClientFactory.Create();
 
     /// <summary>
     /// The production preview loader threaded into <see cref="GlamImageCache"/>, wired with the real
@@ -343,16 +342,6 @@ internal sealed class HistoryTab : IDisposable
     /// <summary>The texture loader threaded into <see cref="GlamImageCache"/>; delegates to the tested <see cref="GlamImageLoader"/>.</summary>
     private static Task<IDalamudTextureWrap?> LoadTextureAsync(string url, CancellationToken ct)
         => Loader.LoadAsync(url, ct);
-
-    private static HttpClient CreateHttpClient()
-    {
-        var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
-        var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.TryAddWithoutValidation(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        return http;
-    }
 
     /// <summary>Releases the per-URL image textures owned by the cache when the window tears down.</summary>
     public void Dispose() => this.imageCache.Dispose();
