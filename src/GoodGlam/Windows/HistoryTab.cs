@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using System.Numerics;
 using System.Text.Json.Serialization;
 using Dalamud.Bindings.ImGui;
@@ -50,7 +49,7 @@ internal sealed class HistoryTab : IDisposable
         ImGuiTableColumnFlags.WidthFixed,
     ];
 
-    private static readonly HttpClient Http = CreateHttpClient();
+    private static readonly HttpClient Http = GlamImageHttpClientFactory.Create();
 
     /// <summary>
     /// The production preview loader threaded into <see cref="GlamImageCache"/>, wired with the real
@@ -343,28 +342,6 @@ internal sealed class HistoryTab : IDisposable
     /// <summary>The texture loader threaded into <see cref="GlamImageCache"/>; delegates to the tested <see cref="GlamImageLoader"/>.</summary>
     private static Task<IDalamudTextureWrap?> LoadTextureAsync(string url, CancellationToken ct)
         => Loader.LoadAsync(url, ct);
-
-    private static HttpClient CreateHttpClient()
-    {
-        var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
-        var http = new HttpClient(handler)
-        {
-            Timeout = TimeSpan.FromSeconds(20),
-
-            // Eorzea Collection's Cloudflare edge 403s the .NET client's default HTTP/1.1 requests but
-            // serves HTTP/2 — the same reason browsers and curl (both HTTP/2) succeed while a bare
-            // HttpClient is blocked. Prefer HTTP/2 so the cover-image download from
-            // glamours.eorzeacollection.com isn't rejected. Verified against the live CDN: HTTP/1.1 -> 403,
-            // HTTP/2 -> 200, independent of request headers. OrLower degrades gracefully where HTTP/2
-            // can't be negotiated rather than throwing.
-            DefaultRequestVersion = HttpVersion.Version20,
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-        };
-        http.DefaultRequestHeaders.TryAddWithoutValidation(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        return http;
-    }
 
     /// <summary>Releases the per-URL image textures owned by the cache when the window tears down.</summary>
     public void Dispose() => this.imageCache.Dispose();
