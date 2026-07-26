@@ -294,7 +294,7 @@ var assemblies = [
       { "name": "GoodGlam.Configuration", "rp": "GoodGlam_Configuration.html", "cl": 26, "ucl": 0, "cal": 26, "tl": 107, "cb": 14, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.ConfigurationStore", "rp": "GoodGlam_ConfigurationStore.html", "cl": 29, "ucl": 0, "cal": 29, "tl": 76, "cb": 11, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Diagnostics.TraceLogger\u003CT\u003E", "rp": "GoodGlam_TraceLogger_1.html", "cl": 9, "ucl": 0, "cal": 9, "tl": 36, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Glam.CurlTransport", "rp": "GoodGlam_CurlTransport.html", "cl": 4, "ucl": 76, "cal": 80, "tl": 337, "cb": 2, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Glam.CurlTransport", "rp": "GoodGlam_CurlTransport.html", "cl": 47, "ucl": 33, "cal": 80, "tl": 337, "cb": 8, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.DropItem", "rp": "GoodGlam_DropItem.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 80, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.DropOccurrence", "rp": "GoodGlam_DropOccurrence.html", "cl": 7, "ucl": 0, "cal": 7, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Glam.EcFilterCatalog", "rp": "GoodGlam_EcFilterCatalog.html", "cl": 82, "ucl": 0, "cal": 82, "tl": 159, "cb": 8, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -386,12 +386,6 @@ var riskHotspotMetrics = [
 ];
 
 var riskHotspots = [
-  {
-    "assembly": "GoodGlam", "class": "GoodGlam.Glam.CurlTransport", "reportPath": "GoodGlam_CurlTransport.html", "methodName": "RunCurlAsync()", "methodShortName": "RunCurlAsync()", "fileIndex": 0, "line": 244,
-    "metrics": [
-      { "value": 72, "exceeded": true },
-      { "value": 8, "exceeded": false },
-    ]},
   {
     "assembly": "GoodGlam", "class": "GoodGlam.Loot.LootWatcher", "reportPath": "GoodGlam_LootWatcher.html", "methodName": "ReadAndScan(System.String,System.Boolean,System.Boolean,System.TimeSpan)", "methodShortName": "ReadAndScan(...)", "fileIndex": 0, "line": 166,
     "metrics": [

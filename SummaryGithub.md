@@ -3,35 +3,35 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/25/2026 - 1:57:17 PM |
-| Coverage date: | 7/25/2026 - 1:56:51 PM |
-| Parser: | Cobertura |
+| Generated on: | 7/26/2026 - 3:46:36 AM |
+| Coverage date: | 7/26/2026 - 3:46:15 AM - 7/26/2026 - 3:46:31 AM |
+| Parser: | MultiReport (2x Cobertura) |
 | Assemblies: | 1 |
 | Classes: | 83 |
 | Files: | 46 |
-| **Line coverage:** | 94.2% (1721 of 1826) |
-| Covered lines: | 1721 |
-| Uncovered lines: | 105 |
+| **Line coverage:** | 96.6% (1764 of 1826) |
+| Covered lines: | 1764 |
+| Uncovered lines: | 62 |
 | Coverable lines: | 1826 |
 | Total lines: | 5739 |
-| **Branch coverage:** | 93.1% (600 of 644) |
-| Covered branches: | 600 |
+| **Branch coverage:** | 94% (606 of 644) |
+| Covered branches: | 606 |
 | Total branches: | 644 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 94.2%</summary>
+<details><summary>GoodGlam - 96.6%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**94.2%**|**93.1%**|
+|**GoodGlam**|**96.6%**|**94%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
 |GoodGlam.Diagnostics.TraceLogger`1|100%||
-|GoodGlam.Glam.CurlTransport|5%|14.2%|
+|GoodGlam.Glam.CurlTransport|58.7%|57.1%|
 |GoodGlam.Glam.DropItem|100%||
 |GoodGlam.Glam.DropOccurrence|100%||
 |GoodGlam.Glam.EcFilterCatalog|100%|80%|
