@@ -243,16 +243,21 @@ public sealed class LiveEcFixture
     }
 
     /// <summary>
-    /// Assembles the actionable failure: the classified probe outcome plus the captured transport
-    /// log (HTTP statuses, curl exit codes, record counts) that explains how it got there.
+    /// Assembles the actionable failure: the classified probe outcome, whether plain browsing of EC
+    /// works at all, and the captured transport log (HTTP statuses, curl exit codes, record counts)
+    /// that explains how it got there.
     /// </summary>
     private static string BuildFailureMessage(EcFixture probe)
     {
-        var diagnosis = Diagnose(probe);
+        var transport = EcTransportFactory.Create();
+        var search = DiagnoseSearch(transport, probe);
+        var browse = DiagnoseBrowse(transport);
+
         return $"""
             {UnreachableMessage}
 
-            Diagnosis: {diagnosis}
+            Search endpoint: {search}
+            Plain page GET: {browse}
 
             EC client/transport log:
             {LiveEcDiagnostics.Snapshot()}
@@ -264,12 +269,10 @@ public sealed class LiveEcFixture
     /// so the response body can be classified. Only ever runs on the failure path, so the extra
     /// request costs nothing in a green run.
     /// </summary>
-    private static string Diagnose(EcFixture probe)
+    private static string DiagnoseSearch(IEcTransport transport, EcFixture probe)
     {
         try
         {
-            var transport = EcTransportFactory.Create();
-
             // Mirrors EorzeaCollectionClient.ResolveEcItemAsync's request; kept local because the
             // point is to see the raw body the client throws away.
             var url = $"{BaseUrl}/gear/{probe.Slot.Key}/search";
@@ -283,6 +286,30 @@ public sealed class LiveEcFixture
         catch (Exception ex)
         {
             return $"the diagnostic probe itself failed with {ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Fetches an ordinary EC page to separate "this host refuses us entirely" (an edge/WAF block on
+    /// the runner's egress, where nothing gets through) from "only the search endpoint misbehaves"
+    /// (an EC-side API change) — two failures that need completely different fixes.
+    /// </summary>
+    private static string DiagnoseBrowse(IEcTransport transport)
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var html = transport.GetAsync($"{BaseUrl}/glamours", cts.Token).GetAwaiter().GetResult();
+
+            return string.IsNullOrWhiteSpace(html)
+                ? "GET /glamours also returned nothing, so EC is refusing this host outright rather " +
+                  "than just the search endpoint (see the transport log for the status code)."
+                : $"GET /glamours succeeded ({html.Length} chars), so the host is reachable and only " +
+                  $"the search call is failing — suspect an EC-side API/data change, not a block.";
+        }
+        catch (Exception ex)
+        {
+            return $"the browse probe failed with {ex.GetType().Name}: {ex.Message}";
         }
     }
 }
