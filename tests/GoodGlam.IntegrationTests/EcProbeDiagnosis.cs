@@ -127,7 +127,11 @@ public sealed record EcProbeDiagnosis(EcProbeOutcome Outcome, string Detail)
     /// <summary>A single-line, length-bounded excerpt of a response body, safe to put in a test failure.</summary>
     private static string Snippet(string body)
     {
-        var collapsed = string.Join(' ', body.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        // A null separator array is String.Split's "split on any whitespace" overload, which is how
+        // the excerpt gets collapsed onto one line regardless of the markup it came from.
+        const char[]? anyWhitespace = null;
+
+        var collapsed = string.Join(' ', body.Split(anyWhitespace, StringSplitOptions.RemoveEmptyEntries));
         return collapsed.Length <= 300 ? collapsed : collapsed[..300] + "…";
     }
 }

@@ -161,6 +161,9 @@ internal class CapturingLog : DispatchProxy
 {
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
+        // DispatchProxy funnels property access through Invoke as get_/set_ accessor calls
+        // (IPluginLog exposes a minimum-level property). Those aren't log lines, so skip them —
+        // the accessor name would otherwise be recorded as if it were a severity.
         var name = targetMethod?.Name;
         if (name is not null && !name.StartsWith("get_", StringComparison.Ordinal) &&
             !name.StartsWith("set_", StringComparison.Ordinal))
