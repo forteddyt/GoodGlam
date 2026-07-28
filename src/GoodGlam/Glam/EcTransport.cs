@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using GoodGlam.Diagnostics;
@@ -176,34 +177,109 @@ internal sealed class ManagedHttpTransport : IEcTransport
 }
 
 /// <summary>
+/// Splits the HTTP status curl is asked to append to its own output back off the response body.
+///
+/// curl exits 0 for any transfer it *completed*, including one the server refused: a Cloudflare
+/// challenge is, as far as curl is concerned, a perfectly successful download of a block page. The
+/// exit code alone therefore cannot distinguish a usable body from a refusal, so the status is
+/// requested via <c>--write-out</c> and recovered here.
+/// </summary>
+internal static class CurlStatusLine
+{
+    /// <summary>
+    /// The <c>--write-out</c> format: a newline followed by the response status. curl expands the
+    /// <c>\n</c> escape itself, so this is passed through as the literal two characters.
+    ///
+    /// Appending (rather than prefixing) leaves the body's leading bytes untouched for the JSON and
+    /// HTML parsers, and the separating newline makes the split unambiguous even when the body
+    /// itself ends in digits or spans multiple lines.
+    /// </summary>
+    public const string WriteOutFormat = @"\n%{http_code}";
+
+    /// <summary>
+    /// Recovers the status and the original body from curl's stdout. Returns <c>false</c> when the
+    /// marker is missing or unparseable, which means the output can't be trusted as a response.
+    /// </summary>
+    public static bool TrySplit(string stdout, out int statusCode, out string body)
+    {
+        statusCode = 0;
+        body = string.Empty;
+
+        var marker = stdout.LastIndexOf('\n');
+        if (marker < 0)
+            return false;
+
+        if (!int.TryParse(
+                stdout.AsSpan(marker + 1).Trim(),
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out statusCode))
+        {
+            return false;
+        }
+
+        body = stdout[..marker];
+        return true;
+    }
+
+    /// <summary>Whether the status is one whose body is worth handing back to a parser.</summary>
+    public static bool IsSuccess(int statusCode) => statusCode is >= 200 and < 300;
+}
+
+/// <summary>
 /// Fallback transport for native Windows: shells out to the system <c>curl.exe</c>
-/// (libcurl/Schannel), whose TLS ClientHello Cloudflare accepts. Returns <c>null</c> when
-/// curl is unavailable (e.g. under Wine), letting the in-process transport take over.
+/// (libcurl/Schannel). Returns <c>null</c> when curl is unavailable (e.g. under Wine) or when the
+/// response isn't usable, letting the in-process transport take over.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>This route cannot currently reach EC on a stock Windows install.</b>
+/// <c>C:\Windows\System32\curl.exe</c> is built without HTTP/2 (verified on windows-latest:
+/// <c>libcurl/8.16.0 Schannel zlib WinIDN</c>, no nghttp2), so it advertises only http/1.1 in ALPN,
+/// and EC's edge refuses HTTP/1.1 outright (verified: negotiated h2 gets 200, forced 1.1 gets 403,
+/// regardless of User-Agent). Such a build therefore receives a 403 rather than a body. That is now
+/// surfaced honestly as a blocked response instead of the silent argument-parse abort that forcing
+/// <c>--http2</c> used to cause, but it is not a working route - see the wiki (<b>Data transport</b>).
+/// </para>
+/// <para>
 /// Deliberately not <c>[ExcludeFromCodeCoverage]</c>: GoodGlam ships on both Windows and Linux, and
-/// the <c>curl.exe</c> subprocess can't be driven deterministically from either CI runner, so the
-/// report should honestly show this path as uncovered rather than hiding it.
+/// this path only activates once the in-process transport is blocked, which never happens on CI, so
+/// the live integration suite can't reach it. <c>CurlTransportTests</c> drives it directly against a
+/// loopback listener instead, which is the only automated coverage it gets.
+/// </para>
 /// </remarks>
 internal sealed class CurlTransport : IEcTransport
 {
-    private static readonly string CurlPath = ResolveCurlPath();
+    private static readonly string DefaultCurlPath = ResolveCurlPath();
 
     private readonly string userAgent;
+    private readonly string curlPath;
     private readonly ITraceLogger<CurlTransport> log;
 
-    public CurlTransport(string userAgent, ITraceLogger<CurlTransport>? log = null)
+    public CurlTransport(
+        string userAgent,
+        ITraceLogger<CurlTransport>? log = null,
+        string? curlPath = null)
     {
         this.userAgent = userAgent;
         this.log = log ?? new TraceLogger<CurlTransport>();
+        this.curlPath = curlPath ?? DefaultCurlPath;
     }
 
     public Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
     {
         var args = new List<string>
         {
-            // Force HTTP/2: EC's Cloudflare edge 403s HTTP/1.1 (see ManagedHttpTransport.SendAsync).
-            "-s", "--http2", "--compressed", "--max-time", "20",
+            // No --http2 here, deliberately. EC's edge does 403 HTTP/1.1 (see
+            // ManagedHttpTransport.SendAsync), but curl already negotiates HTTP/2 over TLS via ALPN
+            // whenever its libcurl was built with it, so the flag buys nothing where it works - and
+            // is fatal where it doesn't: Windows' bundled System32 curl.exe has no HTTP/2 support,
+            // and curl rejects an unsupported protocol option while parsing arguments, exiting
+            // non-zero without issuing any request at all. Since System32 is exactly the curl this
+            // transport resolves on native Windows, forcing the flag stopped it making any request
+            // whatsoever. Dropping the flag restores the request; whether EC answers it is a
+            // separate matter (see the class remarks).
+            "-s", "--compressed", "--max-time", "20",
             "-X", "POST", url,
             "-H", $"User-Agent: {this.userAgent}",
             "-H", "Accept: application/json, text/plain, */*",
@@ -215,22 +291,30 @@ internal sealed class CurlTransport : IEcTransport
             "--data", jsonBody,
         };
 
-        return this.RunCurlAsync(args, ct);
+        return this.RunCurlAsync(args, url, ct);
     }
 
     public Task<string?> GetAsync(string url, CancellationToken ct)
     {
         var args = new List<string>
         {
-            // Force HTTP/2: EC's Cloudflare edge 403s HTTP/1.1 (see ManagedHttpTransport.SendAsync).
-            "-s", "--http2", "--compressed", "--max-time", "20",
+            // No --http2 here, deliberately. EC's edge does 403 HTTP/1.1 (see
+            // ManagedHttpTransport.SendAsync), but curl already negotiates HTTP/2 over TLS via ALPN
+            // whenever its libcurl was built with it, so the flag buys nothing where it works - and
+            // is fatal where it doesn't: Windows' bundled System32 curl.exe has no HTTP/2 support,
+            // and curl rejects an unsupported protocol option while parsing arguments, exiting
+            // non-zero without issuing any request at all. Since System32 is exactly the curl this
+            // transport resolves on native Windows, forcing the flag stopped it making any request
+            // whatsoever. Dropping the flag restores the request; whether EC answers it is a
+            // separate matter (see the class remarks).
+            "-s", "--compressed", "--max-time", "20",
             url,
             "-H", $"User-Agent: {this.userAgent}",
             "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "-H", "Accept-Language: en-US,en;q=0.9",
         };
 
-        return this.RunCurlAsync(args, ct);
+        return this.RunCurlAsync(args, url, ct);
     }
 
     private static string ResolveCurlPath()
@@ -239,10 +323,10 @@ internal sealed class CurlTransport : IEcTransport
         return File.Exists(system) ? system : "curl.exe";
     }
 
-    private async Task<string?> RunCurlAsync(IReadOnlyList<string> args, CancellationToken ct)
+    private async Task<string?> RunCurlAsync(IReadOnlyList<string> args, string url, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
-        var psi = new ProcessStartInfo(CurlPath)
+        var psi = new ProcessStartInfo(this.curlPath)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -252,6 +336,11 @@ internal sealed class CurlTransport : IEcTransport
         };
         foreach (var a in args)
             psi.ArgumentList.Add(a);
+
+        // Added here rather than by each verb so the request can never be issued without the status
+        // marker the response parsing below depends on.
+        psi.ArgumentList.Add("-w");
+        psi.ArgumentList.Add(CurlStatusLine.WriteOutFormat);
 
         using var proc = new Process { StartInfo = psi };
 
@@ -301,8 +390,26 @@ internal sealed class CurlTransport : IEcTransport
             return null;
         }
 
-        this.log.Verbose($"curl.exe succeeded — {stdout.Length} chars in {sw.ElapsedMilliseconds}ms.");
-        return stdout;
+        if (!CurlStatusLine.TrySplit(stdout, out var status, out var body))
+        {
+            this.log.Warning(
+                $"curl.exe returned output with no parseable status marker after {sw.ElapsedMilliseconds}ms; " +
+                "treating it as a failure.");
+            return null;
+        }
+
+        // A completed-but-refused transfer must not be handed back as a body. curl exits 0 for
+        // these, so without the status check a Cloudflare challenge page would be scraped as a
+        // listing containing no glamours - silently reporting a blocked item as having zero loves.
+        if (!CurlStatusLine.IsSuccess(status))
+        {
+            this.log.Debug($"curl.exe {url} returned HTTP {status} in {sw.ElapsedMilliseconds}ms.");
+            return null;
+        }
+
+        this.log.Verbose(
+            $"curl.exe {url} -> HTTP {status}, {body.Length} chars in {sw.ElapsedMilliseconds}ms.");
+        return body;
     }
 
     /// <summary>

@@ -38,13 +38,46 @@ public sealed record GlamPopularity
 }
 
 /// <summary>
+/// Thrown when Eorzea Collection could not be reached for a lookup - a blocked, empty, or
+/// unparseable response rather than a genuine answer.
+///
+/// This exists to keep "EC did not answer" distinct from "EC answered, and the item has no
+/// glamours". Both used to surface as an empty result, so <see cref="GlamPopularityService"/>
+/// cached a Cloudflare block as a legitimate zero-loves verdict and went on repeating it for the
+/// whole cache TTL. Failing loudly instead lets the caller's existing error handling skip the
+/// cache write, so the next drop of the same item retries rather than inheriting the outage.
+/// </summary>
+public sealed class EcUnavailableException : Exception
+{
+    public EcUnavailableException(string message)
+        : base(message)
+    {
+    }
+
+    public EcUnavailableException(string message, Exception inner)
+        : base(message, inner)
+    {
+    }
+}
+
+/// <summary>
 /// Abstraction over the glamour data source so the live scraper can be swapped for a
 /// hosted proxy or a prebuilt index later without touching the rest of the plugin.
 /// </summary>
 public interface IGlamSource
 {
+    /// <summary>
+    /// Resolves the EC item for a game item, or <c>null</c> when Eorzea Collection has no matching
+    /// record (the piece simply isn't catalogued there).
+    /// </summary>
+    /// <exception cref="EcUnavailableException">Eorzea Collection could not be reached.</exception>
     Task<EcItem?> ResolveEcItemAsync(GlamSlot slot, string itemName, uint gameItemId, CancellationToken ct);
 
+    /// <summary>
+    /// Fetches the ranked glamours for an EC item. An empty result means EC answered and found
+    /// none - an unreachable EC throws instead, so the two are never confused.
+    /// </summary>
+    /// <exception cref="EcUnavailableException">Eorzea Collection could not be reached.</exception>
     Task<GlamPopularity> GetPopularityAsync(GlamSlot slot, int ecId, PopularityFilters filters, CancellationToken ct);
 }
 
@@ -88,7 +121,8 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         if (string.IsNullOrWhiteSpace(output))
         {
             this.log.Debug($"search for '{itemName}' returned an empty/blocked response.");
-            return null;
+            throw new EcUnavailableException(
+                $"the Eorzea Collection search for '{itemName}' returned no usable response.");
         }
 
         List<EcGearDto>? records;
@@ -96,11 +130,15 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         {
             records = JsonSerializer.Deserialize<List<EcGearDto>>(output);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // A non-JSON body usually means Cloudflare served a block/challenge page.
+            // A non-JSON body usually means Cloudflare served a block/challenge page, so this is an
+            // unreachable EC rather than an item that isn't catalogued.
             this.log.Warning("Eorzea Collection search returned an unexpected (non-JSON) response.");
-            return null;
+            throw new EcUnavailableException(
+                $"the Eorzea Collection search for '{itemName}' returned a non-JSON response " +
+                "(usually a block or challenge page).",
+                ex);
         }
 
         if (records is null)
@@ -133,7 +171,8 @@ public sealed partial class EorzeaCollectionClient : IGlamSource
         if (string.IsNullOrWhiteSpace(html))
         {
             this.log.Debug($"glamour listing for EC id {ecId} returned an empty/blocked response.");
-            return new GlamPopularity(listingUrl: url);
+            throw new EcUnavailableException(
+                $"the Eorzea Collection listing for EC id {ecId} returned no usable response.");
         }
 
         this.log.Verbose($"listing for EC id {ecId} returned {html.Length} chars of HTML.");
