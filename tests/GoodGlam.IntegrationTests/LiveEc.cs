@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Dalamud.Plugin.Services;
 using GoodGlam.Glam;
 using Xunit;
@@ -32,6 +34,60 @@ public static class EcFixtures
 }
 
 /// <summary>
+/// The retry schedule the live-EC harness uses: capped exponential backoff with jitter, bounded by
+/// both an attempt count and a wall-clock budget.
+///
+/// The shape is dictated by the failure it has to absorb. Eorzea Collection's Cloudflare edge
+/// serves a managed bot challenge to GitHub-hosted runner IPs — an instant HTTP 403 (single-digit
+/// to ~75ms, straight from the edge), applied to every transport alike. Observed on CI runners, it
+/// can clear after a few seconds or persist for the better part of a minute. The previous schedule
+/// (4 attempts, fixed 500·n² backoff) exhausted itself in 7s, i.e. right as EC would often start
+/// letting requests through, which is what turned an environmental blip into a red build.
+///
+/// Jitter matters for the same reason: without it, every retry lands on the same cadence, which is
+/// both needlessly bot-like and correlated across concurrent runs.
+/// </summary>
+internal sealed record RetryPolicy(
+    int MaxAttempts,
+    TimeSpan BaseDelay,
+    TimeSpan MaxDelay,
+    TimeSpan Budget,
+    TimeSpan PerAttemptTimeout)
+{
+    /// <summary>Fraction of each delay that is randomised; the rest is the fixed exponential floor.</summary>
+    private const double JitterFraction = 0.25;
+
+    /// <summary>
+    /// Backoff totalling ~67-90s across 8 attempts (2s doubling, capped at 20s), under a 150s
+    /// wall-clock ceiling so a run where every attempt also times out still ends in bounded time.
+    /// </summary>
+    public static readonly RetryPolicy Default = new(
+        MaxAttempts: 8,
+        BaseDelay: TimeSpan.FromSeconds(2),
+        MaxDelay: TimeSpan.FromSeconds(20),
+        Budget: TimeSpan.FromSeconds(150),
+        PerAttemptTimeout: TimeSpan.FromSeconds(30));
+
+    /// <summary>
+    /// The delay to wait after <paramref name="attempt"/> (1-based). <paramref name="jitter"/> is a
+    /// 0-1 roll: 1 gives the full exponential delay, 0 the damped floor.
+    /// </summary>
+    public TimeSpan BackoffFor(int attempt, double jitter)
+    {
+        var exponential = this.BaseDelay.TotalMilliseconds * Math.Pow(2, attempt - 1);
+        var capped = Math.Min(exponential, this.MaxDelay.TotalMilliseconds);
+        var scale = 1 - JitterFraction + (JitterFraction * Math.Clamp(jitter, 0, 1));
+        return TimeSpan.FromMilliseconds(capped * scale);
+    }
+
+    /// <summary>Total time spent sleeping across a full run, for a constant jitter roll.</summary>
+    public TimeSpan TotalBackoff(double jitter)
+        => TimeSpan.FromMilliseconds(
+            Enumerable.Range(1, this.MaxAttempts - 1)
+                .Sum(attempt => this.BackoffFor(attempt, jitter).TotalMilliseconds));
+}
+
+/// <summary>
 /// Shared helpers for the live Eorzea Collection tests: a no-op Dalamud log bootstrap and a
 /// bounded-retry wrapper that smooths over transient network blips / rate limiting.
 /// </summary>
@@ -39,9 +95,6 @@ public static class LiveEc
 {
     /// <summary>All live-EC tests share this collection so they run serially (politeness + determinism).</summary>
     public const string Collection = "LiveEc";
-
-    private const int MaxAttempts = 4;
-    private static readonly TimeSpan PerAttemptTimeout = TimeSpan.FromSeconds(30);
 
     private static bool logInstalled;
 
@@ -61,31 +114,61 @@ public static class LiveEc
     }
 
     /// <summary>
-    /// Runs a live EC call with bounded exponential backoff, retrying until <paramref name="isGood"/>
-    /// accepts the result or attempts are exhausted, so only a sustained failure reaches the assertion.
-    /// Each attempt is hard-bounded by <see cref="PerAttemptTimeout"/>. The final (possibly "bad")
-    /// result is returned so the caller's assertion produces the failure message.
+    /// Runs a live EC call with bounded exponential backoff + jitter, retrying until
+    /// <paramref name="isGood"/> accepts the result or the <see cref="RetryPolicy"/> is exhausted,
+    /// so only a sustained failure reaches the assertion. Each attempt is hard-bounded by
+    /// <see cref="RetryPolicy.PerAttemptTimeout"/> and the run as a whole by
+    /// <see cref="RetryPolicy.Budget"/>. The final (possibly "bad") result is returned so the
+    /// caller's assertion produces the failure message.
     /// </summary>
-    public static async Task<T> RetryAsync<T>(Func<CancellationToken, Task<T>> call, Func<T, bool> isGood)
+    public static Task<T> RetryAsync<T>(Func<CancellationToken, Task<T>> call, Func<T, bool> isGood)
+        => RetryAsync(call, isGood, RetryPolicy.Default);
+
+    internal static async Task<T> RetryAsync<T>(
+        Func<CancellationToken, Task<T>> call,
+        Func<T, bool> isGood,
+        RetryPolicy policy)
     {
         T result = default!;
-        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        ExceptionDispatchInfo? lastFailure = null;
+        var elapsed = Stopwatch.StartNew();
+
+        for (var attempt = 1; attempt <= policy.MaxAttempts; attempt++)
         {
-            using var cts = new CancellationTokenSource(PerAttemptTimeout);
+            using var cts = new CancellationTokenSource(policy.PerAttemptTimeout);
             try
             {
                 result = await call(cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
+
+                // The attempt produced a result, so it — not any earlier throw — is what the caller
+                // should see if this turns out to be the last one.
+                lastFailure = null;
                 if (isGood(result))
                     return result;
             }
-            catch (Exception) when (attempt < MaxAttempts)
+            catch (Exception ex)
             {
-                // Transient failure — fall through to the backoff delay and try again.
+                lastFailure = ExceptionDispatchInfo.Capture(ex);
             }
 
-            if (attempt < MaxAttempts)
-                await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt * attempt)).ConfigureAwait(false);
+            if (attempt == policy.MaxAttempts)
+                break;
+
+            // Stop once the next sleep would run past the budget: a run where every attempt also
+            // burns its own timeout must still finish in bounded time.
+            var backoff = policy.BackoffFor(attempt, Random.Shared.NextDouble());
+            if (elapsed.Elapsed + backoff >= policy.Budget)
+                break;
+
+            await Task.Delay(backoff).ConfigureAwait(false);
         }
+
+        // A run that only ever threw has to surface its cause. The budget can end the loop before
+        // the final attempt — which is precisely what a timeout-shaped outage does — so rethrowing
+        // only on the last attempt would drop the exception and hand back default(T). For a
+        // non-nullable T that null goes on to fail the caller's assertion as a bare
+        // NullReferenceException, hiding a real hang behind an unrelated error.
+        lastFailure?.Throw();
 
         return result;
     }
@@ -151,11 +234,33 @@ public sealed class LiveEcFixture
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(UnreachableMessage, ex);
+            throw new InvalidOperationException(Explain(probe), ex);
         }
 
         if (resolved is null)
-            throw new InvalidOperationException(UnreachableMessage);
+            throw new InvalidOperationException(Explain(probe));
+    }
+
+    /// <summary>
+    /// Builds the failure message. The plugin's transport reports every failure as <c>null</c>, so
+    /// on the way out we re-probe once with a diagnostic request that keeps the status line and
+    /// Cloudflare headers — turning "unreachable" into an actionable post-mortem (see
+    /// <see cref="EcReachabilityReport"/>). Best effort: if the post-mortem itself fails we still
+    /// report the original outage rather than masking it.
+    /// </summary>
+    private static string Explain(EcFixture probe)
+    {
+        string report;
+        try
+        {
+            report = EcReachabilityProbe.RunAsync(probe).GetAwaiter().GetResult().Describe();
+        }
+        catch (Exception ex)
+        {
+            report = $"(diagnostic probe failed: {ex.GetType().Name}: {ex.Message})";
+        }
+
+        return $"{UnreachableMessage}{Environment.NewLine}{Environment.NewLine}{report}";
     }
 }
 
