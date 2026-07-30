@@ -35,9 +35,9 @@ internal static class EcTransportFactory
 /// <summary>
 /// Builds the requests GoodGlam sends to Eorzea Collection.
 ///
-/// Centralised so every caller - the transport and the integration tests' reachability probe -
-/// sends a byte-identical request. A probe that drifted from the real transport would happily
-/// report success for a request the plugin never makes.
+/// Centralised so the HTTP version and headers that decide whether EC answers at all live in one
+/// place rather than being restated per verb, and so a test can pin them (see
+/// <c>ManagedHttpTransportTests</c>).
 /// </summary>
 internal static class EcRequest
 {
