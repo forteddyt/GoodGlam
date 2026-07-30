@@ -64,14 +64,11 @@ jobs:
             ${{ steps.build.outputs.zip-path }}
             ${{ steps.build.outputs.manifest-path }}
 
-      - name: Test (unit)
+      - name: Test
+        # Offline and deterministic: the Eorzea Collection pipeline is covered by replaying
+        # recorded EC responses (tests/GoodGlam.Tests/Fixtures/Ec), so CI never depends on EC
+        # being reachable or on Cloudflare's willingness to serve this runner's IP.
         run: dotnet test tests/GoodGlam.Tests/GoodGlam.Tests.csproj -c Release --no-build --settings coverlet.runsettings --results-directory TestResults
-
-      - name: Test (integration, live Eorzea Collection)
-        # End-to-end tests that drive the real EC client. Blocking: a sustained EC outage fails
-        # the build (they retry to absorb transient blips). Coverage lands in the same TestResults
-        # dir so the lines they exercise feed the merged report below.
-        run: dotnet test tests/GoodGlam.IntegrationTests/GoodGlam.IntegrationTests.csproj -c Release --no-build --settings coverlet.runsettings --results-directory TestResults
 
       - name: Coverage report
         if: always()

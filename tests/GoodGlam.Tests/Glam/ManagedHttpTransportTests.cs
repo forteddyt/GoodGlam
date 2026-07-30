@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using FluentAssertions;
+using GoodGlam.Diagnostics;
 using GoodGlam.Glam;
 using Xunit;
 
@@ -27,7 +28,10 @@ public class ManagedHttpTransportTests
     }
 
     private static (HttpListener Listener, string Url) StartServer(
-        int status, string body, List<HttpListenerRequest>? seen = null)
+        int status,
+        string body,
+        List<HttpListenerRequest>? seen = null,
+        IReadOnlyDictionary<string, string>? responseHeaders = null)
     {
         // HttpListener can't bind to an ephemeral port and report it back, so pick a candidate and
         // retry Start() if it was grabbed between selection and bind — closing the release-then-rebind
@@ -51,6 +55,12 @@ public class ManagedHttpTransportTests
                 var ctx = await listener.GetContextAsync();
                 seen?.Add(ctx.Request);
                 ctx.Response.StatusCode = status;
+                if (responseHeaders is not null)
+                {
+                    foreach (var (name, value) in responseHeaders)
+                        ctx.Response.Headers[name] = value;
+                }
+
                 var bytes = Encoding.UTF8.GetBytes(body);
                 await ctx.Response.OutputStream.WriteAsync(bytes);
                 ctx.Response.Close();
@@ -179,5 +189,77 @@ public class ManagedHttpTransportTests
 
         post.Headers.GetValues("X-Requested-With").Should().ContainSingle().Which.Should().Be("XMLHttpRequest");
         post.Content!.Headers.ContentType!.MediaType.Should().Be("application/json");
+    }
+
+    /// <summary>
+    /// With the curl.exe fallback gone there is no second transport to try, so a refusal has to
+    /// explain itself in the log or the user is left with a bare status. A Cloudflare challenge is
+    /// aimed at the caller's IP and no amount of retrying or reconfiguring gets past it, so say so.
+    /// </summary>
+    [Fact]
+    public async Task Names_a_cloudflare_challenge_in_the_log()
+    {
+        var log = new RecordingLogger();
+        var (listener, url) = StartServer(
+            403, "blocked", responseHeaders: new Dictionary<string, string> { ["cf-mitigated"] = "challenge" });
+        try
+        {
+            var result = await new ManagedHttpTransport("GoodGlam-Test/1.0", log).GetAsync(url, CancellationToken.None);
+
+            result.Should().BeNull();
+            log.Debugs.Should().ContainSingle(m => m.Contains("Cloudflare challenge for this IP"));
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    /// <summary>
+    /// The other refusal worth telling apart: EC answers HTTP/2 and 403s HTTP/1.1, so a request that
+    /// failed to negotiate HTTP/2 is refused for a completely different (and fixable) reason than a
+    /// bot challenge. The loopback listener is plaintext and therefore always HTTP/1.1, which is
+    /// exactly the downgrade this branch describes.
+    /// </summary>
+    [Fact]
+    public async Task Names_an_http1_downgrade_when_a_403_arrives_over_http1()
+    {
+        var log = new RecordingLogger();
+        var (listener, url) = StartServer(403, "blocked");
+        try
+        {
+            var result = await new ManagedHttpTransport("GoodGlam-Test/1.0", log).GetAsync(url, CancellationToken.None);
+
+            result.Should().BeNull();
+            log.Debugs.Should().ContainSingle(m => m.Contains("fell back to HTTP/1.1"));
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    /// <summary>
+    /// A hand-written recorder. A FakeItEasy fake can't stand in here because
+    /// <c>ITraceLogger&lt;ManagedHttpTransport&gt;</c> is parameterised with an internal type, which
+    /// the dynamic-proxy backend can't proxy without exposing internals to DynamicProxyGenAssembly2.
+    /// </summary>
+    private sealed class RecordingLogger : ITraceLogger<ManagedHttpTransport>
+    {
+        public List<string> Debugs { get; } = new();
+
+        public void Verbose(string message) { }
+
+        public void Debug(string message) => this.Debugs.Add(message);
+
+        public void Information(string message) { }
+
+        public void Warning(string message) { }
+
+        public void Warning(string message, Exception exception) { }
+
+        public void Error(string message) { }
+
+        public void Error(string message, Exception exception) { }
     }
 }
