@@ -74,7 +74,7 @@ published with `keep_files: true` so it coexists with the coverage report. See t
 Loot detection -> item resolution -> Eorzea Collection lookup -> popularity verdict -> history + logo glow. Two key seams keep the layers decoupled:
 
 - **`IGlamSource`** - where popularity data comes from (today the live Eorzea Collection client).
-- **`IEcTransport`** - how EC is reached (managed `HttpClient` first, `curl.exe` fallback).
+- **`IEcTransport`** - how EC is reached (a single in-process `HttpClient`).
 
 Honor these interfaces when adding data sources or transports. The component overview and data flow are in the wiki (**Architecture**, **Data transport**).
 
@@ -95,7 +95,8 @@ Honor these interfaces when adding data sources or transports. The component ove
 
 ## Gotchas
 
-- **Transport:** on native Windows EC blocks .NET's HTTP via Cloudflare TLS fingerprinting, so the plugin shells out to `curl.exe`; under Wine/Linux the in-process client works and `curl.exe` doesn't. The fallback is automatic - don't add OS sniffing. See the wiki **Data transport** page.
+- **Transport:** EC's Cloudflare edge refuses **HTTP/1.1** (403) and serves **HTTP/2**, so every request pins HTTP/2 (`EcRequest`). This is about the HTTP version, *not* a TLS fingerprint: the same `curl` binary gets 403 on 1.1 and 200 on h2. The plugin therefore uses one in-process `HttpClient` on every platform - there is no `curl.exe` fallback any more (it was removed once HTTP/2 made managed HTTP work on native Windows, and Windows' bundled `curl.exe` has no HTTP/2 anyway). Don't add OS sniffing. See the wiki **Data transport** page.
+- **A 403 from EC is usually not a bug.** Cloudflare challenges some egress IPs (`cf-mitigated: challenge`); it's environmental and hits datacenter ranges like CI runners most often. Re-run before investigating.
 - **No product-direction in the repo.** Roadmap/status decisions live in GitHub Issues/Projects, not in committed docs.
 - **The wiki is a submodule** (`forteddyt/GoodGlam.wiki`). If it isn't checked out, run `git submodule update --init wiki`. Edit pages under `wiki/`, commit there, push, then bump the submodule pointer.
 
@@ -103,6 +104,6 @@ Honor these interfaces when adding data sources or transports. The component ove
 
 - **Development** - build/test details, CI & coverage, high-level layout.
 - **Architecture** - components, the key seams, the three item-ID spaces.
-- **Data transport** - the Cloudflare/`curl.exe` design.
+- **Data transport** - why EC needs HTTP/2, and how the transport is verified on Windows.
 - **Contributing** - conventions and PR flow.
 - **Usage** / **Configuration** / **Installation** / **Troubleshooting** - user-facing behavior.

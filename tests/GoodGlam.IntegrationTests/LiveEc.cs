@@ -130,26 +130,43 @@ public static class LiveEc
         RetryPolicy policy)
     {
         T result = default!;
+        var hasResult = false;
         ExceptionDispatchInfo? lastFailure = null;
         var elapsed = Stopwatch.StartNew();
 
         for (var attempt = 1; attempt <= policy.MaxAttempts; attempt++)
         {
-            using var cts = new CancellationTokenSource(policy.PerAttemptTimeout);
+            // Bound the attempt by whatever is left of the budget as well as by its own timeout, so
+            // the ceiling covers the attempt that is running rather than only the sleeps between
+            // attempts. Without this a final attempt could start just under the budget and then run
+            // a whole PerAttemptTimeout past it (~172s against a documented 150s ceiling).
+            var remaining = policy.Budget - elapsed.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+                break;
+
+            var budgetBound = remaining < policy.PerAttemptTimeout;
+            using var cts = new CancellationTokenSource(budgetBound ? remaining : policy.PerAttemptTimeout);
             try
             {
                 result = await call(cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
 
                 // The attempt produced a result, so it — not any earlier throw — is what the caller
                 // should see if this turns out to be the last one.
+                hasResult = true;
                 lastFailure = null;
                 if (isGood(result))
                     return result;
             }
             catch (Exception ex)
             {
-                lastFailure = ExceptionDispatchInfo.Capture(ex);
+                // Being cut short by the budget says only that time ran out, which is never a better
+                // explanation than a real earlier result or failure. Keep those instead.
+                if (!budgetBound || (!hasResult && lastFailure is null))
+                    lastFailure = ExceptionDispatchInfo.Capture(ex);
             }
+
+            if (budgetBound)
+                break;
 
             if (attempt == policy.MaxAttempts)
                 break;

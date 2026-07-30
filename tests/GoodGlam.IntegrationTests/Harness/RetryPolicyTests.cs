@@ -211,6 +211,40 @@ public sealed class RetryPolicyTests
         calls.Should().BeLessThan(policy.MaxAttempts, "the budget should have ended the run early");
     }
 
+    /// <summary>
+    /// The budget is a ceiling on the whole run, so it has to bound the attempt that is *running*,
+    /// not just the sleep before it. Checking it only before sleeping let a final attempt start
+    /// just under the ceiling and then run a full per-attempt timeout past it - with the default
+    /// policy, ~172s against a documented 150s budget.
+    /// </summary>
+    [Fact]
+    public async Task Bounds_a_running_attempt_by_the_remaining_budget()
+    {
+        var policy = new RetryPolicy(
+            MaxAttempts: 8,
+            BaseDelay: TimeSpan.FromMilliseconds(10),
+            MaxDelay: TimeSpan.FromMilliseconds(10),
+            Budget: TimeSpan.FromMilliseconds(300),
+            PerAttemptTimeout: TimeSpan.FromSeconds(30));
+
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+
+        // Every attempt hangs until its token trips, so only the budget can end the run.
+        var act = async () => await LiveEc.RetryAsync<string?>(
+            async ct =>
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+                return null;
+            },
+            value => value is not null,
+            policy);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        elapsed.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5),
+            "the run must honour its budget rather than the far larger per-attempt timeout");
+    }
+
     /// <summary>A later good result must clear an earlier failure rather than resurrect it at the end.</summary>
     [Fact]
     public async Task Does_not_resurface_an_earlier_exception_once_a_result_arrives()

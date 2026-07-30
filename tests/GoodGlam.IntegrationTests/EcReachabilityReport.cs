@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using GoodGlam.Glam;
 
 namespace GoodGlam.IntegrationTests;
 
@@ -16,6 +18,7 @@ namespace GoodGlam.IntegrationTests;
 /// </summary>
 internal sealed record EcReachabilityReport(
     int? StatusCode = null,
+    string? NegotiatedVersion = null,
     string? CfRay = null,
     string? CfMitigated = null,
     string? Server = null,
@@ -49,10 +52,15 @@ internal sealed record EcReachabilityReport(
         else
         {
             report.AppendLine($"  status       : HTTP {this.StatusCode?.ToString() ?? "(none)"}");
+            report.AppendLine($"  negotiated   : HTTP/{this.NegotiatedVersion ?? "(none)"}");
             report.AppendLine($"  server       : {this.Server ?? "(none)"}");
             report.AppendLine($"  cf-ray       : {this.CfRay ?? "(none)"}");
             report.AppendLine($"  cf-mitigated : {this.CfMitigated ?? "(none)"}");
-            report.AppendLine($"  body         : {this.BodySnippet ?? "(empty)"}");
+
+            // A body that is present but empty is itself a finding, so label it rather than
+            // rendering a blank line that reads like missing output.
+            report.AppendLine(
+                $"  body         : {(string.IsNullOrEmpty(this.BodySnippet) ? "(empty)" : this.BodySnippet)}");
         }
 
         if (this.IsCloudflareChallenge)
@@ -60,12 +68,12 @@ internal sealed record EcReachabilityReport(
             report.AppendLine();
             report.AppendLine(
                 "  Diagnosis: Cloudflare bot challenge. Eorzea Collection is serving its managed " +
-                "challenge to this runner's egress IP instead of proxying to the origin, so every " +
-                "transport is refused alike - in-process HTTP and curl.exe are challenged " +
-                "identically, because this is IP reputation, not a TLS fingerprint. That makes it " +
-                "an environmental block on the CI runner, not a GoodGlam regression: the same " +
-                "request succeeds from a residential IP, and re-running the job usually lands on a " +
-                "different runner IP and passes.");
+                "challenge to this client's egress IP instead of proxying to the origin. This is IP " +
+                "reputation rather than anything about the request, so it is environmental and not " +
+                "a GoodGlam regression - no transport or TLS change would get past it. Datacenter " +
+                "ranges (CI runners) are challenged most often, but residential addresses are not " +
+                "exempt. Re-running usually clears it; from CI a re-run also lands on a different " +
+                "egress IP.");
         }
 
         return report.ToString();
@@ -73,16 +81,15 @@ internal sealed record EcReachabilityReport(
 }
 
 /// <summary>
-/// Issues the diagnostic probe that produces an <see cref="EcReachabilityReport"/>. Mirrors the
-/// request the plugin's in-process transport makes (HTTP/2, same headers) so what it observes is
-/// what the real client would have observed — but, unlike the plugin, it keeps the status line and
-/// Cloudflare headers instead of collapsing them to <c>null</c>.
+/// Issues the diagnostic probe that produces an <see cref="EcReachabilityReport"/>.
+///
+/// The request is built by the plugin's own <see cref="EcRequest"/>, the same builder
+/// <see cref="ManagedHttpTransport"/> uses, so the probe cannot drift into reporting on a request
+/// GoodGlam never sends. What differs is only the handling: the transport maps every failure to
+/// <c>null</c>, whereas this keeps the status line and Cloudflare headers.
 /// </summary>
 internal static class EcReachabilityProbe
 {
-    private const string UserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
     private const int BodySnippetLength = 200;
 
     private static readonly HttpClient Http = new(new HttpClientHandler
@@ -97,29 +104,16 @@ internal static class EcReachabilityProbe
     {
         try
         {
-            using var request = new HttpRequestMessage(
-                HttpMethod.Post, $"https://ffxiv.eorzeacollection.com/gear/{probe.Slot.Key}/search")
-            {
-                Content = new StringContent(
-                    $"{{\"search\":{System.Text.Json.JsonSerializer.Serialize(probe.Name)}}}",
-                    Encoding.UTF8,
-                    "application/json"),
-                Version = HttpVersion.Version20,
-                VersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-            };
-
-            request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
-            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
-            request.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
-            request.Headers.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
-            request.Headers.TryAddWithoutValidation("Origin", "https://ffxiv.eorzeacollection.com");
-            request.Headers.TryAddWithoutValidation("Referer", "https://ffxiv.eorzeacollection.com/glamours");
+            using var request = EcRequest.Post(
+                $"https://ffxiv.eorzeacollection.com/gear/{probe.Slot.Key}/search",
+                $$"""{"search":{{JsonSerializer.Serialize(probe.Name)}}}""");
 
             using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             return new EcReachabilityReport(
                 StatusCode: (int)response.StatusCode,
+                NegotiatedVersion: response.Version.ToString(),
                 CfRay: FirstHeader(response, "cf-ray"),
                 CfMitigated: FirstHeader(response, "cf-mitigated"),
                 Server: FirstHeader(response, "server"),

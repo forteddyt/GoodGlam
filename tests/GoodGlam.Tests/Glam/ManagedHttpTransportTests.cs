@@ -8,9 +8,10 @@ using Xunit;
 namespace GoodGlam.Tests.Glam;
 
 /// <summary>
-/// Drives <see cref="ManagedHttpTransport"/> (the in-process HTTP path used everywhere except native
-/// Windows) against a throwaway loopback <see cref="HttpListener"/>, covering the success, HTTP-error,
-/// connection-failure, and cancellation branches without touching Eorzea Collection.
+/// Drives <see cref="ManagedHttpTransport"/> - the in-process HTTP path, now the only way GoodGlam
+/// reaches Eorzea Collection on every platform - against a throwaway loopback
+/// <see cref="HttpListener"/>, covering the success, HTTP-error, connection-failure, and
+/// cancellation branches without touching Eorzea Collection.
 /// </summary>
 public class ManagedHttpTransportTests
 {
@@ -146,7 +147,37 @@ public class ManagedHttpTransportTests
         }
     }
 
+    /// <summary>
+    /// The factory hands back the in-process transport directly. GoodGlam no longer pairs it with a
+    /// curl.exe subprocess: EC refuses by HTTP version rather than TLS fingerprint, so pinning
+    /// HTTP/2 makes the managed client work on every platform - including native Windows, where the
+    /// bundled curl.exe couldn't have helped anyway because it has no HTTP/2 support.
+    /// </summary>
     [Fact]
-    public void Factory_creates_the_fallback_transport_stack()
-        => EcTransportFactory.Create().Should().BeOfType<FallbackEcTransport>();
+    public void Factory_creates_the_in_process_transport()
+        => EcTransportFactory.Create().Should().BeOfType<ManagedHttpTransport>();
+
+    /// <summary>
+    /// The transport and the integration tests' reachability probe must send the same request, or
+    /// the probe can report success for something the plugin never sends. Both build their requests
+    /// through <see cref="EcRequest"/>; pin the pieces that decide whether EC answers.
+    /// </summary>
+    [Fact]
+    public void Ec_requests_pin_http2_and_the_browser_user_agent()
+    {
+        using var post = EcRequest.Post("https://example.invalid/gear/body/search", """{"search":"x"}""");
+        using var get = EcRequest.Get("https://example.invalid/glamours");
+
+        foreach (var req in new[] { post, get })
+        {
+            req.Version.Should().Be(HttpVersion.Version20, "EC's edge 403s HTTP/1.1");
+            req.VersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionOrLower);
+
+            // GetValues re-splits a user agent into its product tokens, so compare the rejoined value.
+            string.Join(" ", req.Headers.GetValues("User-Agent")).Should().Be(EcRequest.UserAgent);
+        }
+
+        post.Headers.GetValues("X-Requested-With").Should().ContainSingle().Which.Should().Be("XMLHttpRequest");
+        post.Content!.Headers.ContentType!.MediaType.Should().Be("application/json");
+    }
 }

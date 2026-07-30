@@ -87,9 +87,8 @@ public interface IGlamSource
 ///   * POST /gear/{slot}/search  -> JSON, maps game item ID (XIVApiId) -> EC ID.
 ///   * GET  /glamours?filter[..]  -> HTML listing we scrape for the ranked "loves" results.
 ///
-/// The actual HTTP is delegated to an <see cref="IEcTransport"/> chosen for the current
-/// platform (in-process HttpClient under Wine, the curl.exe subprocess on native Windows),
-/// because Cloudflare's WAF blocks managed HTTP only on native Windows. See
+/// The actual HTTP is delegated to an <see cref="IEcTransport"/> - one in-process HttpClient on
+/// every platform, pinning HTTP/2 because EC's Cloudflare edge 403s HTTP/1.1. See
 /// <see cref="EcTransportFactory"/>.
 /// </summary>
 public sealed partial class EorzeaCollectionClient : IGlamSource

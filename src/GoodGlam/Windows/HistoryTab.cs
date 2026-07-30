@@ -68,8 +68,8 @@ internal sealed class HistoryTab : IDisposable
     /// <c>CreateFromImageAsync</c>) is what lets the WebP that Cloudflare Polish serves for Eorzea
     /// Collection cover images load under Wine — see issue #64. The load flow and its failure
     /// handling live in the tested <see cref="GlamImageLoader"/>; only this collaborator wiring (which
-    /// needs a live HTTP client and render device) stays here. No <c>curl.exe</c>/OS sniffing;
-    /// reaching Eorzea Collection without curl on native Windows is tracked separately.
+    /// needs a live HTTP client and render device) stays here. No OS sniffing: images load
+    /// in-process on every platform, as does everything else GoodGlam fetches.
     /// </summary>
     private static readonly GlamImageLoader Loader = new(
         (url, ct) => Http.GetByteArrayAsync(url, ct),
