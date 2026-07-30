@@ -3,49 +3,49 @@
 
 |||
 |:---|:---|
-| Generated on: | 7/29/2026 - 2:28:06 PM |
-| Coverage date: | 7/29/2026 - 2:27:52 PM - 7/29/2026 - 2:28:02 PM |
-| Parser: | MultiReport (2x Cobertura) |
+| Generated on: | 7/30/2026 - 8:50:01 PM |
+| Coverage date: | 7/30/2026 - 8:49:56 PM |
+| Parser: | Cobertura |
 | Assemblies: | 1 |
 | Classes: | 83 |
 | Files: | 46 |
-| **Line coverage:** | 96.6% (1764 of 1826) |
-| Covered lines: | 1764 |
-| Uncovered lines: | 62 |
-| Coverable lines: | 1826 |
-| Total lines: | 5739 |
-| **Branch coverage:** | 94% (606 of 644) |
-| Covered branches: | 606 |
-| Total branches: | 644 |
+| **Line coverage:** | 98.2% (1714 of 1744) |
+| Covered lines: | 1714 |
+| Uncovered lines: | 30 |
+| Coverable lines: | 1744 |
+| Total lines: | 5619 |
+| **Branch coverage:** | 94.6% (587 of 620) |
+| Covered branches: | 587 |
+| Total branches: | 620 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
 
 ## Coverage
-<details><summary>GoodGlam - 96.6%</summary>
+<details><summary>GoodGlam - 98.2%</summary>
 
 |**Name**|**Line**|**Branch**|
 |:---|---:|---:|
-|**GoodGlam**|**96.6%**|**94%**|
+|**GoodGlam**|**98.2%**|**94.6%**|
 |GoodGlam.CharacterDataManager|100%|91.6%|
 |GoodGlam.Configuration|100%|100%|
 |GoodGlam.ConfigurationStore|100%|91.6%|
 |GoodGlam.Diagnostics.TraceLogger`1|100%||
-|GoodGlam.Glam.CurlTransport|58.7%|57.1%|
 |GoodGlam.Glam.DropItem|100%||
 |GoodGlam.Glam.DropOccurrence|100%||
 |GoodGlam.Glam.EcFilterCatalog|100%|80%|
 |GoodGlam.Glam.EcFilterOption|100%||
 |GoodGlam.Glam.EcItem|100%||
+|GoodGlam.Glam.EcRequest|100%||
 |GoodGlam.Glam.EcTransportFactory|100%||
-|GoodGlam.Glam.EorzeaCollectionClient|98.8%|89.2%|
-|GoodGlam.Glam.FallbackEcTransport|100%|93.7%|
+|GoodGlam.Glam.EcUnavailableException|100%||
+|GoodGlam.Glam.EorzeaCollectionClient|98.9%|89.2%|
 |GoodGlam.Glam.GlamPopularity|100%|100%|
 |GoodGlam.Glam.GlamPopularityService|100%|100%|
 |GoodGlam.Glam.GlamResult|100%||
 |GoodGlam.Glam.GlamSlot|100%|100%|
 |GoodGlam.Glam.ItemResolver|100%|100%|
-|GoodGlam.Glam.ManagedHttpTransport|100%|100%|
+|GoodGlam.Glam.ManagedHttpTransport|97.2%|80%|
 |GoodGlam.Glam.PopularityFilters|100%|100%|
 |GoodGlam.Glam.SlotSetting|100%||
 |GoodGlam.History.HistoryNotifier|89.6%|75%|
