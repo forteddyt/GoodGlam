@@ -135,6 +135,49 @@ public class GlamPopularityServiceTests
         source.PopularityCalls.Should().Be(1);
     }
 
+    /// <summary>
+    /// The user-visible half of the Cloudflare-block bug. A blocked lookup produces zero loves, and
+    /// caching that verdict made the plugin keep calling a popular item unpopular for the whole TTL
+    /// (12h by default) even after EC became reachable again. An unreachable EC must leave no trace
+    /// in the cache, so the next drop of the same item asks again.
+    /// </summary>
+    [Fact]
+    public async Task Does_not_cache_a_verdict_from_an_unreachable_eorzea_collection()
+    {
+        var source = new FakeGlamSource { Throw = new EcUnavailableException("blocked") };
+        var service = new GlamPopularityService(
+            new Configuration { CacheTtlHours = 12, LovesThreshold = 100 }, source, new FakeNotifier());
+
+        var blocked = await service.ProcessAsync(Drop());
+        blocked.TopLoves.Should().Be(0, "a blocked lookup can't report loves");
+
+        // EC comes back.
+        source.Throw = null;
+        source.Popularity = new GlamPopularity([new GlamResult(150, "u")]);
+
+        var recovered = await service.ProcessAsync(Drop());
+
+        recovered.TopLoves.Should().Be(150, "the blocked attempt must not have been remembered as a real verdict");
+        source.ResolveCalls.Should().Be(2);
+    }
+
+    /// <summary>
+    /// The counterpart: a genuine zero *is* a real answer and must still be cached, or every
+    /// unpopular drop would re-query Eorzea Collection.
+    /// </summary>
+    [Fact]
+    public async Task Still_caches_a_genuine_zero_loves_answer()
+    {
+        var source = new FakeGlamSource { Popularity = new GlamPopularity() };
+        var service = new GlamPopularityService(new Configuration { CacheTtlHours = 12 }, source, new FakeNotifier());
+
+        await service.ProcessAsync(Drop());
+        await service.ProcessAsync(Drop());
+
+        source.ResolveCalls.Should().Be(1);
+        source.PopularityCalls.Should().Be(1);
+    }
+
     [Fact]
     public async Task Non_positive_ttl_clamps_so_entry_is_not_instantly_expired()
     {

@@ -33,6 +33,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Recorded Eorzea Collection responses replayed by EcRecordedResponseTests. Copied rather than
+      embedded so a capture can be refreshed and diffed as an ordinary file; see Fixtures/Ec/README.md.
+    -->
+    <Content Include="Fixtures\Ec\*.json;Fixtures\Ec\*.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Fixtures\Ec\%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Dalamud">
       <HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
     </Reference>

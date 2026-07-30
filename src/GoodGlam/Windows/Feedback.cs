@@ -8,8 +8,8 @@ namespace GoodGlam.Windows;
 /// <summary>
 /// Shared "give us feedback" UI: a <b>Report Bug</b> button and a <b>Suggest Feature</b> button, each
 /// opening GitHub's new-issue page with the matching structured issue form pre-selected — so bug
-/// reports arrive with the environment details that matter for this plugin (notably the
-/// native-Windows <c>curl.exe</c> vs Wine/Linux in-process HTTP transport split), and enhancement
+/// reports arrive with the environment details that matter for this plugin (notably the platform,
+/// since Eorzea Collection reachability varies by network and egress IP), and enhancement
 /// requests arrive as well-formed <c>feature_request.yml</c> submissions.
 /// </summary>
 /// <remarks>

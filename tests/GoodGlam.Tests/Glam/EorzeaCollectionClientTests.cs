@@ -49,21 +49,55 @@ public class EorzeaCollectionClientTests
         item.Should().BeNull();
     }
 
+    /// <summary>
+    /// A missing or non-JSON search response means EC never answered - typically a Cloudflare block
+    /// or challenge page. That must not be reported as "this item isn't on EC", which is what let a
+    /// transient block get cached as a real verdict.
+    /// </summary>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
+    [InlineData("   ")]
     [InlineData("<html>Cloudflare block</html>")]
-    public async Task ResolveEcItem_returns_null_for_blank_or_non_json(string? body)
+    public async Task ResolveEcItem_throws_for_blank_or_non_json(string? body)
     {
-        var item = await new EorzeaCollectionClient(new FakeTransport { PostResult = body })
+        var act = () => new EorzeaCollectionClient(new FakeTransport { PostResult = body })
             .ResolveEcItemAsync(GlamSlot.Hands, "x", 3610, CancellationToken.None);
+
+        await act.Should().ThrowAsync<EcUnavailableException>();
+    }
+
+    /// <summary>
+    /// The counterpart: EC *did* answer, and the item genuinely has no record. That is an ordinary
+    /// negative result, so it must stay a plain null rather than an outage.
+    /// </summary>
+    [Fact]
+    public async Task ResolveEcItem_returns_null_without_throwing_when_ec_answers_with_no_match()
+    {
+        var transport = new FakeTransport { PostResult = """[{"ID":111,"Name":"Other","XIVApiId":999}]""" };
+
+        var item = await new EorzeaCollectionClient(transport)
+            .ResolveEcItemAsync(GlamSlot.Hands, "x", 3610, CancellationToken.None);
+
         item.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetPopularity_throws_when_the_listing_is_blank(string? body)
+    {
+        var act = () => new EorzeaCollectionClient(new FakeTransport { GetResult = body })
+            .GetPopularityAsync(GlamSlot.Body, 1, new PopularityFilters(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<EcUnavailableException>();
     }
 
     [Fact]
     public async Task GetPopularity_builds_listing_url_with_slot_filter()
     {
-        var transport = new FakeTransport { GetResult = string.Empty };
+        var transport = new FakeTransport { GetResult = "<html></html>" };
         await new EorzeaCollectionClient(transport).GetPopularityAsync(GlamSlot.Legs, 14930, new PopularityFilters(), CancellationToken.None);
 
         transport.GetUrls.Should().ContainSingle().Which.Should().Be(
@@ -152,7 +186,7 @@ public class EorzeaCollectionClientTests
     [Fact]
     public async Task GetPopularity_appends_active_filters_to_listing_url()
     {
-        var transport = new FakeTransport { GetResult = string.Empty };
+        var transport = new FakeTransport { GetResult = "<html></html>" };
         var filters = new PopularityFilters
         {
             Gender = "female",
@@ -171,7 +205,7 @@ public class EorzeaCollectionClientTests
     [Fact]
     public async Task GetPopularity_encodes_each_race_as_array_param()
     {
-        var transport = new FakeTransport { GetResult = string.Empty };
+        var transport = new FakeTransport { GetResult = "<html></html>" };
         var filters = new PopularityFilters { Races = ["miqote", "aura"] };
 
         await new EorzeaCollectionClient(transport).GetPopularityAsync(GlamSlot.Body, 1, filters, CancellationToken.None);

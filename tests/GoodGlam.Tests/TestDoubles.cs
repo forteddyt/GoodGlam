@@ -115,24 +115,6 @@ internal sealed class FakeTransport : IEcTransport
     }
 }
 
-/// <summary>One-shot transport: returns a fixed value and counts calls (for fallback tests).</summary>
-internal sealed class CountingTransport(string? result) : IEcTransport
-{
-    public int Calls;
-
-    public Task<string?> PostJsonAsync(string url, string jsonBody, CancellationToken ct)
-    {
-        this.Calls++;
-        return Task.FromResult(result);
-    }
-
-    public Task<string?> GetAsync(string url, CancellationToken ct)
-    {
-        this.Calls++;
-        return Task.FromResult(result);
-    }
-}
-
 /// <summary>
 /// Installs no-op or fake Dalamud services into the static <c>Services</c> holder so code paths
 /// that touch <c>Services.*</c> don't dereference null statics under test.

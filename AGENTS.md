@@ -74,7 +74,7 @@ published with `keep_files: true` so it coexists with the coverage report. See t
 Loot detection -> item resolution -> Eorzea Collection lookup -> popularity verdict -> history + logo glow. Two key seams keep the layers decoupled:
 
 - **`IGlamSource`** - where popularity data comes from (today the live Eorzea Collection client).
-- **`IEcTransport`** - how EC is reached (managed `HttpClient` first, `curl.exe` fallback).
+- **`IEcTransport`** - how EC is reached (a single in-process `HttpClient`).
 
 Honor these interfaces when adding data sources or transports. The component overview and data flow are in the wiki (**Architecture**, **Data transport**).
 
@@ -90,12 +90,14 @@ Honor these interfaces when adding data sources or transports. The component ove
 
 - **Always prefer test-driven development, especially for bug fixes.** Write the failing (red) test that reproduces the bug or captures the new behavior *first*, confirm it fails for the right reason, then implement the fix and confirm the test goes green. Do not write the fix before the test.
 - xUnit + FluentAssertions + FakeItEasy in `tests/GoodGlam.Tests` (mirrors `src/`); internals are exposed via `InternalsVisibleTo`.
-- `tests/GoodGlam.IntegrationTests` holds **live** end-to-end tests that drive the real Eorzea Collection client (the `/goodglam check` pipeline below the Lumina resolve step). They are blocking and require EC reachability; both suites feed the merged coverage report. See the wiki **Development** page.
+- **There is one test project and it never touches the network.** `tests/GoodGlam.Tests/Fixtures/Ec` holds **real, unedited Eorzea Collection responses**, replayed through the actual client and `GlamPopularityService` by `EcRecordedResponseTests` — the `/goodglam check` pipeline below the Lumina resolve step. A live suite used to do this over the network; it was removed because EC's Cloudflare edge challenges egress IPs unpredictably, which made every PR hostage to a third party rather than to this code. **Don't reintroduce live-network tests.**
+- **Don't hand-edit a fixture to make a test pass** — re-capture it (`Fixtures/Ec/README.md`). Fixtures are valuable precisely because nobody here wrote them: invented markup only proves the parser still does what it did yesterday. The known gap is that frozen snapshots can't notice **EC changing its own JSON/HTML shape**; a report of missing or zero loves is the cue to re-capture and diff.
 - Add/update tests for behavior you change. The `NeedGreed` in-game hook path and Lumina item resolution can't run in CI; verify those manually (e.g. `/goodglam check <itemId>` in-game) and note it in the PR.
 
 ## Gotchas
 
-- **Transport:** on native Windows EC blocks .NET's HTTP via Cloudflare TLS fingerprinting, so the plugin shells out to `curl.exe`; under Wine/Linux the in-process client works and `curl.exe` doesn't. The fallback is automatic - don't add OS sniffing. See the wiki **Data transport** page.
+- **Transport:** EC's Cloudflare edge refuses **HTTP/1.1** (403) and serves **HTTP/2**, so every request pins HTTP/2 (`EcRequest`). This is about the HTTP version, *not* a TLS fingerprint: the same `curl` binary gets 403 on 1.1 and 200 on h2. The plugin therefore uses one in-process `HttpClient` on every platform - there is no `curl.exe` fallback any more (it was removed once HTTP/2 made managed HTTP work on native Windows, and Windows' bundled `curl.exe` has no HTTP/2 anyway). Don't add OS sniffing. See the wiki **Data transport** page.
+- **A 403 from EC is usually not a bug.** Cloudflare challenges some egress IPs (`cf-mitigated: challenge`); it's environmental and hits datacenter ranges like CI runners most often. Re-run before investigating.
 - **No product-direction in the repo.** Roadmap/status decisions live in GitHub Issues/Projects, not in committed docs.
 - **The wiki is a submodule** (`forteddyt/GoodGlam.wiki`). If it isn't checked out, run `git submodule update --init wiki`. Edit pages under `wiki/`, commit there, push, then bump the submodule pointer.
 
@@ -103,6 +105,6 @@ Honor these interfaces when adding data sources or transports. The component ove
 
 - **Development** - build/test details, CI & coverage, high-level layout.
 - **Architecture** - components, the key seams, the three item-ID spaces.
-- **Data transport** - the Cloudflare/`curl.exe` design.
+- **Data transport** - why EC needs HTTP/2, and how the transport is verified on Windows.
 - **Contributing** - conventions and PR flow.
 - **Usage** / **Configuration** / **Installation** / **Troubleshooting** - user-facing behavior.
