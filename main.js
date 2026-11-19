@@ -345,7 +345,7 @@ var assemblies = [
       { "name": "GoodGlam.Windows.DropDetailsLayout", "rp": "GoodGlam_DropDetailsLayout.html", "cl": 7, "ucl": 0, "cal": 7, "tl": 153, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.Feedback", "rp": "GoodGlam_Feedback.html", "cl": 3, "ucl": 3, "cal": 6, "tl": 104, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.GlamImage", "rp": "GoodGlam_GlamImage.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 320, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "GoodGlam.Windows.GlamImageCache", "rp": "GoodGlam_GlamImageCache.html", "cl": 140, "ucl": 1, "cal": 141, "tl": 320, "cb": 81, "tb": 82, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GoodGlam.Windows.GlamImageCache", "rp": "GoodGlam_GlamImageCache.html", "cl": 140, "ucl": 1, "cal": 141, "tl": 320, "cb": 83, "tb": 84, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.GlamImageHttpClientFactory", "rp": "GoodGlam_GlamImageHttpClientFactory.html", "cl": 17, "ucl": 0, "cal": 17, "tl": 41, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.GlamImageLoader", "rp": "GoodGlam_GlamImageLoader.html", "cl": 28, "ucl": 0, "cal": 28, "tl": 81, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "GoodGlam.Windows.GlamPreviewBox", "rp": "GoodGlam_GlamPreviewBox.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 226, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -411,6 +411,12 @@ var riskHotspots = [
       { "value": 24, "exceeded": true },
     ]},
   {
+    "assembly": "GoodGlam", "class": "GoodGlam.Windows.GlamImageCache", "reportPath": "GoodGlam_GlamImageCache.html", "methodName": "SubmitBatch(System.Collections.Generic.IEnumerable\u00601\u003CSystem.String\u003E)", "methodShortName": "SubmitBatch(...)", "fileIndex": 0, "line": 83,
+    "metrics": [
+      { "value": 18, "exceeded": false },
+      { "value": 18, "exceeded": true },
+    ]},
+  {
     "assembly": "GoodGlam", "class": "GoodGlam.Windows.GlamImageCache", "reportPath": "GoodGlam_GlamImageCache.html", "methodName": "StartPendingLocked()", "methodShortName": "StartPendingLocked()", "fileIndex": 0, "line": 155,
     "metrics": [
       { "value": 18, "exceeded": false },
@@ -421,12 +427,6 @@ var riskHotspots = [
     "metrics": [
       { "value": 18, "exceeded": false },
       { "value": 18, "exceeded": true },
-    ]},
-  {
-    "assembly": "GoodGlam", "class": "GoodGlam.Windows.GlamImageCache", "reportPath": "GoodGlam_GlamImageCache.html", "methodName": "SubmitBatch(System.Collections.Generic.IEnumerable\u00601\u003CSystem.String\u003E)", "methodShortName": "SubmitBatch(...)", "fileIndex": 0, "line": 83,
-    "metrics": [
-      { "value": 16, "exceeded": false },
-      { "value": 16, "exceeded": true },
     ]},
 ];
 

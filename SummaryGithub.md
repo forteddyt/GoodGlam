@@ -3,8 +3,8 @@
 
 |||
 |:---|:---|
-| Generated on: | 11/19/2026 - 7:07:49 AM |
-| Coverage date: | 11/19/2026 - 7:07:46 AM |
+| Generated on: | 11/19/2026 - 8:27:11 PM |
+| Coverage date: | 11/19/2026 - 8:27:04 PM |
 | Parser: | Cobertura |
 | Assemblies: | 1 |
 | Classes: | 83 |
@@ -14,9 +14,9 @@
 | Uncovered lines: | 30 |
 | Coverable lines: | 1744 |
 | Total lines: | 5619 |
-| **Branch coverage:** | 94.6% (587 of 620) |
-| Covered branches: | 587 |
-| Total branches: | 620 |
+| **Branch coverage:** | 94.6% (589 of 622) |
+| Covered branches: | 589 |
+| Total branches: | 622 |
 | **Method coverage:** | [Feature is only available for sponsors](https://reportgenerator.io/pro) |
 
 </details>
@@ -82,7 +82,7 @@
 |GoodGlam.Windows.DropDetailsLayout|100%||
 |GoodGlam.Windows.Feedback|50%||
 |GoodGlam.Windows.GlamImage|100%||
-|GoodGlam.Windows.GlamImageCache|99.2%|98.7%|
+|GoodGlam.Windows.GlamImageCache|99.2%|98.8%|
 |GoodGlam.Windows.GlamImageHttpClientFactory|100%||
 |GoodGlam.Windows.GlamImageLoader|100%|100%|
 |GoodGlam.Windows.GlamPreviewBox|100%||
